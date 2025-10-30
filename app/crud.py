@@ -278,66 +278,63 @@ def _create_splits(db: Session, expense: models.Expense, splits_in: List[schemas
     Internal helper function to create expense splits for a given expense.
     """
     db_splits = []
+    expense_amount_cents = expense.amount # amount 现在是整数 (美分)
+    
     if split_type == "equal":
         member_count = len(splits_in)
         if member_count == 0:
             raise ValueError("No members specified for equal split")
 
-        # Use Decimal for precision
-        expense_amount_dec = Decimal(str(expense.amount))
-        # Round to 2 decimal places using standard rounding
-        equal_amount_dec = (expense_amount_dec / Decimal(member_count)).quantize(Decimal("0.01"), rounding='ROUND_HALF_UP')
-        equal_amount = float(equal_amount_dec)
+        # 使用整数除法
+        equal_amount_cents = expense_amount_cents // member_count
+        remainder_cents = expense_amount_cents % member_count
 
-        total_dec = Decimal("0.00")
+        total_cents_allocated = 0
+        
         for i, split in enumerate(splits_in):
-            amount_dec = equal_amount_dec
-            # Adjust last split precisely to match the total expense amount
-            if i == member_count - 1:
-                amount_dec = expense_amount_dec - total_dec
-
-            amount = float(amount_dec)
-            total_dec += amount_dec # Accumulate the precise Decimal value
+            amount_cents = equal_amount_cents
+            if i < remainder_cents:
+                # 将余下的美分分配给前几个成员
+                amount_cents += 1
+            
+            total_cents_allocated += amount_cents
 
             db_split = models.ExpenseSplit(
                 expense_id=expense.id,
                 user_id=split.user_id,
-                amount=amount,
-                balance=amount, # Initial balance reflects the owed amount
+                amount=amount_cents,
+                balance=amount_cents, # 初始余额
                 share_type="equal"
             )
             db.add(db_split)
             db_splits.append(db_split)
-        # Final check for precision (optional, good for debugging)
-        if total_dec != expense_amount_dec:
-            logging.warning(f"Equal split total ({total_dec}) does not exactly match expense amount ({expense_amount_dec}) for expense {expense.id} due to potential floating point issues in intermediate steps.")
-
+        
+        if total_cents_allocated != expense_amount_cents:
+             # 安全检查，理论上不应发生
+             logging.warning(f"Equal split total ({total_cents_allocated}) does not match expense amount ({expense_amount_cents}) for expense {expense.id}")
 
     elif split_type == "custom":
-        total_provided_dec = Decimal("0.00")
+        total_provided_cents = 0
         for split in splits_in:
             if split.amount is None:
                 raise ValueError(f"Amount is required for user {split.user_id} in custom split")
-            # Ensure amount is treated as Decimal
-            split_amount_dec = Decimal(str(split.amount)).quantize(Decimal("0.01"))
-            total_provided_dec += split_amount_dec
-            split_amount_float = float(split_amount_dec)
+            
+            # amount 现在是整数 (美分)
+            split_amount_cents = split.amount
+            total_provided_cents += split_amount_cents
 
             db_split = models.ExpenseSplit(
                 expense_id=expense.id,
                 user_id=split.user_id,
-                amount=split_amount_float,
-                balance=split_amount_float, # Initial balance reflects the owed amount
+                amount=split_amount_cents,
+                balance=split_amount_cents, # 初始余额
                 share_type="custom"
             )
             db.add(db_split)
             db_splits.append(db_split)
 
-        # Verify total matches expense amount precisely
-        expense_amount_dec = Decimal(str(expense.amount)).quantize(Decimal("0.01"))
-        if total_provided_dec != expense_amount_dec:
-             # This check should ideally be redundant if validation in main.py is correct
-             logging.error(f"Critical: Custom split sum ({total_provided_dec}) does not match expense amount ({expense_amount_dec}) for expense {expense.id}. Raising ValueError.")
+        if total_provided_cents != expense_amount_cents:
+             logging.error(f"Critical: Custom split sum ({total_provided_cents}) does not match expense amount ({expense_amount_cents}) for expense {expense.id}.")
              raise ValueError("Custom split sum does not match expense amount")
 
     return db_splits
@@ -996,41 +993,35 @@ def calculate_expense_balance(db: Session, expense_id: int, user_id: int) -> flo
         raise ValueError(f"Expense {expense_id} not found")
 
     # Find the user's share (what they should have paid)
-    user_share_dec = Decimal("0.00")
+    user_share_cents = 0
     if expense.splits:
         for split in expense.splits:
             if split.user_id == user_id:
-                user_share_dec = Decimal(str(split.amount)).quantize(Decimal("0.01"))
-                break # Found the user's split
+                user_share_cents = split.amount # amount 是整数
+                break 
 
-    # Amount user actually paid initially (as the payer)
-    user_paid_initially_dec = Decimal("0.00")
-    expense_amount_dec = Decimal(str(expense.amount)).quantize(Decimal("0.01"))
+    user_paid_initially_cents = 0
+    expense_amount_cents = expense.amount # amount 是整数
     if expense.payer_id == user_id:
-        user_paid_initially_dec = expense_amount_dec
+        user_paid_initially_cents = expense_amount_cents
 
-    # Base balance = Amount Paid Initially - Amount Owed (Share)
-    base_balance_dec = user_paid_initially_dec - user_share_dec
+    base_balance_cents = user_paid_initially_cents - user_share_cents
 
-    # Sum subsequent payments received by this user for this expense
     payments_received_sum = db.query(func.sum(models.Payment.amount)).filter(
         models.Payment.expense_id == expense_id,
         models.Payment.to_user_id == user_id
-    ).scalar() or 0.0
-    payments_received_dec = Decimal(str(payments_received_sum)).quantize(Decimal("0.01"))
+    ).scalar() or 0 # 默认值为 0 (整数)
+    payments_received_cents = payments_received_sum
 
-    # Sum subsequent payments made by this user for this expense
     payments_made_sum = db.query(func.sum(models.Payment.amount)).filter(
         models.Payment.expense_id == expense_id,
         models.Payment.from_user_id == user_id
-    ).scalar() or 0.0
-    payments_made_dec = Decimal(str(payments_made_sum)).quantize(Decimal("0.01"))
+    ).scalar() or 0 # 默认值为 0 (整数)
+    payments_made_cents = payments_made_sum
 
-    # Final Balance = Base Balance - Payments Received + Payments Made
-    final_balance_dec = base_balance_dec - payments_received_dec + payments_made_dec
+    final_balance_cents = base_balance_cents - payments_received_cents + payments_made_cents
 
-    # Return as float, but calculation was done with Decimal
-    return float(final_balance_dec)
+    return final_balance_cents
 # ************************************************************************ #
 
 # ----------- Audit Log CRUD -----------
