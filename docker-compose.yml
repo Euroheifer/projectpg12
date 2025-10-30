@@ -36,7 +36,7 @@ services:
       PYTHONUNBUFFERED: 1
     # <<<<<<<<<<<<<<< 8080 HTTP Only >>>>>>>>>>>>>>>
     ports:
-      - "8080:8080" 
+      - "8081:8080" 
     command: >
       sh -c "export PYTHONPATH=/app && 
              python /app/app/create_tables.py && 
