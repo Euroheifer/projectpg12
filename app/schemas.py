@@ -128,7 +128,7 @@ class GroupInvitationResponse(BaseModel):
 
 class ExpenseBase(BaseModel):
     description: str
-    amount: float
+    amount: int
     payer_id: int
     image_url: Optional[str] = None  
 
@@ -137,7 +137,7 @@ class ExpenseCreate(ExpenseBase):
 
 class ExpenseUpdate(BaseModel):
     description: Optional[str] = None
-    amount: Optional[float] = None
+    amount: Optional[int] = None
     payer_id: Optional[int] = None
     date: Optional[date] = None
     image_url: Optional[str] = None 
@@ -158,7 +158,7 @@ class Expense(ExpenseBase):
 # ----------- Recurring Expense Schemas (US8) -----------
 class RecurringExpenseBase(BaseModel):
     description: str
-    amount: float
+    amount: int
     frequency: str # e.g., 'daily', 'weekly', 'monthly'
     start_date: date
     payer_id: int 
@@ -171,7 +171,7 @@ class RecurringExpenseCreate(RecurringExpenseBase):
 
 class RecurringExpenseUpdate(BaseModel):
     description: Optional[str] = None
-    amount: Optional[float] = None
+    amount: Optional[int] = None
     frequency: Optional[str] = None
     start_date: Optional[date] = None
     is_active: Optional[bool] = None
@@ -197,7 +197,7 @@ class ExpenseSplitBase(BaseModel):
     user_id: int
 
 class ExpenseSplitCreate(ExpenseSplitBase):
-    amount: Optional[float] = None
+    amount: Optional[int] = None
 
 ExpenseUpdate.model_rebuild() # add by sunzhe 22 Oct to payment update with splits
 RecurringExpenseUpdate.model_rebuild()
@@ -206,7 +206,7 @@ RecurringExpenseCreate.model_rebuild()
 class ExpenseSplit(ExpenseSplitBase):
     id: int
     expense_id: int
-    amount: float
+    amount: int
     share_type: str
     
     class Config:
@@ -225,7 +225,7 @@ class ExpenseWithSplits(Expense):
 class PaymentBase(BaseModel):
     from_user_id: int  
     to_user_id: int   
-    amount: float
+    amount: int
     description: Optional[str] = None
     image_url: Optional[str] = None  
     #payment_date: date
@@ -248,16 +248,16 @@ class Payment(PaymentBase):
 # ----------- Balance Schemas -----------
 class UserBalance(BaseModel):
     user_id: int
-    balance: float  # positive means owe money to others, negative means gets money from others
+    balance: int  # positive means owe money to others, negative means gets money from others
 
 class ExpenseBalance(BaseModel):
     expense: Expense
-    balances: Dict[int, float]  # user_id -> balance
+    balances: Dict[int, int]  # user_id -> balance
 
 class SettlementTransaction(BaseModel):
     from_user_id: int  
     to_user_id: int   
-    amount: float
+    amount: int
 
 class BalanceSummary(BaseModel):
     detailed_balance: List[UserBalance]

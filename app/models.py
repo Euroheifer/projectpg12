@@ -5,7 +5,7 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,
     DateTime,
-    Float,
+    Integer,
     Table,
     Enum,
     Date,
@@ -102,7 +102,7 @@ class Expense(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     description = Column(String, nullable=False)
-    amount = Column(Float, nullable=False)
+    amount = Column(Integer, nullable=False)
     date = Column(Date, nullable=False, default=func.current_date())
 
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
@@ -127,7 +127,7 @@ class RecurringExpense(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     description = Column(String, nullable=False)
-    amount = Column(Float, nullable=False)
+    amount = Column(Integer, nullable=False)
     frequency = Column(String, nullable=False)
     start_date = Column(Date, nullable=False)
     next_due_date = Column(Date, nullable=False)
@@ -152,10 +152,10 @@ class ExpenseSplit(Base):
     expense_id = Column(Integer, ForeignKey("expenses.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
-    amount = Column(Float, nullable=False)
+    amount = Column(Integer, nullable=False)
     share_type = Column(String, default="equal")
 
-    balance = Column(Float, nullable=False, default=0.0) 
+    balance = Column(Integer, nullable=False, default=0.0) 
     last_balance_update = Column(DateTime, default=datetime.utcnow) 
 
    
@@ -173,7 +173,7 @@ class Payment(Base):
     from_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  
     to_user_id = Column(Integer, ForeignKey("users.id"), nullable=False) 
     
-    amount = Column(Float, nullable=False)
+    amount = Column(Integer, nullable=False)
     description = Column(String, nullable=True)
     payment_date = Column(Date, default=date.today)
     created_at = Column(DateTime, default=datetime.now)
