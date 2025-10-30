@@ -181,8 +181,6 @@ expense_A1_data='{"description":"Team Snacks","amount":45.50,"payer_id":5, "spli
 expense_A1=$(call_api POST "$API/groups/$g3_id/expenses" "${tokens[5]}" "$expense_A1_data")
 expense_A1_id=$(echo "$expense_A1" | jq '.id')
 echo "Expense A1 (ID: $expense_A1_id) created by member user5."
-echo "--- Full Expense A1 Response ---"
-echo "$expense_A1" | jq '.' 
 
 echo "--- (US6a) user5 (non-admin member) creates a second expense for 'Coffee' ---"
 expense_A2_data='{"description":"Coffee Supplies","amount":25.00,"payer_id":5, "split_type":"equal", "splits":[{"user_id":5}]}'

@@ -91,3 +91,37 @@ def verify_group_admin(
         )
     return group
 #######################################################
+
+# ----------- invite -----------
+
+def get_pending_invitation_as_invitee(
+    invitation_id: int = Path(..., title="The ID of the invitation to respond to"),
+    db: Session = Depends(database.get_db),
+    current_user: User = Depends(get_current_user),
+) -> models.GroupInvitation:
+    """
+    Dependency that verifies if the current user is the invitee of a specific
+    PENDING invitation.
+    """
+    db_invitation = crud.get_invitation_by_id(db, invitation_id=invitation_id)
+
+    if not db_invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invitation not found",
+        )
+
+    if db_invitation.invitee_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to respond to this invitation",
+        )
+
+    if db_invitation.status != models.InvitationStatus.PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"This invitation has already been {db_invitation.status.value}",
+        )
+
+    return db_invitation
+

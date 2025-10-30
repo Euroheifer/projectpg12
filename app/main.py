@@ -6,17 +6,10 @@ from sqlalchemy import func
 from typing import Annotated, List, Dict
 from datetime import timedelta, date
 import logging
-
-# --- NEW IMPORTS FOR SCHEDULER ---
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from app.database import SessionLocal # <-- IMPORTANT: Import your Session factory
+from app.database import SessionLocal 
 import traceback
-# --- END OF NEW IMPORTS ---
-
-# --- NEW IMPORTS FOR SSR (JINJA2) ---
 from fastapi.templating import Jinja2Templates
-# --- END OF NEW IMPORTS ---
-
 from app import schemas, crud, models, database, auth
 from .database import engine, Base, get_db
 from app.dependencies import (
@@ -24,27 +17,23 @@ from app.dependencies import (
     get_group_with_access_check,
     verify_group_owner,
     verify_group_admin,
+    get_pending_invitation_as_invitee,  
 )
 
-# FastAPI Application Configuration
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# --- add for HTML ---
+from .pages import pages_router
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 #app = FastAPI()
 app = FastAPI(title="Project PG12 Web Application", version="1.0.0")
 
-templates = Jinja2Templates(directory="frontend")
+# --- add for HTML ---
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
+app.include_router(pages_router)
 
-#app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
-@app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    context = {"request": request, "title": app.title}
-    return templates.TemplateResponse("index.html", context)
-
-# --- NEW SCHEDULER SETUP 23 oct ---
-# This function will be run by the scheduler.
-# It MUST create its own database session.
 def check_recurring_expenses_job():
     logging.info("Scheduler: Running recurring expense check...")
     db = SessionLocal() # Create a new session
@@ -56,7 +45,6 @@ def check_recurring_expenses_job():
     finally:
         db.close() # Always close the session
 
-# Create the scheduler instance
 scheduler = AsyncIOScheduler()
 
 @app.on_event("startup")
@@ -78,7 +66,6 @@ def start_scheduler():
         logging.warning("Scheduler started... Job will run every MINUTES.")
 
     except Exception as e:
-
         logging.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         logging.error("!!! FAILED TO START SCHEDULER !!!")
         logging.error(f"!!! Error: {e}")
@@ -153,7 +140,7 @@ def read_user(user_id: int, db: Session = Depends(get_db)):
     return db_user
 
 
-# ----------- Expense Group Routes (US2)-----------
+# -------------------------------------------- Expense Group Routes (US2)-------------------------------------------------------
 @app.post("/groups/", response_model=schemas.Group, status_code=status.HTTP_201_CREATED)
 def create_group_route(
     group: schemas.GroupCreate,
@@ -220,7 +207,6 @@ def delete_group_route(
 
 # ----------- Group Member Routes (US3) -----------
 
-
 @app.get("/groups/{group_id}/members", response_model=list[schemas.GroupMember])
 def get_group_members(
     group: models.Group = Depends(get_group_with_access_check),
@@ -240,20 +226,12 @@ def add_member_to_group(
     user_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
-    group: models.Group = Depends(get_group_with_access_check),
+    #change back to only admin can add member 28 oct
+    group: models.Group = Depends(verify_group_admin), 
 ):
-    """Add a new member to a group (group member or admin)."""
-    current_member = crud.get_group_member(
-        db, group_id=group_id, user_id=current_user.id
-    )
-
-    if not current_member:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not a member of this group",
-        )
-
+    """Add a new member to a group (Admin Only)."""
     user_to_add = crud.get_user_by_id(db, user_id)
+
     if not user_to_add:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User to add not found"
@@ -268,15 +246,7 @@ def add_member_to_group(
             detail="User is already a member of this group",
         )
 
-    return schemas.GroupMember(
-        group_id=group_id,
-        group_name=group.name,
-        user_id=user_id,
-        is_admin=db_member.is_admin,
-        nickname=db_member.nickname,
-        remarks=db_member.remarks,
-    )
-
+    return db_member
 
 @app.delete("/groups/{group_id}/members/{user_id}")
 def remove_member_from_group(
@@ -332,12 +302,7 @@ def update_member_nickname(
         db, group_id=group_id, user_id=user_id, nickname_update=nickname_update
     )
 
-    return schemas.GroupMember(
-        user_id=user_id,
-        is_admin=db_member.is_admin,
-        nickname=db_member.nickname,
-        remarks=db_member.remarks,
-    )
+    return db_member # 28 oct
 
 @app.patch(
     "/groups/{group_id}/members/{user_id}/admin", response_model=schemas.GroupMember
@@ -375,15 +340,128 @@ def update_member_admin_status(
         db, group_id=group_id, user_id=user_id, note=note
     )
 
-    return schemas.GroupMember(
-        user_id=user_id,
-        is_admin=db_member.is_admin,
-        nickname=db_member.nickname,
-        remarks=db_member.remarks,
+    return db_member
+
+# ----------- Group Invitation Routes -----------
+
+@app.post(
+    "/groups/{group_id}/invite",
+    response_model=schemas.GroupInvitationResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def invite_member_to_group(
+    invitation_data: schemas.GroupInvitationCreate,
+    group: models.Group = Depends(get_group_with_access_check),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Invite a new member to the group (ANY group member can invite).
+    Invitation is sent via email lookup.
+    """
+    invitee = crud.get_user_by_email(db, email=invitation_data.invitee_email)
+    if not invitee:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User with this email not found"
+        )
+
+    existing_member = crud.get_group_member(db, group_id=group.id, user_id=invitee.id)
+    if existing_member:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is already a member of this group"
+        )
+
+    if invitee.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You cannot invite yourself to the group"
+        )
+
+    db_invitation = crud.create_group_invitation(
+        db=db,
+        group_id=group.id,
+        inviter_id=current_user.id,
+        invitee_id=invitee.id
     )
 
+    if db_invitation is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A pending invitation for this user already exists"
+        )
+
+    detailed_invitation = crud.get_invitation_by_id(db, db_invitation.id)
+    return detailed_invitation
+
+
+@app.get(
+    "/invitations/me",
+    response_model=List[schemas.GroupInvitationResponse],
+)
+def get_my_pending_invitations(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Get all PENDING group invitations for the current user.
+    """
+    invitations = crud.get_pending_invitations_for_user(db, user_id=current_user.id)
+    return invitations
+
+
+@app.post(
+    "/invitations/{invitation_id}/respond",
+    response_model=schemas.GroupInvitation,
+)
+def respond_to_invitation(
+    action_data: schemas.InvitationAction,
+    invitation: models.GroupInvitation = Depends(get_pending_invitation_as_invitee), 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """
+    Respond to a pending invitation (accept or reject).
+    Only the invitee can respond.
+    """
+    if action_data.action.lower() == "accept":
+        db_member = crud.add_group_member(
+            db,
+            group_id=invitation.group_id,
+            user_id=current_user.id,
+            inviter_username=invitation.inviter.username 
+        )
+        if db_member is None:
+            invitation.status = models.InvitationStatus.REJECTED
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User is already a member of this group (invitation voided)"
+            )
+
+        invitation.status = models.InvitationStatus.ACCEPTED
+        db.add(invitation)
+        db.commit()
+        db.refresh(invitation)
+        return invitation
+
+    elif action_data.action.lower() == "reject":
+        invitation.status = models.InvitationStatus.REJECTED
+        db.add(invitation)
+        db.commit()
+        db.refresh(invitation)
+        return invitation
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid action. Must be 'accept' or 'reject'."
+        )
+
+# -------------- END 28 Oct --------------------------------- #
+
 # ----------- Expense Routes (US7, US9) -----------
-# *********** rewrite the create_expense_in_group function to include expense splits *********** #
 @app.post("/groups/{group_id}/expenses", response_model=schemas.ExpenseWithSplits, status_code=status.HTTP_201_CREATED)
 def create_expense_in_group(
     group_id: int,
@@ -440,13 +518,7 @@ def create_expense_in_group(
         creator_id=current_user.id,
         expense=expense_data 
     )
-    
-    return schemas.ExpenseWithSplits(
-        **result["expense"].__dict__,
-        splits=result["splits"],
-        #split_type=result["split_type"]
-    )
-
+    return result["expense"]
 
 @app.get("/groups/{group_id}/expenses", response_model=List[schemas.ExpenseWithSplits])
 def read_group_expenses(
@@ -480,7 +552,6 @@ def update_expense_in_group(
 
     current_member = crud.get_group_member(db, group_id=group_id, user_id=current_user.id)
     
-    # Check for permission
     is_admin = current_member and current_member.is_admin
     is_creator = db_expense.creator_id == current_user.id
 
@@ -490,17 +561,13 @@ def update_expense_in_group(
             detail="Not authorized to update this expense.",
         )
     
-    # ### FIX START: Add validation for split updates ###
-    # If new splits are provided, we must validate them before passing to crud
     if expense_update.splits is not None:
-        # 1. Check if split_type is also provided
         if expense_update.split_type is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="split_type is required when updating splits"
             )
             
-        # 2. Check if all users in new splits are group members
         for split in expense_update.splits:
             split_member = crud.get_group_member(db, group_id=group_id, user_id=split.user_id)
             if not split_member:
@@ -509,9 +576,7 @@ def update_expense_in_group(
                     detail=f"User {split.user_id} is not a member of this group"
                 )
 
-        # 3. Check totals for "custom" split
         if expense_update.split_type == "custom":
-            # Use the new amount if provided, otherwise the old amount
             total_amount = expense_update.amount if expense_update.amount is not None else db_expense.amount
             
             if not all(s.amount is not None for s in expense_update.splits):
@@ -520,7 +585,6 @@ def update_expense_in_group(
                     detail="Amount is required for all users in custom split mode"
                 )
             
-            # Use .amount as it's required in custom split
             total_provided = sum(split.amount for split in expense_update.splits)
             
             if abs(total_provided - total_amount) > 0.01:
@@ -542,7 +606,6 @@ def update_expense_in_group(
         )
         
     return updated_expense
-    # ### FIX END ###
 
 @app.delete("/groups/{group_id}/expenses/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_expense_from_group(
@@ -563,7 +626,6 @@ def delete_expense_from_group(
 
     current_member = crud.get_group_member(db, group_id=group_id, user_id=current_user.id)
 
-    # Check for permission
     is_admin = current_member and current_member.is_admin
     is_creator = db_expense.creator_id == current_user.id
 
@@ -573,7 +635,6 @@ def delete_expense_from_group(
             detail="Not authorized to delete this expense.",
         )
     
-    #crud.delete_expense(db, expense_id=expense_id)
     crud.delete_expense(db, expense_id=expense_id, user_id=current_user.id)
     return {"message": "Expense deleted successfully"}
 
@@ -606,7 +667,6 @@ def create_new_recurring_expense(
     """
     (US8) Create a recurring expense definition. Any group member can create one.
     """
-
     payer_member = crud.get_group_member(db, group_id=group_id, user_id=recurring_expense.payer_id)
     if not payer_member:
         raise HTTPException(
@@ -634,7 +694,6 @@ def create_new_recurring_expense(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Custom split amounts ({total_provided}) must equal the total recurring expense amount ({recurring_expense.amount})"
             )
-
     return crud.create_recurring_expense(db, group_id=group_id, creator_id=current_user.id, recurring_expense=recurring_expense)
 
 
@@ -702,7 +761,6 @@ def update_existing_recurring_expense(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Custom split amounts ({total_provided}) must equal the total expense amount ({total_amount})"
                 )
-
     return crud.update_recurring_expense(db, recurring_expense_id=recurring_expense_id, expense_update=expense_update, user_id=current_user.id)
 
 
@@ -760,7 +818,6 @@ def create_payment_for_expense(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-
     db_expense = crud.get_expense_by_id(db, expense_id)
     if not db_expense:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
@@ -771,7 +828,6 @@ def create_payment_for_expense(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not a member of this expense's group"
         )
-
     """
     (US9) Create a payment for an expense.
     - Only group members can create payments.
@@ -825,7 +881,6 @@ def get_payment(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Payment not found"
         )
-
     member = crud.get_group_member(db, group_id=payment.expense.group_id, user_id=current_user.id)
     if not member:
         raise HTTPException(
@@ -842,7 +897,6 @@ def update_payment(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-
     payment = crud.get_payment(db, payment_id=payment_id)
     if not payment:
         raise HTTPException(
@@ -879,7 +933,6 @@ def delete_payment(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-
     payment = crud.get_payment(db, payment_id=payment_id)
     if not payment:
         raise HTTPException(
@@ -893,12 +946,14 @@ def delete_payment(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not authorized to delete this payment"
         )
+    is_admin=member.is_admin
 
     try:
         success = crud.delete_payment(
             db=db,
             payment_id=payment_id,
-            current_user_id=current_user.id
+            current_user_id=current_user.id,
+            is_admin=is_admin
         )
         if not success:
              raise HTTPException(status_code=400, detail="Payment could not be deleted")
@@ -917,7 +972,6 @@ def get_user_expense_balance(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-
     db_expense = crud.get_expense_by_id(db, expense_id)
     if not db_expense:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
@@ -938,7 +992,6 @@ def get_user_expense_balance(
    
     balance = crud.calculate_expense_balance(db, expense_id=expense_id, user_id=user_id)
     
-    # Calculate total paid amount
     total_paid = db.query(func.sum(models.Payment.amount)).filter(
         models.Payment.expense_id == expense_id,
         models.Payment.from_user_id == user_id
@@ -970,7 +1023,6 @@ def get_user_expense_balance(
     }
 
 # *********** end of Payment & Balance *********** #
-
 
 @app.get("/groups/{group_id}/audit-trail", response_model=List[schemas.AuditLog])
 def read_audit_trail(

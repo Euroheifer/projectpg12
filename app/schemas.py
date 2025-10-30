@@ -1,6 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Dict, Any
-from datetime import date, datetime # add my sunzhe 16 Oct for US 6+7+8
+from datetime import date, datetime 
+from app.models import InvitationStatus  
 
 # ----------- User Schemas -----------
 class UserBase(BaseModel):
@@ -26,6 +27,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
+    
     email: Optional[str] = None
 
 
@@ -88,12 +90,47 @@ class GroupMemberUpdate(BaseModel):
 class GroupMemberAdminUpdate(BaseModel):
     is_admin: bool
 
+# ----------- Group Invitation Schemas -----------
+
+class GroupInvitationCreate(BaseModel):
+    invitee_email: EmailStr
+
+
+class InvitationAction(BaseModel):
+    action: str  # must be "accept" or "reject"
+
+
+class GroupInvitation(BaseModel):
+    id: int
+    group_id: int
+    inviter_id: int
+    invitee_id: int
+    status: InvitationStatus
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class GroupInvitationResponse(BaseModel):
+    id: int
+    status: InvitationStatus
+    group: Group  
+    inviter: User 
+    invitee: User
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # ----------- Expense Schemas (US7, US9) -----------
 
 class ExpenseBase(BaseModel):
     description: str
     amount: float
     payer_id: int
+    image_url: Optional[str] = None  
 
 class ExpenseCreate(ExpenseBase):
     date: Optional[date] = None # For INPUT, date is optional
@@ -103,7 +140,7 @@ class ExpenseUpdate(BaseModel):
     amount: Optional[float] = None
     payer_id: Optional[int] = None
     date: Optional[date] = None
-    # add by sunzhe 22 Oct for payment update with splits
+    image_url: Optional[str] = None 
     split_type: Optional[str] = None
     splits: Optional[List['ExpenseSplitCreate']] = None # Use string forward reference
 
@@ -113,7 +150,7 @@ class Expense(ExpenseBase):
     creator_id: int
     date: date # For OUTPUT, date is required and will always be present
 
-    split_type: str # add by sunzhe 22 Oct for payment update with splits
+    split_type: str 
     class Config:
         from_attributes = True
 
@@ -140,8 +177,7 @@ class RecurringExpenseUpdate(BaseModel):
     is_active: Optional[bool] = None
     payer_id: Optional[int] = None
     split_type: Optional[str] = None
-    splits: Optional[List['ExpenseSplitCreate']] = None 
-
+    splits: Optional[List['ExpenseSplitCreate']] = None
 
 class RecurringExpense(RecurringExpenseBase):
     id: int
@@ -165,8 +201,7 @@ class ExpenseSplitCreate(ExpenseSplitBase):
 
 ExpenseUpdate.model_rebuild() # add by sunzhe 22 Oct to payment update with splits
 RecurringExpenseUpdate.model_rebuild()
-RecurringExpenseCreate.model_rebuild()
-
+RecurringExpenseCreate.model_rebuild() 
 
 class ExpenseSplit(ExpenseSplitBase):
     id: int
@@ -192,6 +227,7 @@ class PaymentBase(BaseModel):
     to_user_id: int   
     amount: float
     description: Optional[str] = None
+    image_url: Optional[str] = None  
     #payment_date: date
 
 class PaymentCreate(PaymentBase):

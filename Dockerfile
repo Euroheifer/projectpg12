@@ -27,5 +27,5 @@ RUN openssl req -x509 -newkey rsa:4096 -nodes -out stag.pem -keyout stag.key -da
 
 # Copy application code
 COPY app/ ./app
-COPY frontend/ ./frontend
+
 

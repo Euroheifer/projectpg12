@@ -11,11 +11,18 @@ from sqlalchemy import (
     Date,
     Text,
     func,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
-from sqlalchemy import JSON #add by sunzhe 20 Oct for US5
-from datetime import date, datetime  
+from sqlalchemy import JSON 
+from datetime import date, datetime
+import enum # add for iter2 28 Oct
+
+class InvitationStatus(enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
 
 
 class User(Base):
@@ -32,6 +39,8 @@ class User(Base):
     # * add for payment
     payments_made = relationship("Payment", foreign_keys="Payment.from_user_id", back_populates="from_user")
     payments_received = relationship("Payment", foreign_keys="Payment.to_user_id", back_populates="to_user")
+    sent_invitations = relationship("GroupInvitation", foreign_keys="GroupInvitation.inviter_id", back_populates="inviter")
+    received_invitations = relationship("GroupInvitation", foreign_keys="GroupInvitation.invitee_id", back_populates="invitee")
 
 
 class Group(Base):
@@ -45,6 +54,7 @@ class Group(Base):
 
     admin = relationship("User", back_populates="groups_created")
     members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
+    invitations = relationship("GroupInvitation", back_populates="group", cascade="all, delete-orphan")
 
    
 
@@ -62,6 +72,29 @@ class GroupMember(Base):
 
     group = relationship("Group", back_populates="members")
     user = relationship("User", back_populates="memberships")
+    __table_args__ = (UniqueConstraint('group_id', 'user_id', name='_group_user_uc'),)
+
+
+class GroupInvitation(Base):
+    __tablename__ = "group_invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    group_id = Column(Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False)
+    inviter_id = Column(Integer, ForeignKey("users.id"), nullable=False)  
+    invitee_id = Column(Integer, ForeignKey("users.id"), nullable=False) 
+
+    status = Column(Enum(InvitationStatus), default=InvitationStatus.PENDING, nullable=False)
+
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    group = relationship("Group", back_populates="invitations")
+    inviter = relationship("User", foreign_keys=[inviter_id], back_populates="sent_invitations")
+    invitee = relationship("User", foreign_keys=[invitee_id], back_populates="received_invitations")
+
+    __table_args__ = (
+        UniqueConstraint('group_id', 'invitee_id', 'status', name='_group_invitee_pending_uc'),
+    )
 
 
 class Expense(Base):
@@ -77,6 +110,8 @@ class Expense(Base):
     payer_id = Column(Integer, ForeignKey("users.id"), nullable=False) # The user who paid for the expense
 
     split_type = Column(String, default="equal") # add by sunzhe for payment update 22 oct
+    
+    image_url = Column(String, nullable=True)
 
     group = relationship("Group")
     creator = relationship("User", foreign_keys=[creator_id])
@@ -144,6 +179,8 @@ class Payment(Base):
     created_at = Column(DateTime, default=datetime.now)
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
+    image_url = Column(String, nullable=True)  
+
     expense = relationship("Expense", back_populates="payments")
     from_user = relationship("User", foreign_keys=[from_user_id], back_populates="payments_made")
     to_user = relationship("User", foreign_keys=[to_user_id], back_populates="payments_received")
