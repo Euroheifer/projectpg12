@@ -150,58 +150,81 @@ async function handleCreateGroupClick() {
 /**
  * 页面加载时的总入口
  */
+// ... (文件顶部的所有 render 和 api 函数保持不变) ...
+
+/**
+ * 页面加载时的总入口 (已修改)
+ */
 async function initializePage() {
-    // 1. 验证用户身份
+    // --- 1. 绑定静态按钮 (立即执行) ---
+    // 无论 API 是否成功，这些按钮都应该工作
+    try {
+        // 菜单按钮
+        document.getElementById('user-display-button').addEventListener('click', toggleUserMenu);
+        document.querySelector('button[onclick="handleMyProfile(); toggleUserMenu();"]').addEventListener('click', () => customAlert('提示', '“我的资料”功能待实现。'));
+        document.querySelector('button[onclick="handleBackToDashboard(); toggleUserMenu();"]').addEventListener('click', () => window.location.href = '/home');
+        document.querySelector('button[onclick="showLogoutConfirmation()"]').addEventListener('click', showLogoutConfirmation);
+
+        // 退出登录弹窗按钮
+        document.querySelector('button[onclick="closeLogoutConfirm()"]').addEventListener('click', closeLogoutConfirm);
+        document.querySelector('button[onclick="confirmLogout()"]').addEventListener('click', confirmLogout);
+
+        // 自定义弹窗按钮
+        document.querySelector('button[onclick="closeCustomAlert()"]').addEventListener('click', closeCustomAlert);
+
+        // 创建群组弹窗按钮
+        document.querySelector('button[onclick="handleCreateGroup()"]').addEventListener('click', () => document.getElementById('create-group-modal').classList.remove('hidden'));
+        document.querySelector('button[onclick="closeCreateGroupModal()"]').addEventListener('click', closeCreateGroupModal);
+        document.querySelector('button[onclick="createNewGroup()"]').addEventListener('click', handleCreateGroupClick);
+
+        // 模拟邀请按钮
+        document.getElementById('simulate-invite-btn').addEventListener('click', () => customAlert('提示', '这是一个模拟功能。真实的邀请会通过 API 自动加载。'));
+
+        // 全局点击关闭菜单
+        document.addEventListener('click', (event) => {
+            const menuContainer = document.getElementById('user-menu-container');
+            if (isMenuOpen && menuContainer && !menuContainer.contains(event.target)) {
+                toggleUserMenu();
+            }
+        });
+    } catch (e) {
+        console.error("绑定静态按钮时出错:", e);
+        // 即使绑定失败，也继续尝试加载数据
+    }
+
+    // --- 2. 验证用户身份并加载数据 ---
     try {
         currentUser = await getCurrentUser(getAuthToken());
         if (!currentUser) {
             window.location.href = '/login'; // 未登录，跳转
             return;
         }
-    } catch (error) {
-        clearAuthData(); // Token 无效或过期
-        window.location.href = '/login';
-        return;
-    }
 
-    // 2. 填充通用 UI (导航栏)
-    document.getElementById('user-display').textContent = currentUser.username;
+        // 填充导航栏用户名
+        document.getElementById('user-display').textContent = currentUser.username;
 
-    // 3. 加载此页面特定的动态内容
-    await loadUserGroups();
-    await loadUserInvitations();
-
-    // 4. 绑定所有静态按钮的事件
-    // (注意: 动态按钮, 如"接受", 是在 renderInvitations 中绑定的)
-
-    // 菜单按钮
-    document.getElementById('user-display-button').addEventListener('click', toggleUserMenu);
-    document.querySelector('button[onclick="handleMyProfile(); toggleUserMenu();"]').addEventListener('click', () => customAlert('提示', '“我的资料”功能待实现。'));
-    document.querySelector('button[onclick="handleBackToDashboard(); toggleUserMenu();"]').addEventListener('click', () => window.location.href = '/home');
-    document.querySelector('button[onclick="showLogoutConfirmation()"]').addEventListener('click', showLogoutConfirmation);
-
-    // 退出登录弹窗按钮
-    document.querySelector('button[onclick="closeLogoutConfirm()"]').addEventListener('click', closeLogoutConfirm);
-    document.querySelector('button[onclick="confirmLogout()"]').addEventListener('click', confirmLogout);
-
-    // 自定义弹窗按钮
-    document.querySelector('button[onclick="closeCustomAlert()"]').addEventListener('click', closeCustomAlert);
-
-    // 创建群组弹窗按钮
-    document.querySelector('button[onclick="handleCreateGroup()"]').addEventListener('click', () => document.getElementById('create-group-modal').classList.remove('hidden'));
-    document.querySelector('button[onclick="closeCreateGroupModal()"]').addEventListener('click', closeCreateGroupModal);
-    document.querySelector('button[onclick="createNewGroup()"]').addEventListener('click', handleCreateGroupClick);
-
-    // 模拟邀请按钮
-    document.getElementById('simulate-invite-btn').addEventListener('click', () => customAlert('提示', '这是一个模拟功能。真实的邀请会通过 API 自动加载。'));
-
-    // 全局点击关闭菜单
-    document.addEventListener('click', (event) => {
-        const menuContainer = document.getElementById('user-menu-container');
-        if (isMenuOpen && menuContainer && !menuContainer.contains(event.target)) {
-            toggleUserMenu();
+        // --- 3. 加载动态内容 (使用 try/catch) ---
+        // 现在，即使一个加载失败，也不会阻止其他加载
+        try {
+            await loadUserGroups();
+        } catch (groupError) {
+            console.error("加载群组失败:", groupError);
+            customAlert('加载错误', '无法加载您的群组列表。');
         }
-    });
+
+        try {
+            await loadUserInvitations();
+        } catch (inviteError) {
+            console.error("加载邀请失败:", inviteError);
+            customAlert('加载错误', '无法加载您的邀请列表。');
+        }
+
+    } catch (authError) {
+        // getCurrentUser 失败 (例如 token 过期)
+        console.error("身份验证失败:", authError);
+        clearAuthData();
+        window.location.href = '/login';
+    }
 }
 
 // 页面加载时执行
