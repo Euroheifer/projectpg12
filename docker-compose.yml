@@ -75,7 +75,7 @@ services:
       PYTHONUNBUFFERED: 1
     # <<<<<<<<<<<<<<< 443 HTTPS Only >>>>>>>>>>>>>>>
     ports:
-      - "443:443"
+      - "8443:443"
     command: >
       sh -c "export PYTHONPATH=/app && 
              python /app/app/create_tables.py && 

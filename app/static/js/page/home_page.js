@@ -156,7 +156,7 @@ function renderGroups(groups) {
  */
 async function handleInviteResponseClick(invitationId, action) {
     try {
-        await respondToInvitation(invitationId, action); //
+        await respondToInvitation(invitationId); //
         customAlert('成功', `邀请已${action === 'accept' ? '接受' : '拒绝'}！`);
         await loadUserInvitations(); // 重新加载邀请列表
         if (action === 'accept') {
@@ -211,7 +211,10 @@ function toggleUserMenu() {
  * UI 处理: 显示登出确认
  */
 function showLogoutConfirmation() {
-    toggleUserMenu();
+    // 确保菜单是关闭的
+    if (isMenuOpen) {
+        toggleUserMenu();
+    }
     const modal = document.getElementById('logout-confirm-modal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -260,22 +263,89 @@ function showCreateGroupModal() {
  */
 function closeCreateGroupModal() {
     document.getElementById('create-group-modal').classList.add('hidden');
-    document.getElementById('group-name').value = '';
+    // 重置输入框
+    const groupNameInput = document.getElementById('group-name');
+    if (groupNameInput) {
+        groupNameInput.value = '';
+    }
 }
 
+/**
+ * API 调用 (READ): 加载当前用户的所有群组
+ * (这是您缺少的函数)
+ */
+async function loadUserGroups() {
+    const token = getAuthToken();
+    const container = document.getElementById('my-groups-list');
+    const emptyState = document.getElementById('groups-empty-state');
+    if (!container || !emptyState) {
+        console.warn('无法在 home.html 上找到群组列表容器。');
+        return;
+    }
+
+    try {
+        // API 路由: @app.get("/groups/", ...)
+        const response = await fetch('/groups/', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!response.ok) {
+            throw new Error(`获取群组失败: ${response.statusText}`);
+        }
+        
+        const groups = await response.json();
+        renderGroups(groups); // 调用渲染函数
+
+    } catch (error) {
+        console.error(error);
+        emptyState.textContent = '无法加载群组列表。';
+        emptyState.classList.remove('hidden');
+    }
+}
+
+/**
+ * API 调用 (READ): 加载待处理的邀请
+ * (这是您缺少的函数)
+ */
+async function loadUserInvitations() {
+    const token = getAuthToken();
+    const container = document.getElementById('invitation-list-container');
+    const emptyState = document.getElementById('empty-state');
+    if (!container || !emptyState) {
+        console.warn('无法在 home.html 上找到邀请列表容器。');
+        return;
+    }
+
+    try {
+        // API 路由: @app.get("/invitations/me", ...)
+        const response = await fetch('/invitations/me', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('获取邀请失败');
+
+        const invitations = await response.json();
+        renderInvitations(invitations); // 调用渲染函数
+
+    } catch (error) {
+        console.error(error);
+        emptyState.textContent = '无法加载邀请列表。';
+        emptyState.classList.remove('hidden');
+    }
+}
 
 // --- 4. 页面入口 (Page Entry Point) ---
 
 /**
- * 页面加载时的总入口
+ * 页面加载时的总入口 (已修改，修复了按钮无反应的问题)
  */
 async function initializePage() {
+    console.log("home_page.js 初始化...");
+
     // --- 1. 绑定静态按钮 (立即执行) ---
     // 无论 API 是否成功，这些按钮都应该工作
     try {
         // 导航栏用户菜单
         document.getElementById('user-display-button').addEventListener('click', toggleUserMenu);
-        // (注意：我们使用 data-action 属性来查找按钮，而不是旧的 onclick 文本)
         document.getElementById('profile-button').addEventListener('click', () => {
             customAlert('提示', '“我的资料”功能待实现。');
             toggleUserMenu();
@@ -308,6 +378,7 @@ async function initializePage() {
                 toggleUserMenu();
             }
         });
+        console.log("静态按钮绑定完成。");
     } catch (e) {
         console.error("绑定静态按钮时出错:", e);
         // 即使绑定失败，也继续尝试加载数据
@@ -323,18 +394,23 @@ async function initializePage() {
         
         // 填充导航栏用户名
         document.getElementById('user-display').textContent = currentUser.username;
+        console.log(`用户 ${currentUser.username} 已登录。`);
 
         // --- 3. 加载动态内容 (使用 try/catch) ---
         // 现在，即使一个加载失败，也不会阻止其他加载
         try {
+            console.log("正在加载群组...");
             await loadUserGroups();
+            console.log("群组加载完毕。");
         } catch (groupError) {
             console.error("加载群组失败:", groupError);
             customAlert('加载错误', '无法加载您的群组列表。');
         }
 
         try {
+            console.log("正在加载邀请...");
             await loadUserInvitations();
+            console.log("邀请加载完毕。");
         } catch (inviteError) {
             console.error("加载邀请失败:", inviteError);
             customAlert('加载错误', '无法加载您的邀请列表。');
