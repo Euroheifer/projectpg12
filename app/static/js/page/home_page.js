@@ -156,7 +156,7 @@ function renderGroups(groups) {
  */
 async function handleInviteResponseClick(invitationId, action) {
     try {
-        await respondToInvitation(invitationId); //
+        await respondToInvitation(invitationId, action); //
         customAlert('成功', `邀请已${action === 'accept' ? '接受' : '拒绝'}！`);
         await loadUserInvitations(); // 重新加载邀请列表
         if (action === 'accept') {
