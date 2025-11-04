@@ -197,7 +197,7 @@
                 </button>
 
                 <h2 id="group-name-display" class="text-3xl font-extrabold text-gray-900 mb-4 sm:mb-0">
-                    周末旅行基金 <span class="text-sm font-normal text-gray-500">(ID: 1)</span>
+                    加载中... <span class="text-sm font-normal text-gray-500">(ID: -)</span>
                 </h2>
                 <!-- 添加的管理员徽章
                 <span id="admin-badge" class="admin-only ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
@@ -395,7 +395,7 @@
                                 </label>
                                 <input type="text" id="group-name-input"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                                    placeholder="输入群组名称" value="周末旅行基金">
+                                    placeholder="输入群组名称" value="">
                                 <p class="text-xs text-gray-500 mt-1">群组名称将显示在所有成员界面中</p>
                             </div>
 
@@ -406,7 +406,7 @@
                                 </label>
                                 <textarea id="group-description-input" rows="3"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                                    placeholder="描述这个群组的用途...">用于记录周末旅行相关费用</textarea>
+                                    placeholder="描述这个群组的用途..."></textarea>
                             </div>
 
                             <div class="flex justify-end space-x-3 pt-2">
@@ -584,7 +584,7 @@
 
         <h2 class="text-2xl font-bold text-gray-900 mb-6 border-b pb-4">添加新费用</h2>
 
-        <form id="expense-form">
+        <form id="expense-form" onsubmit="handleSaveExpense(event)">
 
             <div class="space-y-6">
 
@@ -1323,7 +1323,8 @@
         if (modal) {
             modal.classList.remove('hidden');
         } else {
-            alert('添加费用功能暂时不可用，请刷新页面重试');
+            // 打开添加费用模态框
+            showAddExpenseModal();
         }
     };
     
@@ -1355,6 +1356,59 @@
         }
     };
     
+    // 取消操作
+    window.handleCancel = function() {
+        const form = document.getElementById('expense-form');
+        if (form) {
+            form.reset();
+        }
+        closeModal('add-expense-modal');
+    };
+
+    // 保存费用
+    window.handleSaveExpense = async function(event) {
+        event.preventDefault();
+        
+        try {
+            const form = document.getElementById('expense-form');
+            const formData = new FormData(form);
+            
+            const expenseData = {
+                description: formData.get('description'),
+                amount: parseFloat(formData.get('amount')),
+                payer_id: parseInt(formData.get('payer')),
+                category: formData.get('category') || '其他',
+                date: formData.get('date') || new Date().toISOString().split('T')[0]
+            };
+            
+            const groupId = getGroupId();
+            const token = getToken();
+            
+            const response = await fetch(`/api/groups/${groupId}/expenses`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(expenseData)
+            });
+            
+            if (response.ok) {
+                alert('费用添加成功！');
+                closeModal('add-expense-modal');
+                form.reset();
+                // 重新加载数据
+                loadGroupData();
+            } else {
+                const error = await response.json();
+                alert('添加费用失败: ' + (error.detail || '未知错误'));
+            }
+        } catch (error) {
+            console.error('添加费用失败:', error);
+            alert('添加费用失败，请检查网络连接');
+        }
+    };
+
     // 模态框处理函数
     window.handleExpenseCancel = function() {
         window.closeModal('add-expense-modal');
@@ -1504,6 +1558,215 @@ function rebindAllEvents() {
     
     console.log('✅ 群组页面所有按钮事件已重新绑定');
 }
+
+// 添加动态数据加载功能
+function getToken() {
+    return localStorage.getItem('access_token');
+}
+
+function getGroupId() {
+    const path = window.location.pathname;
+    const match = path.match(/\/groups\/(\d+)/);
+    return match ? parseInt(match[1]) : 1;
+}
+
+// 加载群组数据
+async function loadGroupData() {
+    try {
+        const groupId = getGroupId();
+        const token = getToken();
+        
+        if (!token) {
+            console.error('未找到访问令牌');
+            return;
+        }
+        
+        const response = await fetch(`/api/groups/${groupId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const groupData = await response.json();
+            updateGroupDisplay(groupData);
+            await loadGroupBalance(groupId);
+            await loadMembers(groupId);
+        } else {
+            console.error('获取群组数据失败:', response.status);
+        }
+    } catch (error) {
+        console.error('加载群组数据失败:', error);
+    }
+}
+
+// 更新群组显示
+function updateGroupDisplay(groupData) {
+    const nameElement = document.getElementById('group-name-display');
+    const nameInput = document.getElementById('group-name-input');
+    const descInput = document.getElementById('group-description-input');
+    
+    if (nameElement) {
+        nameElement.innerHTML = `${groupData.name} <span class="text-sm font-normal text-gray-500">(ID: ${groupData.id})</span>`;
+    }
+    if (nameInput) {
+        nameInput.value = groupData.name || '';
+    }
+    if (descInput) {
+        descInput.value = groupData.description || '';
+    }
+}
+
+// 加载群组余额
+async function loadGroupBalance(groupId) {
+    try {
+        const token = getToken();
+        const response = await fetch(`/api/groups/${groupId}/balances`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const balanceData = await response.json();
+            updateBalanceDisplay(balanceData);
+        } else {
+            console.error('获取余额数据失败:', response.status);
+        }
+    } catch (error) {
+        console.error('加载余额数据失败:', error);
+    }
+}
+
+// 更新余额显示
+function updateBalanceDisplay(balanceData) {
+    const balanceOwed = document.getElementById('balance-owed');
+    const balanceOwedCount = document.getElementById('balance-owed-count');
+    const balanceOwingMe = document.getElementById('balance-owing-me');
+    const balanceOwingCount = document.getElementById('balance-owing-count');
+    const settlementCount = document.getElementById('settlement-count');
+    
+    if (balanceOwed) {
+        balanceOwed.textContent = `¥${(balanceData.total_owed || 0).toFixed(2)}`;
+    }
+    if (balanceOwedCount) {
+        balanceOwedCount.textContent = balanceData.owed_to_count || 0;
+    }
+    if (balanceOwingMe) {
+        balanceOwingMe.textContent = `¥${(balanceData.total_owing || 0).toFixed(2)}`;
+    }
+    if (balanceOwingCount) {
+        balanceOwingCount.textContent = balanceData.owing_from_count || 0;
+    }
+    if (settlementCount) {
+        const totalCount = (balanceData.owed_to_count || 0) + (balanceData.owing_from_count || 0);
+        settlementCount.textContent = totalCount;
+    }
+}
+
+// 加载成员列表
+async function loadMembers(groupId) {
+    try {
+        const token = getToken();
+        const response = await fetch(`/api/groups/${groupId}/members`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const membersData = await response.json();
+            updateExpenseModalMembers(membersData);
+        } else {
+            console.error('获取成员列表失败:', response.status);
+        }
+    } catch (error) {
+        console.error('加载成员列表失败:', error);
+    }
+}
+
+// 更新费用模态框中的成员选择
+function updateExpenseModalMembers(members) {
+    const payerSelect = document.getElementById('expense-payer');
+    if (payerSelect) {
+        // 清空现有选项
+        payerSelect.innerHTML = '<option value="">选择付款人</option>';
+        
+        // 添加成员选项
+        members.forEach(member => {
+            const option = document.createElement('option');
+            option.value = member.id;
+            option.textContent = member.username;
+            payerSelect.appendChild(option);
+        });
+    }
+    
+    // 更新结算相关成员选择
+    const settleSelects = document.querySelectorAll('[id*="settle-member"]');
+    settleSelects.forEach(select => {
+        if (select) {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">选择成员</option>';
+            members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.id;
+                option.textContent = member.username;
+                select.appendChild(option);
+            });
+            // 恢复之前选中的值
+            if (currentValue) {
+                select.value = currentValue;
+            }
+        }
+    });
+}
+
+// 显示添加费用模态框
+function showAddExpenseModal() {
+    const modal = document.getElementById('add-expense-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// 关闭模态框
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.add('hidden');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// 页面加载完成后初始化
+document.addEventListener('DOMContentLoaded', function() {
+    loadGroupData();
+    
+    // 绑定关闭模态框事件
+    const closeButtons = document.querySelectorAll('.close-modal, [onclick*="closeModal"]');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const modal = this.closest('[id$="-modal"]');
+            if (modal) {
+                closeModal(modal.id);
+            }
+        });
+    });
+    
+    // ESC键关闭模态框
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modals = document.querySelectorAll('[id$="-modal"]:not(.hidden)');
+            modals.forEach(modal => {
+                closeModal(modal.id);
+            });
+        }
+    });
+});
 </script>
 
 {% endblock %}
