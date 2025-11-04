@@ -1,5 +1,5 @@
-from fastapi import HTTPException, status, Depends
-from sqlalchemy.orm import Session, joinedload 
+from fastapi import HTTPException, status, Depends, UploadFile
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import insert, delete
 from passlib.context import CryptContext
 from typing import Optional, List, Dict, Set, Any
@@ -7,12 +7,15 @@ from collections import defaultdict
 from sqlalchemy import func
 from decimal import Decimal
 import logging
-import json 
-from datetime import date, datetime, timedelta 
+import json
+from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from app import models, schemas, auth
 from fastapi.encoders import jsonable_encoder
-
+# --- for img 03 Nov ------
+import uuid  # 🚨 新增：用于生成唯一文件名
+import shutil # 🚨 新增：用于将文件流写入磁盘
+import os     # 🚨 新增：用于创建文件夹
 
 # ----------- User CRUD -----------
 def get_user_by_email(db: Session, email: str):
@@ -125,6 +128,7 @@ def get_group_members(db: Session, group_id: int):
     return (
         db.query(models.GroupMember)
         .filter(models.GroupMember.group_id == group_id)
+        .options(joinedload(models.GroupMember.user))  # add by sunzhe 03 Nov for load username
         .all()
     )
 
@@ -279,7 +283,7 @@ def _create_splits(db: Session, expense: models.Expense, splits_in: List[schemas
     """
     db_splits = []
     expense_amount_cents = expense.amount # amount 现在是整数 (美分)
-    
+
     if split_type == "equal":
         member_count = len(splits_in)
         if member_count == 0:
@@ -290,13 +294,13 @@ def _create_splits(db: Session, expense: models.Expense, splits_in: List[schemas
         remainder_cents = expense_amount_cents % member_count
 
         total_cents_allocated = 0
-        
+
         for i, split in enumerate(splits_in):
             amount_cents = equal_amount_cents
             if i < remainder_cents:
                 # 将余下的美分分配给前几个成员
                 amount_cents += 1
-            
+
             total_cents_allocated += amount_cents
 
             db_split = models.ExpenseSplit(
@@ -308,7 +312,7 @@ def _create_splits(db: Session, expense: models.Expense, splits_in: List[schemas
             )
             db.add(db_split)
             db_splits.append(db_split)
-        
+
         if total_cents_allocated != expense_amount_cents:
              # 安全检查，理论上不应发生
              logging.warning(f"Equal split total ({total_cents_allocated}) does not match expense amount ({expense_amount_cents}) for expense {expense.id}")
@@ -318,7 +322,7 @@ def _create_splits(db: Session, expense: models.Expense, splits_in: List[schemas
         for split in splits_in:
             if split.amount is None:
                 raise ValueError(f"Amount is required for user {split.user_id} in custom split")
-            
+
             # amount 现在是整数 (美分)
             split_amount_cents = split.amount
             total_provided_cents += split_amount_cents
@@ -340,18 +344,63 @@ def _create_splits(db: Session, expense: models.Expense, splits_in: List[schemas
     return db_splits
 
 
-def create_expense(db: Session, group_id: int, creator_id: int, expense: schemas.ExpenseCreateWithSplits) -> Dict:
+#def create_expense(db: Session, group_id: int, creator_id: int, expense: schemas.ExpenseCreateWithSplits) -> Dict:
+def create_expense(db: Session, group_id: int, creator_id: int, expense: schemas.ExpenseCreateWithSplits, image_file: Optional[UploadFile] = None) -> Dict:
     """Create a new expense and its splits within a group."""
+# ---------------------- change date 03 Nov ------------------   
+    if expense.date is not None and isinstance(expense.date, str):
+        try:
+            # 将字符串 "YYYY-MM-DD" 转换为 Python date 对象
+            expense_date = datetime.strptime(expense.date, "%Y-%m-%d").date()
+        except ValueError:
+            # 如果格式错误，则使用今天的日期，或者抛出 HTTP 400 错误
+            logging.error(f"Invalid date format received: {expense.date}")
+            expense_date = date.today()
+    elif expense.date is None:
+        expense_date = date.today()
+    else:
+        # 如果它是 None，或者已经是 date 对象，则直接使用
+        expense_date = expense.date
+# --------------------- end -----------------------------------#
+# ------------- add for img 03 Nov ----------------------------#
+# 🚨 新增：文件上传和 URL 处理逻辑
+    image_url = None
+    if image_file and image_file.filename:
+        # 1. 设置存储目录 (app/static/uploads)
+        upload_dir = "app/static/uploads"
+        os.makedirs(upload_dir, exist_ok=True) # 确保目录存在
+        
+        # 2. 生成唯一文件名 (保留原始后缀)
+        file_extension = os.path.splitext(image_file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        file_location = os.path.join(upload_dir, unique_filename)
 
+        try:
+            # 3. 将文件内容写入磁盘
+            with open(file_location, "wb") as file_object:
+                shutil.copyfileobj(image_file.file, file_object)
+            
+            # 4. 设置公共访问 URL (对应 main1.py 中的 app.mount("/static", ...))
+            image_url = f"/static/uploads/{unique_filename}"
+            logging.info(f"Successfully saved file to: {file_location}")
+        except Exception as e:
+            logging.error(f"Failed to save uploaded file '{image_file.filename}': {e}")
+            image_file.file.close() # 确保关闭文件流
+            # 如果文件保存失败，不影响费用创建，但 image_url 为 None
+    # 🚨 结束文件上传处理
+# -------------------- END -----------------------------------
     db_expense = models.Expense(
         description=expense.description,
         amount=expense.amount,
         payer_id=expense.payer_id,
-        date=expense.date if expense.date else date.today(),
+        #03 nov 
+        date=expense_date,
         group_id=group_id,
         creator_id=creator_id,
         split_type=expense.split_type,
-        image_url=getattr(expense, 'image_url', None)
+        #03 Nov img 
+        image_url=image_url
+        #image_url=getattr(expense, 'image_url', None)
     )
     db.add(db_expense)
     db.flush() # Get the expense ID
@@ -378,7 +427,7 @@ def create_expense(db: Session, group_id: int, creator_id: int, expense: schemas
         action="CREATE_EXPENSE",
         details={
             "expense_id": db_expense.id,
-            "new_value": original_input_log, 
+            "new_value": original_input_log,
             "calculated_splits": calculated_splits_for_log
         }
     )
@@ -998,31 +1047,31 @@ def calculate_expense_balance(db: Session, expense_id: int, user_id: int) -> flo
         for split in expense.splits:
             if split.user_id == user_id:
                 user_share_cents = split.amount # amount 是整数
-                break 
+                break
 
     user_paid_initially_cents = 0
     expense_amount_cents = expense.amount # amount 是整数
     if expense.payer_id == user_id:
         user_paid_initially_cents = expense_amount_cents
 
-    base_balance_cents = user_paid_initially_cents - user_share_cents
+    base_balance_cents =nitially_cents - user_share_cents
 
     payments_received_sum = db.query(func.sum(models.Payment.amount)).filter(
         models.Payment.expense_id == expense_id,
-        models.Payment.to_user_id == user_id
+        models.Payment.to_user_i
     ).scalar() or 0 # 默认值为 0 (整数)
     payments_received_cents = payments_received_sum
 
     payments_made_sum = db.query(func.sum(models.Payment.amount)).filter(
         models.Payment.expense_id == expense_id,
         models.Payment.from_user_id == user_id
-    ).scalar() or 0 # 默认值为 0 (整数)
+    ).scalar() or 0 # 默认值为 0)
     payments_made_cents = payments_made_sum
 
     final_balance_cents = base_balance_cents - payments_received_cents + payments_made_cents
 
     return final_balance_cents
-# ************************************************************************ #
+# ******************************************************************** #
 
 # ----------- Audit Log CRUD -----------
 
@@ -1075,4 +1124,3 @@ def get_audit_logs(db: Session, group_id: int):
     return db.query(models.AuditLog).options(
         joinedload(models.AuditLog.user)
     ).filter(models.AuditLog.group_id == group_id).order_by(models.AuditLog.timestamp.desc()).all()
-

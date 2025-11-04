@@ -103,7 +103,7 @@ class Expense(Base):
     id = Column(Integer, primary_key=True, index=True)
     description = Column(String, nullable=False)
     amount = Column(Integer, nullable=False)
-    date = Column(Date, nullable=False, default=func.current_date())
+    date = Column(Date, nullable=True, default=func.current_date()) # 03 Nov change nullable to True
 
     group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False) # The user who created the expense

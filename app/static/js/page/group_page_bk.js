@@ -42,16 +42,16 @@ import {
     inviteNewMember
 } from '../api/members.js';
 
-// --- Added: Function to get user info, adapted from home_page.js edit by sunzhe ---
+// --- 新增：从 home_page.js 借鉴的获取用户信息函数 edit by sunzhe ---
 async function fetchCurrentUser() {
     try {
-        const token = getAuthToken(); // Ensure getAuthToken is imported from utils
+        const token = getAuthToken(); // 确保 getAuthToken 已从 utils 导入
         if (!token) {
-            console.warn('Authentication token not found, cannot fetch user');
+            console.warn('未找到认证token，无法获取用户');
             return null;
         }
 
-        console.log('Fetching user info from API (/me)...');
+        console.log('正在从API (/me) 获取用户信息...');
         const response = await fetch('/me', {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -60,44 +60,44 @@ async function fetchCurrentUser() {
 
         if (response.ok) {
             const user = await response.json();
-            console.log('User info from API (/me):', user);
+            console.log('从API (/me) 获取的用户信息:', user);
             return user;
         } else {
-            console.error('Failed to fetch user info, status code:', response.status);
+            console.error('获取用户信息失败，状态码:', response.status);
             const errorText = await response.text();
-            console.error('Error message:', errorText);
+            console.error('错误信息:', errorText);
             return null;
         }
     } catch (error) {
-        console.error('Failed to fetch user info:', error);
+        console.error('获取用户信息失败:', error);
         return null;
     }
 }
 
-// --- Global State and Data ---
+// --- 全局状态和数据 ---
 window.CURRENT_USER_ID = '';
 window.CURRENT_USER_NAME = '';
 window.IS_CURRENT_USER_ADMIN = false;
 window.currentGroupId = null;
 window.currentGroup = null;
 
-// Data Lists
+// 数据列表
 window.groupMembers = [];
 window.expensesList = [];
 window.paymentsList = [];
 window.recurringExpensesList = [];
 
-// Page State
+// 页面状态
 let activeTab = 'expenses';
 
 
 
-//--- Page Initialization ---
+//--- 页面初始化 ---
 async function initializePage() {
-    console.log('Starting group page initialization...');
+    console.log('开始初始化群组页面...');
 
     try {
-        // 1. Verify user identity
+        // 1. 验证用户身份
         const user = await fetchCurrentUser(); //edit by sunzhe
         if (!user) {
             window.location.href = '/login';
@@ -108,72 +108,66 @@ async function initializePage() {
         window.CURRENT_USER_NAME = user.username;
        // document.getElementById('user-display').textContent = window.CURRENT_USER_NAME; // edit by sunzhe
 
-        // 2. Get Group ID from URL path
+        // 2. 从 URL 路径获取 Group ID
         const pathParts = window.location.pathname.split('/');
         window.currentGroupId = pathParts[pathParts.length - 1];
 
-        console.log('Group ID from URL:', window.currentGroupId);
+        console.log('从URL获取的群组ID:', window.currentGroupId);
 
         if (!window.currentGroupId || window.currentGroupId === 'groups') {
-            showCustomAlert('Error', 'Group ID not found');
+            showCustomAlert('错误', '未找到群组 ID');
             setTimeout(() => window.location.href = '/home', 1500);
             return;
         }
 
-        // 3. Load group data and permissions
+        // 3. 加载群组数据和权限
         await loadGroupData();
+	
+	// --- 新增：立即更新群组名称显示 ---
+    	updateGroupNameDisplay();
 
-        // --- Added: Immediately update group name display ---
-        updateGroupNameDisplay();
-
-        // 4. Render UI based on permissions
+        // 4. 根据权限渲染界面
         renderUIByPermission();
 
-        // 5. Bind events and initialize
+        // 5. 绑定事件和初始化
         setupModalCloseHandlers();
         bindEvents();
 
-        // 6. Load data lists
+        // 6. 加载数据列表
         await loadDataLists();
 
-        console.log(`Group page initialization complete - Group: ${window.currentGroupId}, User: ${window.CURRENT_USER_NAME}, Permission: ${window.IS_CURRENT_USER_ADMIN ? 'Admin' : 'Member'}`);
+        console.log(`群组页面初始化完成 - 群组: ${window.currentGroupId}, 用户: ${window.CURRENT_USER_NAME}, 权限: ${window.IS_CURRENT_USER_ADMIN ? '管理员' : '成员'}`);
 
     } catch (error) {
-        console.error('Page initialization failed:', error);
-        showCustomAlert('Error', 'Page initialization failed');
+        console.error('页面初始化失败:', error);
+        showCustomAlert('错误', '页面初始化失败');
     }
 }
 
-
+//--- 数据加载函数 ---
 async function loadGroupData() {
     try {
-        console.log('Starting to load group data, Group ID:', window.currentGroupId);
-
         window.currentGroup = await getGroupData(window.currentGroupId);
-        console.log('Fetched group data:', window.currentGroup);
+	console.log('从API获取的群组数据:', window.currentGroup);
+        //window.IS_CURRENT_USER_ADMIN = window.currentGroup.current_user_role === 'admin' || window.currentGroup.is_admin === true;
+	window.IS_CURRENT_USER_ADMIN = window.currentGroup.admin_id === window.CURRENT_USER_ID;
 
-        // Set admin permission (we can now rely on real data returned from auth.js)
-        window.IS_CURRENT_USER_ADMIN =
-            window.currentGroup.admin_id === window.CURRENT_USER_ID;
-
-        console.log('Permission check result - User:', window.CURRENT_USER_ID, 'is admin:', window.IS_CURRENT_USER_ADMIN);
+        console.log('权限检查结果:', {
+            groupId: window.currentGroupId,
+            groupName: window.currentGroup.name,
+            userRole: window.currentGroup.current_user_role,
+            isAdmin: window.IS_CURRENT_USER_ADMIN
+        });
 
     } catch (error) {
-        console.error('Failed to load group data:', error);
-
-        // --- Fix: No longer call getMockGroupData ---
-        // Use a safe fallback object that doesn't depend on other functions
+        console.error('加载群组数据失败:', error);
         window.currentGroup = {
             id: window.currentGroupId,
-            name: 'Loading Failed',
-            description: error.message, // Show error in description
-            admin_id: null
+            name: '群组',
+            description: '',
+            current_user_role: 'member'
         };
         window.IS_CURRENT_USER_ADMIN = false;
-
-        // Notify user of loading failure
-        showCustomAlert('Failed to load group', error.message);
-        // --- End Fix ---
     }
 }
 
@@ -185,13 +179,13 @@ async function loadDataLists() {
             loadMembersList(),
             loadRecurringExpensesList()
         ]);
-        // --- Added ---
-        // 2. After all lists are loaded, update the counts on the tabs
+	// --- 新增 ---
+        // 2. 在所有列表加载完毕后，更新Tab上的数字
         updateTabCounts();
-        // --- End ---
+        // --- 结束 ---
     } catch (error) {
-        console.error('Failed to load data lists:', error);
-        showCustomAlert('Error', 'Failed to load data');
+        console.error('加载数据列表失败:', error);
+        showCustomAlert('错误', '加载数据失败');
     }
 }
 
@@ -207,19 +201,7 @@ async function loadPaymentsList() {
 
 async function loadMembersList() {
     window.groupMembers = await getGroupMembers(window.currentGroupId);
-    // --- Fix Start ---
-    // Add try...catch to capture rendering errors from renderMemberList
-    try {
-        renderMemberList();
-    } catch (error) {
-        console.error('Failed to render member list (from members.js):', error);
-        // Don't let the whole page crash even if rendering fails
-        const container = document.getElementById('member-list-container');
-        if (container) {
-            container.innerHTML = '<p class="text-red-500 text-center">Error loading member list.</p>';
-        }
-    }
-    // --- Fix End ---
+    renderMemberList();
 }
 
 async function loadRecurringExpensesList() {
@@ -227,36 +209,82 @@ async function loadRecurringExpensesList() {
     refreshRecurringList();
 }
 
-// --- UI Rendering Functions ---
+// --- 界面渲染函数 ---
 
 /**
- * Added function: Render group summary info at the top (balance, settlement, etc.)
- * It depends on data in window.currentGroup
+ * 新增函数：渲染群组顶部的摘要信息（余额、结算等）
+ * 它依赖 window.currentGroup 中的数据
  */
 function renderGroupSummary() {
     if (!window.currentGroup) {
-        console.warn('renderGroupSummary: window.currentGroup is null, skipping render');
+        console.warn('renderGroupSummary: window.currentGroup 为空，跳过渲染');
         return;
     }
 
-    console.log('Rendering group summary info...', window.currentGroup);
+    console.log('正在渲染群组摘要信息...', window.currentGroup);
 
+    // --- 1. 渲染用户结余 ---
+    // !!! 假设：你的 window.currentGroup 对象有 user_balance 字段
+    // !!! 假设：你的 HTML 元素 ID 如下
+    //const balanceLabelEl = document.getElementById('balance-label');
+    //const balanceAmountEl = document.getElementById('balance-amount');
+    //const balanceContextEl = document.getElementById('balance-context');
 
-    // --- 1. Get all HTML elements ---
+    // 尝试从 currentGroup 获取余额信息
+    // 默认值为 0
+    //const balance = window.currentGroup.user_balance || 0;
+    // 默认上下文为空字符串
+    //const balanceContext = window.currentGroup.user_balance_context || ''; 
+    //const balanceAmount = Math.abs(balance).toFixed(2);
+
+    //if (balance < 0) {
+    //    if (balanceLabelEl) balanceLabelEl.textContent = '您欠款(应付)';
+    //    if (balanceAmountEl) {
+    //        balanceAmountEl.textContent = `¥${balanceAmount}`;
+    //        balanceAmountEl.className = 'text-3xl font-bold text-red-500'; // 欠款为红色
+    //    }
+    //} else if (balance > 0) {
+     //   if (balanceLabelEl) balanceLabelEl.textContent = '您被欠(应收)';
+    //    if (balanceAmountEl) {
+     //       balanceAmountEl.textContent = `¥${balanceAmount}`;
+      //      balanceAmountEl.className = 'text-3xl font-bold text-green-500'; // 被欠为绿色
+       // }
+   // } else {
+     //   if (balanceLabelEl) balanceLabelEl.textContent = '您已结清';
+       // if (balanceAmountEl) {
+         //   balanceAmountEl.textContent = '¥0.00';
+          //  balanceAmountEl.className = 'text-3xl font-bold text-gray-700'; // 结清为灰色
+       // }
+   // }
+
+    // 渲染结余上下文，例如 "给 2 位成员"
+    //if (balanceContextEl) {
+     //   balanceContextEl.textContent = balanceContext;
+    //}
+
+    // --- 2. 渲染结算建议 ---
+    // !!! 假设：你的 window.currentGroup 对象有 settlement_summary 字段
+    // !!! 假设：你的 HTML 元素 ID 如下
+    //const settlementSummaryEl = document.getElementById('settlement-summary');
+
+    // 默认值为 "暂无待清算"
+    //const summary = window.currentGroup.settlement_summary || '暂无待清算';
+    
+    // --- 1. 获取所有 HTML 元素 ---
     const owedAmountEl = document.getElementById('balance-owed');
     const owedContextEl = document.getElementById('balance-owed-context');
-
+    
     const owingAmountEl = document.getElementById('balance-owing-me');
     const owingContextEl = document.getElementById('balance-owing-me-context');
-
+    
     const settlementSummaryEl = document.getElementById('settlement-summary-text');
 
-    // --- 2. Render "You Owe" card ---
-    // Default value is 0.00
+    // --- 2. 渲染“您欠款”卡片 ---
+    // 默认值为 0.00
     const balanceOwed = window.currentGroup.user_balance_owed || 0;
-    // Default context is an empty string
-    const owedContext = window.currentGroup.user_balance_owed_context || '';
-
+    // 默认上下文为空字符串
+    const owedContext = window.currentGroup.user_balance_owed_context || ''; 
+    
     if (owedAmountEl) {
         owedAmountEl.textContent = `¥${Number(balanceOwed).toFixed(2)}`;
     }
@@ -264,12 +292,12 @@ function renderGroupSummary() {
         owedContextEl.textContent = owedContext;
     }
 
-    // --- 3. Render "You are Owed" card ---
-    // Default value is 0.00
+    // --- 3. 渲染“被欠款”卡片 ---
+    // 默认值为 0.00
     const balanceOwing = window.currentGroup.user_balance_owing || 0;
-    // Default context is an empty string
-    const owingContext = window.currentGroup.user_balance_owing_context || '';
-
+    // 默认上下文为空字符串
+    const owingContext = window.currentGroup.user_balance_owing_context || ''; 
+    
     if (owingAmountEl) {
         owingAmountEl.textContent = `¥${Number(balanceOwing).toFixed(2)}`;
     }
@@ -277,9 +305,9 @@ function renderGroupSummary() {
         owingContextEl.textContent = owingContext;
     }
 
-    // --- 4. Render "Settlement Suggestion" card ---
-    // Default value is "Nothing to settle"
-    const summary = window.currentGroup.settlement_summary || 'Nothing to settle';
+    // --- 4. 渲染“建议结算”卡片 ---
+    // 默认值为 "暂无待清算"
+    const summary = window.currentGroup.settlement_summary || '暂无待清算';
 
     if (settlementSummaryEl) {
         settlementSummaryEl.textContent = summary;
@@ -290,49 +318,49 @@ function renderGroupSummary() {
 // ----------------- until here sunzhe -----------------------//
 
 function renderUIByPermission() {
-    console.log('Rendering UI - User Permission:', window.IS_CURRENT_USER_ADMIN ? 'Admin' : 'Member');
+    console.log('渲染界面 - 用户权限:', window.IS_CURRENT_USER_ADMIN ? '管理员' : '成员');
 
-// --- Modification Start ---
+// --- 修改开始 ---
 
-    // 1. Render group name (ID and Name)
+    // 1. 渲染群组名称 (ID 和 名字)
     updateGroupNameDisplay();
-
-    // 2. Render group summary (Balance and Settlement)
+    
+    // 2. 渲染群组摘要 (余额和结算)
     renderGroupSummary();
 
-    // 3. Set up admin badge (It will be appended to the group-name-display element)
+    // 3. 设置管理员徽章 (它会附加到 group-name-display 元素上)
     setupAdminBadge();
-
-    // --- Modification End ---
+    
+    // --- 修改结束 ---
 
     toggleAdminElements();
     // updateTabCounts();
     setupFeatureRestrictions();
 
-    // Ensure the correct tab is displayed initially
+    // 确保初始显示正确的标签页
     const initialTab = window.IS_CURRENT_USER_ADMIN ? 'expenses' : 'expenses';
     setActiveTab(initialTab);
 }
-// Set up admin badge - only call once when admin status is known
+// 设置管理员徽章 - 只在知道是管理员时调用一次
 function setupAdminBadge() {
     if (window.IS_CURRENT_USER_ADMIN) {
         const groupNameDisplay = document.getElementById('group-name-display');
         if (groupNameDisplay) {
-            // First, clear any existing badge
+            // 先清除可能存在的旧徽章
             const existingBadge = groupNameDisplay.querySelector('.admin-badge');
             if (existingBadge) {
                 existingBadge.remove();
             }
 
-            // Add new badge
+            // 添加新徽章
             const adminBadge = document.createElement('span');
             adminBadge.className = 'admin-badge ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800';
-            adminBadge.textContent = 'Admin';
+            adminBadge.textContent = '管理员';
             groupNameDisplay.appendChild(adminBadge);
-            console.log('Admin badge added');
+            console.log('已添加管理员徽章');
         }
     } else {
-        // If not admin, ensure badge is removed
+        // 如果不是管理员，确保移除徽章
         const adminBadge = document.querySelector('.admin-badge');
         if (adminBadge) {
             adminBadge.remove();
@@ -342,33 +370,33 @@ function setupAdminBadge() {
 function toggleAdminElements() {
     const adminTabs = ['manage', 'audit'];
 
-    console.log('toggleAdminElements - Current permission:', window.IS_CURRENT_USER_ADMIN);
+    console.log('toggleAdminElements - 当前权限:', window.IS_CURRENT_USER_ADMIN);
 
     if (window.IS_CURRENT_USER_ADMIN) {
-        // Add admin class to body
+        // 添加管理员类到body
         document.body.classList.add('is-admin');
 
-        // Show admin tabs
+        // 显示管理员标签页
         adminTabs.forEach(tab => {
             const tabElement = document.getElementById(`tab-${tab}`);
             if (tabElement) {
                 tabElement.classList.remove('hidden');
-                console.log(`Showing admin tab: ${tab}`);
+                console.log(`显示管理员标签页: ${tab}`);
             }
         });
 
     } else {
-        // Remove admin class
+        // 移除管理员类
         document.body.classList.remove('is-admin');
 
-        // Hide admin tabs
+        // 隐藏管理员标签页
         adminTabs.forEach(tab => {
             const tabElement = document.getElementById(`tab-${tab}`);
             const contentElement = document.getElementById(`tab-content-${tab}`);
 
             if (tabElement) {
                 tabElement.classList.add('hidden');
-                console.log(`Hiding admin tab: ${tab}`);
+                console.log(`隐藏管理员标签页: ${tab}`);
             }
             if (contentElement) {
                 contentElement.classList.add('hidden');
@@ -378,38 +406,42 @@ function toggleAdminElements() {
 }
 
 
+
+//function updateGroupNameDisplay() {
+//    const groupNameDisplay = document.getElementById('group-name-display');
+//    if (groupNameDisplay && window.currentGroup) {
+        // 只更新群组名称，徽章由 setupAdminBadge 处理
+//        const nameSpan = groupNameDisplay.querySelector('span:not(.admin-badge)');
+  //      if (nameSpan) {
+    //        nameSpan.innerHTML = `${window.currentGroup.name} <span class="text-sm font-normal text-gray-500">(ID: ${window.currentGroup.id})</span>`;
+      //  } else {
+        //    groupNameDisplay.innerHTML = `${window.currentGroup.name} <span class="text-sm font-normal text-gray-500">(ID: ${window.currentGroup.id})</span>`;
+        //}
+    //}
+//	    groupNameDisplay.innerHTML = `${window.currentGroup.name} <span class="text-sm font-normal text-gray-500">(ID: ${window.currentGroup.id})</span>`;
+//    }
+//}
+
 function updateGroupNameDisplay() {
     const groupNameDisplay = document.getElementById('group-name-display');
-    if (!groupNameDisplay) {
-        console.error('Could not find group name display element');
-        return;
+    if (groupNameDisplay && window.currentGroup) {
+        // 确保使用正确的群组名称属性
+        const groupName = window.currentGroup.name || '未命名群组';
+        const groupId = window.currentGroup.id || window.currentGroupId;
+
+        groupNameDisplay.innerHTML = `${groupName} <span class="text-sm font-normal text-gray-500">(ID: ${groupId})</span>`;
+
+        console.log('更新群组名称显示:', {
+            name: groupName,
+            id: groupId,
+            fullGroupData: window.currentGroup
+        });
+    } else {
+        console.warn('无法更新群组名称显示:', {
+            groupNameDisplay: !!groupNameDisplay,
+            currentGroup: window.currentGroup
+        });
     }
-
-    if (!window.currentGroup) {
-        console.warn('window.currentGroup is null, cannot update group name');
-        groupNameDisplay.innerHTML = 'Loading group data...';
-        return;
-    }
-
-    // Try different name attributes
-    const groupName =
-        window.currentGroup.name ||
-        window.currentGroup.group_name ||
-        'Unnamed Group';
-
-    const groupId =
-        window.currentGroup.id ||
-        window.currentGroup.group_id ||
-        window.currentGroupId ||
-        'Unknown';
-
-    groupNameDisplay.innerHTML = `${groupName} <span class="text-sm font-normal text-gray-500">(ID: ${groupId})</span>`;
-
-    console.log('Successfully updated group name display:', {
-        name: groupName,
-        id: groupId,
-        fullGroupData: window.currentGroup
-    });
 }
 
 function updateTabCounts() {
@@ -428,7 +460,7 @@ function updateTabCounts() {
 
 function setupFeatureRestrictions() {
     if (!window.IS_CURRENT_USER_ADMIN) {
-        console.log('Restricting member features - current user is not admin');
+        console.log('限制成员功能 - 当前用户不是管理员');
 
         const detailInputs = document.querySelectorAll('#expense-detail-modal input, #expense-detail-modal select');
         detailInputs.forEach(input => {
@@ -450,33 +482,33 @@ function setupFeatureRestrictions() {
     }
 }
 
-// --- Tab Switching Logic ---
+// --- Tab 切换逻辑 ---
 function setActiveTab(tabName) {
-    console.log('Switching to tab:', tabName, 'Permission:', window.IS_CURRENT_USER_ADMIN ? 'Admin' : 'Member');
+    console.log('切换到标签:', tabName, '权限:', window.IS_CURRENT_USER_ADMIN ? '管理员' : '成员');
 
-    // Permission check - only restrict tabs that truly require admin permission
+    // 权限验证 - 只限制真正需要管理员权限的标签
     const adminOnlyTabs = ['manage', 'audit'];
     if (adminOnlyTabs.includes(tabName) && !window.IS_CURRENT_USER_ADMIN) {
-        showCustomAlert('Permission Denied', 'You do not have permission to access this page');
+        showCustomAlert('权限不足', '您没有权限访问此页面');
         return;
     }
 
-    // If already on the current tab, do nothing
+    // 如果已经是当前标签，不执行任何操作
     if (activeTab === tabName) return;
 
-    // Remove active state from all tabs
+    // 移除所有tab的active状态
     const allTabs = document.querySelectorAll('[id^="tab-"]');
     allTabs.forEach(tab => {
         tab.classList.remove('active');
     });
 
-    // Hide all content
+    // 隐藏所有内容
     const allContents = document.querySelectorAll('[id^="tab-content-"]');
     allContents.forEach(content => {
         content.classList.add('hidden');
     });
 
-    // Show current content and set active state
+    // 显示当前内容并设置active状态
     const currentTab = document.getElementById(`tab-${tabName}`);
     const currentContent = document.getElementById(`tab-content-${tabName}`);
 
@@ -488,7 +520,7 @@ function setActiveTab(tabName) {
         currentContent.classList.remove('hidden');
     }
 
-    // Refresh data when switching to the corresponding tab
+    // 切换到对应标签时刷新数据
     switch (tabName) {
         case 'expenses':
             refreshExpensesList();
@@ -503,54 +535,28 @@ function setActiveTab(tabName) {
             renderMemberList();
             break;
         case 'invite':
-            // Invite page needs no special handling
+            // 邀请页面不需要特殊处理
             break;
         case 'manage':
-            // Manage page special handling
+            // 管理页面特殊处理
             break;
         case 'audit':
-            // Audit page special handling
+            // 审计页面特殊处理
             break;
     }
 
     activeTab = tabName;
-    console.log('Successfully switched to tab:', tabName);
+    console.log('成功切换到标签:', tabName);
 }
 
-// --- Event Binding ---
+// --- 事件绑定 ---
 function bindEvents() {
     const userDisplayButton = document.getElementById('user-display-button');
     if (userDisplayButton) {
         userDisplayButton.addEventListener('click', toggleUserMenu);
     }
-	
-	// --- add by sunzhe 03 Nov ---
-    /* // Find the form within the "add expense" modal
-    const addExpenseForm = document.getElementById('expense-form'); 
-    if (addExpenseForm) {
-        // Note: handleSaveExpense is imported from expense.js
-        addExpenseForm.addEventListener('submit', handleSaveExpense); 
-        console.log('Bound submit event to expense-form');
-    } else {
-        console.error('Could not find expense-form to bind event');
-    } */
-    // --- END OF ADDED SECTION ---
-	
-		// --- 修复重复绑定：在绑定之前先移除 ---
-    const addExpenseForm = document.getElementById('expense-form'); 
-    if (addExpenseForm) {
-        // 1. 在绑定新事件之前，先移除可能存在的旧事件
-        addExpenseForm.removeEventListener('submit', handleSaveExpense); 
-        
-        // 2. 绑定新的事件
-        addExpenseForm.addEventListener('submit', handleSaveExpense); 
-        console.log('Bound submit event to expense-form');
-    } else {
-        console.error('Could not find expense-form to bind event');
-    }
-	
 
-    // Bind member menu close event
+    // 绑定成员菜单关闭事件
     document.addEventListener('click', function () {
         const allMenus = document.querySelectorAll('[id^="member-menu-"]');
         allMenus.forEach(menu => {
@@ -558,10 +564,10 @@ function bindEvents() {
         });
     });
 
-    console.log('Event binding complete');
+    console.log('事件绑定完成');
 }
 
-// --- User Menu Logic ---
+// --- 用户菜单逻辑 ---
 function toggleUserMenu() {
     const dropdown = document.getElementById('logout-dropdown');
     const caret = document.getElementById('caret-icon');
@@ -577,7 +583,7 @@ function toggleUserMenu() {
     }
 }
 
-// --- Page Navigation Logic ---
+// --- 页面导航逻辑 ---
 function handleBackToPreviousPage() {
     window.history.back();
 }
@@ -587,29 +593,27 @@ function handleBackToDashboard() {
 }
 
 function handleMyProfile() {
-    console.log('Navigate to My Profile');
-    // TODO: Implement navigation logic to My Profile page
+    console.log('跳转到我的资料');
+    // TODO: 实现跳转到我的资料页面逻辑
 }
 
 function handleLogoutUser() {
-    console.log('Logging out');
+    console.log('退出登录');
     window.handleLogout();
     window.location.href = '/login';
 }
 
-// --- Other Functions ---
+// --- 其他功能 ---
 function refreshRecurringList() {
-    // TODO: Implement recurring expense list refresh
+    // TODO: 实现定期费用列表刷新
 }
 
-// --- Modal Functions ---
+// --- 弹窗功能 ---
 function handleSettleUp() {
-    showCustomAlert('Settle Up Feature', 'Settle all debts feature is under development');
+    showCustomAlert('结算功能', '结算所有欠款功能开发中');
 }
 window.handleAddNewExpense = function () {
-    console.log('Show add expense modal');
-	
-	initializeExpenseForm(); // add by sunzhe 03 Nov
+    console.log('显示添加费用弹窗');
     const modal = document.getElementById('add-expense-modal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -617,7 +621,7 @@ window.handleAddNewExpense = function () {
 };
 
 window.handleAddNewPayment = function () {
-    console.log('Show add payment modal');
+    console.log('显示添加支付弹窗');
     const modal = document.getElementById('add-payment-modal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -625,7 +629,7 @@ window.handleAddNewPayment = function () {
 };
 
 window.handleAddNewRecurringExpense = function () {
-    console.log('Show add recurring expense modal');
+    console.log('显示添加定期费用弹窗');
     const modal = document.getElementById('add-recurring-expense-modal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -633,12 +637,12 @@ window.handleAddNewRecurringExpense = function () {
 };
 
 window.handleSettleUp = function () {
-    console.log('Settle all debts');
-    showCustomAlert('Settle Up Feature', 'Settle all debts feature is under development');
+    console.log('结算所有欠款');
+    showCustomAlert('结算功能', '结算所有欠款功能开发中');
 };
-// Add functions to close modals
+// 添加关闭弹窗的函数
 window.handleRecurringCancel = function () {
-    console.log('Close recurring expense modal');
+    console.log('关闭定期费用弹窗');
     const modal = document.getElementById('add-recurring-expense-modal');
     if (modal) {
         modal.classList.add('hidden');
@@ -646,7 +650,7 @@ window.handleRecurringCancel = function () {
 };
 
 window.handleCancel = function () {
-    console.log('Close expense modal');
+    console.log('关闭费用弹窗');
     const modal = document.getElementById('add-expense-modal');
     if (modal) {
         modal.classList.add('hidden');
@@ -654,7 +658,7 @@ window.handleCancel = function () {
 };
 
 window.handlePaymentCancel = function () {
-    console.log('Close payment modal');
+    console.log('关闭支付弹窗');
     const modal = document.getElementById('add-payment-modal');
     if (modal) {
         modal.classList.add('hidden');
@@ -662,7 +666,7 @@ window.handlePaymentCancel = function () {
 };
 
 
-// --- Global Exports ---
+// --- 全局导出 ---
 window.initializePage = initializePage;
 window.setActiveTab = setActiveTab;
 window.toggleUserMenu = toggleUserMenu;
@@ -677,16 +681,15 @@ window.handleAddNewRecurringExpense = handleAddNewRecurringExpense;
 window.handleRecurringCancel = handleRecurringCancel;
 window.handleCancel = handleCancel;
 window.handlePaymentCancel = handlePaymentCancel;
-window.loadExpensesList = loadExpensesList;
 
-// Export data loading functions
+// 导出数据加载函数
 window.loadMembersList = loadMembersList;
 
-// Export other necessary functions
+// 导出其他必要函数
 window.showCustomAlert = showCustomAlert;
 
 
 document.addEventListener('DOMContentLoaded', function () {
-    console.log('DOM content loaded, starting group page initialization...');
+    console.log('DOM 加载完成，开始初始化群组页面...');
     initializePage();
 });

@@ -1,7 +1,12 @@
 #pages.py 定义一个处理首页请求的路由，返回 HTML 页面
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+
+from sqlalchemy.orm import Session
+from app import crud
+from app.database import get_db
+from app.dependencies import get_current_user 
 
 
 templates = Jinja2Templates(directory="app/templates")
@@ -30,6 +35,11 @@ async def home_page(request: Request):
     context = {"request": request, "title": "用户首页"}
     return templates.TemplateResponse("home.html", context)
 
+@pages_router.get("/groups/{group_id}")
+async def get_group_page(request: Request, group_id: int):
+    # 根据用户权限返回统一的 group.html
+    return templates.TemplateResponse("groups.html", {"request": request})
+
 @pages_router.get("/group_admin", response_class=HTMLResponse)
 async def groups_admin_page(request: Request):
     context = {"request": request, "title": "用户界面（管理员）"}
@@ -39,8 +49,5 @@ async def groups_admin_page(request: Request):
 async def groups_member_page(request: Request):
     context = {"request": request, "title": "用户界面（成员）"}
     return templates.TemplateResponse("group_details_member.html", context)
-
-
-
 
 

@@ -1,7 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from typing import Optional, List, Dict, Any
-from datetime import date, datetime 
-from app.models import InvitationStatus  
+from datetime import date, datetime
+from app.models import InvitationStatus
 
 # ----------- User Schemas -----------
 class UserBase(BaseModel):
@@ -27,7 +27,7 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    
+
     email: Optional[str] = None
 
 
@@ -65,6 +65,8 @@ class GroupMemberBase(BaseModel):
 
 
 class GroupMember(GroupMemberBase):
+    user: User # add by sunzhe 03 Nov for load username
+
     class Config:
         from_attributes = True
 
@@ -116,8 +118,8 @@ class GroupInvitation(BaseModel):
 class GroupInvitationResponse(BaseModel):
     id: int
     status: InvitationStatus
-    group: Group  
-    inviter: User 
+    group: Group
+    inviter: User
     invitee: User
     created_at: datetime
 
@@ -126,46 +128,84 @@ class GroupInvitationResponse(BaseModel):
 
 # ----------- Expense Schemas (US7, US9) -----------
 
+# class ExpenseBase(BaseModel):
+    # description: str
+    # amount: int  # 03 Nov
+    # payer_id: int
+    # image_url: Optional[str] = None
 class ExpenseBase(BaseModel):
     description: str
     amount: int
     payer_id: int
-    image_url: Optional[str] = None  
+    image_url: Optional[str] = None
 
-class ExpenseCreate(ExpenseBase):
-    date: Optional[date] = None # For INPUT, date is optional
-
+# class ExpenseCreate(ExpenseBase):
+    # date: Optional[date] = None # For INPUT, date is optional
+class ExpenseCreate(BaseModel):
+    description: str
+    amount: int
+    payer_id: int
+    image_url: Optional[str] = None
+    #date: Optional[date] = None  # 明确声明为可选
+    date: Optional[str] = None
+    
+# class ExpenseUpdate(BaseModel):
+    # description: Optional[str] = None
+    # amount: Optional[int] = None # 03 Nov
+    # payer_id: Optional[int] = None
+    # date: Optional[date] = None
+    # image_url: Optional[str] = None
+    # split_type: Optional[str] = None
+    # splits: Optional[List['ExpenseSplitCreate']] = None # Use string forward reference
 class ExpenseUpdate(BaseModel):
     description: Optional[str] = None
     amount: Optional[int] = None
     payer_id: Optional[int] = None
-    date: Optional[date] = None
-    image_url: Optional[str] = None 
+    #date: Optional[date] = None
+    date: Optional[str] = None
+    image_url: Optional[str] = None
     split_type: Optional[str] = None
-    splits: Optional[List['ExpenseSplitCreate']] = None # Use string forward reference
+    splits: Optional[List['ExpenseSplitCreate']] = None
 
+
+# class Expense(ExpenseBase):
+    # id: int
+    # group_id: int
+    # creator_id: int
+    # date: date # For OUTPUT, date is required and will always be present
+
+    # split_type: str
+    # class Config:
+        # from_attributes = True
 class Expense(ExpenseBase):
     id: int
     group_id: int
     creator_id: int
-    date: date # For OUTPUT, date is required and will always be present
-
-    split_type: str 
+    date: date
+    split_type: str
+    
     class Config:
         from_attributes = True
 
 
 # ----------- Recurring Expense Schemas (US8) -----------
-class RecurringExpenseBase(BaseModel):
+# class RecurringExpenseBase(BaseModel):
+    # description: str
+    # amount: int    # 03 Nov
+    # frequency: str # e.g., 'daily', 'weekly', 'monthly'
+    # start_date: date
+    # payer_id: int
+    # split_type: str = "equal"  # add by sunzhe 22 Oct for payment update with splits
+class RecurringExpenseBase(BaseModel):  # ✅ 取消注释
     description: str
     amount: int
     frequency: str # e.g., 'daily', 'weekly', 'monthly'
     start_date: date
-    payer_id: int 
-    split_type: str = "equal"  # add by sunzhe 22 Oct for payment update with splits
-
+    payer_id: int
+    split_type: str = "equal"
+    
 class RecurringExpenseCreate(RecurringExpenseBase):
-    date: Optional[date] = None
+    # date: Optional[date] = None      #03 Nov
     splits: List['ExpenseSplitCreate'] # add by sunzhe 22 Oct for payment update with splits
 
 
@@ -191,43 +231,52 @@ class RecurringExpense(RecurringExpenseBase):
     class Config:
         from_attributes = True
 
-# ************************************************************************ # 
+# ************************************************************************ #
 # ----------- Expense Split Schemas -----------
 class ExpenseSplitBase(BaseModel):
     user_id: int
 
 class ExpenseSplitCreate(ExpenseSplitBase):
-    amount: Optional[int] = None
+    amount: Optional[int] = None   #03 Nov
 
-ExpenseUpdate.model_rebuild() # add by sunzhe 22 Oct to payment update with splits
-RecurringExpenseUpdate.model_rebuild()
-RecurringExpenseCreate.model_rebuild() 
+#  removed  3 lines 03 Nov
+#ExpenseUpdate.model_rebuild() # add by sunzhe 22 Oct to payment update with splits
+#RecurringExpenseUpdate.model_rebuild()
+#RecurringExpenseCreate.model_rebuild()
 
 class ExpenseSplit(ExpenseSplitBase):
     id: int
     expense_id: int
     amount: int
     share_type: str
-    
+
     class Config:
         from_attributes = True
+
+#class ExpenseCreateWithSplits(ExpenseBase): #03 Nov
+# class ExpenseCreateWithSplits(ExpenseCreate):
+    # splits: List[ExpenseSplitCreate]
+    # split_type: str = "equal"
+
 class ExpenseCreateWithSplits(ExpenseCreate):
     splits: List[ExpenseSplitCreate]
     split_type: str = "equal"
-    date: Optional[date] = None #test 23 oct
-
+    #date: Optional[date] = None #03 Nov
+    date: Optional[str] = None
+    
 class ExpenseWithSplits(Expense):
     splits: List[ExpenseSplit] = []
     split_type: str
 
+#ExpenseCreateWithSplits.model_rebuild()  # sunzhe 03 Nov
 
 # ----------- Payment Schemas -----------
 class PaymentBase(BaseModel):
-    from_user_id: int  
-    to_user_id: int   
-    amount: int
+    from_user_id: int
+    to_user_id: int
+    amount: int # 03 Nov
     description: Optional[str] = None
-    image_url: Optional[str] = None  
+    image_url: Optional[str] = None
     #payment_date: date
 
 class PaymentCreate(PaymentBase):
@@ -240,31 +289,31 @@ class Payment(PaymentBase):
     id: int
     expense_id: int
     created_at: datetime
-    creator_id: int     
-    
+    creator_id: int
+
     class Config:
         from_attributes = True
 
 # ----------- Balance Schemas -----------
 class UserBalance(BaseModel):
     user_id: int
-    balance: int  # positive means owe money to others, negative means gets money from others
+    balance: float  # positive means owe money to others, negative means gets money from others
 
 class ExpenseBalance(BaseModel):
     expense: Expense
-    balances: Dict[int, int]  # user_id -> balance
+    balances: Dict[int, float]  # user_id -> balance
 
 class SettlementTransaction(BaseModel):
-    from_user_id: int  
-    to_user_id: int   
+    from_user_id: int
+    to_user_id: int
     amount: int
 
 class BalanceSummary(BaseModel):
     detailed_balance: List[UserBalance]
     simplified_transactions: List[SettlementTransaction]
-    
 
-# ************************************************************************ # 
+
+# ************************************************************************ #
 # ----------- Audit Log Schemas -----------
 class AuditLog(BaseModel):
     id: int
@@ -276,3 +325,10 @@ class AuditLog(BaseModel):
 
     class Config:
         from_attributes = True
+
+# --- 把这些粘贴到文件的最末尾 03 Nov ---
+ExpenseUpdate.model_rebuild()
+RecurringExpenseUpdate.model_rebuild()
+RecurringExpenseCreate.model_rebuild()
+ExpenseCreateWithSplits.model_rebuild()
+# --- 粘贴结束 ---
