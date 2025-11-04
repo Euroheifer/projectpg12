@@ -207,14 +207,41 @@ export async function getGroupExpenses(groupId) {
  * 我们暂时返回空数组，这个功能需要后端支持。
  */
 export async function getGroupPayments(groupId) {
-    console.log('获取群组支付数据 - 注意：后端API暂未实现');
+    console.log('获取群组支付数据，群组ID:', groupId);
     const token = getAuthToken();
     if (!token) throw new Error('未认证');
 
     try {
-        // 临时返回空数组，避免前端崩溃
-        console.warn('支付API暂未实现，返回空数组');
-        return [];
+        // 1. 先获取组内所有费用
+        const expenses = await getGroupExpenses(groupId);
+        const allPayments = [];
+        
+        // 2. 为每个费用获取支付记录
+        for (const expense of expenses) {
+            try {
+                const response = await fetch(`/expenses/${expense.id}/payments`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const expensePayments = await response.json();
+                    // 为每个支付记录添加关联的费用信息
+                    const paymentsWithExpense = expensePayments.map(payment => ({
+                        ...payment,
+                        expense_title: expense.description,
+                        expense_id: expense.id
+                    }));
+                    allPayments.push(...paymentsWithExpense);
+                }
+            } catch (error) {
+                console.error(`获取费用${expense.id}的支付记录失败:`, error);
+                // 继续处理其他费用，不让单个错误影响整体
+            }
+        }
+        
+        console.log(`成功获取群组${groupId}的支付记录:`, allPayments);
+        return allPayments;
         
     } catch (error) {
         console.error('获取支付数据失败:', error);

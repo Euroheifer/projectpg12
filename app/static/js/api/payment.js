@@ -37,7 +37,7 @@ let currentEditingPayment = null;
 async function createPayment(paymentData) {
     try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch(`${API_BASE_URL}/groups/${paymentData.group_id}/payments`, {
+        const response = await fetch(`/expenses/${expenseId}/payments`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -64,7 +64,7 @@ async function createPayment(paymentData) {
 async function getGroupPayments(groupId) {
     try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch(`${API_BASE_URL}/groups/${groupId}/payments`, {
+        const response = await fetch(`${API_BASE_URL}/expenses/${groupId}/payments`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -88,7 +88,7 @@ async function updatePayment(paymentId, paymentData) {
     try {
         const token = localStorage.getItem('access_token');
         const response = await fetch(`${API_BASE_URL}/payments/${paymentId}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
@@ -184,11 +184,14 @@ export async function handleSavePayment(event) {
         const paymentData = {
             from_user_id: parseInt(formData.get('from_user_id')),
             to_user_id: parseInt(formData.get('to_user_id')),
-            amount_cents: Math.round(parseFloat(formData.get('amount')) * 100),
+            amount: Math.round(parseFloat(formData.get('amount')) * 100),
             description: formData.get('description') || '',
             expense_id: formData.get('expense_id') ? parseInt(formData.get('expense_id')) : null
         };
-
+        const expenseId = formData.get('expense_id');
+        if (!expenseId) {
+            throw new Error('必须选择关联的费用');
+        }
         // 处理图片上传
         const fileInput = form.querySelector('input[type="file"]');
         if (fileInput && fileInput.files[0]) {
