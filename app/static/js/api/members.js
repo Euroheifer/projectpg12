@@ -1,10 +1,121 @@
-// member_management.js - 成员管理、邀请、角色设置
+// member_management.js - 成员管理、邀请、角色设置 - 修复版本
 import { requireAdmin, isValidEmail } from '../ui/utils.js';
-// --- 全局状态 ---
 
-// 成员管理状态
+// --- 全局状态 ---
 let memberToRemove = null;
 let memberToUpdateRole = null;
+
+// API基础URL
+const API_BASE_URL = '/api';
+
+// 消息显示函数
+function showSuccessMessage(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded shadow-lg z-50';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+function showErrorMessage(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded shadow-lg z-50';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
+// API函数 - 更新成员角色
+async function updateMemberRoleAPI(memberId, newRole) {
+    try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`${API_BASE_URL}/groups/${window.currentGroupId}/members/${memberId}/role`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ role: newRole })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || '更新角色失败');
+        }
+
+        const result = await response.json();
+        
+        // 更新本地数据
+        if (window.groupMembers) {
+            const memberIndex = window.groupMembers.findIndex(m => (m.id || m.user_id) == memberId);
+            if (memberIndex !== -1) {
+                window.groupMembers[memberIndex].role = newRole;
+            }
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('更新成员角色错误:', error);
+        throw error;
+    }
+}
+
+// API函数 - 移除成员
+async function removeMemberAPI(memberId) {
+    try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`${API_BASE_URL}/groups/${window.currentGroupId}/members/${memberId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || '移除成员失败');
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error('移除成员错误:', error);
+        throw error;
+    }
+}
+
+// API函数 - 邀请新成员
+async function inviteMemberAPI(email, role = 'member') {
+    try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch(`${API_BASE_URL}/groups/${window.currentGroupId}/invitations`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+                email: email,
+                role: role
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || '发送邀请失败');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('邀请成员错误:', error);
+        throw error;
+    }
+}
 
 /* export function renderMemberList() {
     const container = document.getElementById('member-list-container');
@@ -254,17 +365,95 @@ export const handleRemoveMember = requireAdmin(function (memberId, memberName) {
 });
 
 export function confirmUpdateRole() {
-    console.log('更新成员角色');
-    window.showCustomAlert('成功', '成员角色已更新');
-    cancelUpdateRole();
-    window.loadMembersList();
+    const modal = document.getElementById('role-update-modal');
+    if (!modal) return;
+    
+    const memberId = modal.dataset.memberId;
+    if (!memberId) return;
+    
+    // 获取当前成员信息确定新角色
+    const member = window.groupMembers?.find(m => (m.id || m.user_id) == memberId);
+    if (!member) {
+        showErrorMessage('成员不存在');
+        cancelUpdateRole();
+        return;
+    }
+    
+    // 切换角色：如果是admin则改为member，如果是member则改为admin
+    const newRole = member.role === 'admin' ? 'member' : 'admin';
+    const action = newRole === 'admin' ? '设为管理员' : '取消管理员';
+    
+    // 显示加载状态
+    const confirmButton = modal.querySelector('button[onclick="confirmUpdateRole()"]');
+    if (confirmButton) {
+        confirmButton.disabled = true;
+        confirmButton.textContent = '处理中...';
+    }
+    
+    updateMemberRoleAPI(memberId, newRole)
+        .then(() => {
+            showSuccessMessage(`成员已${action}`);
+            cancelUpdateRole();
+            // 刷新成员列表
+            if (window.loadMembersList) {
+                window.loadMembersList();
+            } else {
+                renderMemberList();
+            }
+        })
+        .catch(error => {
+            console.error('更新角色错误:', error);
+            showErrorMessage('更新角色失败: ' + error.message);
+            cancelUpdateRole();
+        });
 }
 
 export function confirmRemoveMember() {
-    console.log('移除成员');
-    window.showCustomAlert('成功', '成员已移除');
-    cancelRemoveMember();
-    window.loadMembersList();
+    const modal = document.getElementById('remove-modal');
+    if (!modal) return;
+    
+    const memberId = modal.dataset.memberId;
+    if (!memberId) return;
+    
+    // 获取成员信息
+    const member = window.groupMembers?.find(m => (m.id || m.user_id) == memberId);
+    if (!member) {
+        showErrorMessage('成员不存在');
+        cancelRemoveMember();
+        return;
+    }
+    
+    // 显示加载状态
+    const confirmButton = modal.querySelector('button[onclick="confirmRemoveMember()"]');
+    if (confirmButton) {
+        confirmButton.disabled = true;
+        confirmButton.textContent = '处理中...';
+    }
+    
+    removeMemberAPI(memberId)
+        .then(() => {
+            showSuccessMessage('成员已移除');
+            
+            // 如果移除的是当前用户，跳转到主页
+            if ((member.id || member.user_id) == window.CURRENT_USER_ID) {
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            } else {
+                cancelRemoveMember();
+                // 刷新成员列表
+                if (window.loadMembersList) {
+                    window.loadMembersList();
+                } else {
+                    renderMemberList();
+                }
+            }
+        })
+        .catch(error => {
+            console.error('移除成员错误:', error);
+            showErrorMessage('移除成员失败: ' + error.message);
+            cancelRemoveMember();
+        });
 }
 
 export function cancelUpdateRole() {
@@ -293,12 +482,12 @@ export async function inviteNewMember() {
     const email = emailInput.value.trim();
 
     if (!email) {
-        window.showCustomAlert('错误', '请输入邮箱地址');
+        showErrorMessage('请输入邮箱地址');
         return;
     }
 
     if (!isValidEmail(email)) {
-        window.showCustomAlert('错误', '请输入有效的邮箱地址');
+        showErrorMessage('请输入有效的邮箱地址');
         return;
     }
 
@@ -306,11 +495,12 @@ export async function inviteNewMember() {
     submitButton.disabled = true;
 
     try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        window.showCustomAlert('成功', `邀请已发送到 ${email}`);
+        const result = await inviteMemberAPI(email);
+        showSuccessMessage(`邀请已发送到 ${email}`);
         clearInviteForm();
     } catch (error) {
-        window.showCustomAlert('错误', '发送邀请失败，请重试');
+        console.error('邀请成员错误:', error);
+        showErrorMessage('发送邀请失败: ' + error.message);
     } finally {
         loadingMessage.classList.add('hidden');
         submitButton.disabled = false;
