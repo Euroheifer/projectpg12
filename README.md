@@ -2,6 +2,26 @@
 
 A backend system for shared expense management
 
+## 🔧 修复版本说明 (2025-11-05)
+
+### 已修复的关键问题:
+1. **escapeHtml函数未定义** - 已修复为全局函数
+2. **邀请功能占位符** - 已完整实现所有邀请功能
+3. **API函数命名不一致** - 已统一函数命名
+4. **消息提示功能缺失** - 已添加showMessage函数
+
+### 快速部署:
+```bash
+docker-compose down --remove-orphans
+docker-compose up -d --build
+# 访问: https://localhost:8443
+```
+
+### 验证修复:
+```bash
+bash validate_fix.sh
+```
+
 ```bash
 PROJECT-PG12/
 ├── app/

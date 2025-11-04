@@ -431,31 +431,7 @@ export async function deleteExpense(groupId, expenseId) {
 // ----------------------------------------------------------------
 // --- 支付相关的 API 调用 ---
 // ----------------------------------------------------------------
-
-/**
- * API 调用: 创建支付
- * API 路由: @app.post("/expenses/{expense_id}/payments", ...)
- */
-export async function createPayment(expenseId, paymentData) {
-    const token = getAuthToken();
-    if (!token) throw new Error('未认证');
-
-    const response = await fetch(`/expenses/${expenseId}/payments`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(paymentData)
-    });
-    
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || '创建支付失败');
-    }
-    
-    return await response.json();
-}
+// 注意: createPayment 和 updatePayment 函数已移动到 payment.js 中
 
 /**
  * API 调用: 获取费用支付
@@ -497,7 +473,6 @@ window.respondToInvitation = respondToInvitation;
 window.createExpense = createExpense;
 window.updateExpense = updateExpense;
 window.deleteExpense = deleteExpense;
-window.createPayment = createPayment;
 window.getExpensePayments = getExpensePayments;
 
 console.log('auth.js 已加载，所有 API 函数已暴露到全局');

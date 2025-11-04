@@ -113,6 +113,10 @@ export async function acceptInvitation(invitationId) {
  * 拒绝群组邀请
  */
 export async function declineInvitation(invitationId) {
+    return rejectInvitation(invitationId);
+}
+
+export async function rejectInvitation(invitationId) {
     try {
         const token = localStorage.getItem('access_token');
         if (!token) {

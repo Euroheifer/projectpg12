@@ -136,67 +136,67 @@
     };
     
     window.createNewGroup = function() {
-    console.log('createNewGroup called');
-    const groupName = document.getElementById('group-name').value.trim();
-    const groupDescription = document.getElementById('group-description').value.trim();
-    
-    if (!groupName) {
-        alert('请输入群组名称');
-        return;
-    }
-    
-    const token = getAuthToken();
-    if (!token) {
-        alert('请先登录');
-        return;
-    }
-    
-    // 显示加载状态
-    const createButton = document.querySelector('[onclick="createNewGroup()"]');
-    if (createButton) {
-        createButton.textContent = '创建中...';
-        createButton.disabled = true;
-    }
-    
-    // 调用后端API创建群组
-    fetch('/groups/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-            name: groupName,
-            description: groupDescription
-        })
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.json();
-        } else {
-            return response.json().then(error => {
-                throw new Error(error.detail || '创建群组失败');
-            });
+        console.log('createNewGroup called');
+        const groupName = document.getElementById('group-name').value.trim();
+        const groupDescription = document.getElementById('group-description').value.trim();
+        
+        if (!groupName) {
+            alert('请输入群组名称');
+            return;
         }
-    })
-    .then(data => {
-        alert('群组创建成功！');
-        window.closeCreateGroupModal();
-        // 刷新页面以显示新群组
-        window.location.reload();
-    })
-    .catch(error => {
-        console.error('创建群组错误:', error);
-        alert(`创建群组失败: ${error.message}`);
-    })
-    .finally(() => {
-        // 恢复按钮状态
+        
+        const token = getAuthToken();
+        if (!token) {
+            alert('请先登录');
+            return;
+        }
+        
+        // 显示加载状态
+        const createButton = document.querySelector('[onclick="createNewGroup()"]');
         if (createButton) {
-            createButton.textContent = '创建群组';
-            createButton.disabled = false;
+            createButton.textContent = '创建中...';
+            createButton.disabled = true;
         }
-    });
-};
+        
+        // 调用后端API创建群组
+        fetch('/groups/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name: groupName,
+                description: groupDescription
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            } else {
+                return response.json().then(error => {
+                    throw new Error(error.detail || '创建群组失败');
+                });
+            }
+        })
+        .then(data => {
+            alert('群组创建成功！');
+            window.closeCreateGroupModal();
+            // 刷新群组列表而不是整个页面
+            loadMyGroups();
+        })
+        .catch(error => {
+            console.error('创建群组错误:', error);
+            alert(`创建群组失败: ${error.message}`);
+        })
+        .finally(() => {
+            // 恢复按钮状态
+            if (createButton) {
+                createButton.textContent = '创建群组';
+                createButton.disabled = false;
+            }
+        });
+    };
     
     // 认证检查函数
     window.getAuthToken = function() {
@@ -260,16 +260,173 @@ function initializeHomePage() {
     loadMyGroups();
 }
 
-function loadInvitations() {
-    // 模拟加载邀请
+async function loadInvitations() {
+    const token = getAuthToken();
+    if (!token) {
+        console.warn('未找到认证token，无法加载邀请');
+        const container = document.getElementById('invitation-list-container');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center p-6 text-gray-500">
+                    <i class="fa-solid fa-exclamation-triangle text-3xl mb-3"></i>
+                    <p>请先登录以查看邀请</p>
+                </div>
+            `;
+        }
+        return;
+    }
+
     const container = document.getElementById('invitation-list-container');
-    if (container) {
+    if (!container) {
+        console.warn('找不到邀请列表容器');
+        return;
+    }
+
+    // 显示加载状态
+    container.innerHTML = `
+        <div class="text-center p-6 text-gray-500">
+            <i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i>
+            <p>加载邀请中...</p>
+        </div>
+    `;
+
+    try {
+        // 调用后端API获取邀请列表
+        const response = await fetch('/invitations/me', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const invitations = await response.json();
+            displayInvitations(invitations);
+        } else {
+            throw new Error('获取邀请列表失败');
+        }
+    } catch (error) {
+        console.error('加载邀请错误:', error);
+        container.innerHTML = `
+            <div class="text-center p-6 text-red-500">
+                <i class="fa-solid fa-exclamation-triangle text-3xl mb-3"></i>
+                <p>加载邀请失败: ${error.message}</p>
+                <button onclick="loadInvitations()" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    重新加载</button>
+            </div>
+        `;
+    }
+}
+
+function displayInvitations(invitations) {
+    const container = document.getElementById('invitation-list-container');
+    if (!container) return;
+
+    if (!invitations || invitations.length === 0) {
         container.innerHTML = `
             <div class="text-center p-6 text-gray-500">
                 <i class="fa-solid fa-inbox text-3xl mb-3"></i>
                 <p>暂无待处理的邀请</p>
             </div>
         `;
+        return;
+    }
+
+    const invitationsHtml = invitations.map(invitation => `
+        <div class="bg-white rounded-lg shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow duration-200">
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-semibold text-gray-900">${escapeHtml(invitation.group_name)}</h3>
+                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
+                    ${invitation.invited_by_name} 邀请
+                </span>
+            </div>
+            <p class="text-gray-600 text-sm mb-4">${escapeHtml(invitation.message || '邀请您加入群组')}</p>
+            <div class="flex justify-between items-center">
+                <span class="text-xs text-gray-500">
+                    邀请时间: ${new Date(invitation.created_at).toLocaleDateString()}
+                </span>
+                <div class="flex space-x-2">
+                    <button onclick="acceptInvitation('${invitation.id}')" 
+                            class="px-3 py-1 bg-emerald-500 text-white text-sm rounded hover:bg-emerald-600 transition-colors duration-200">
+                        <i class="fa-solid fa-check mr-1"></i>接受
+                    </button>
+                    <button onclick="rejectInvitation('${invitation.id}')" 
+                            class="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors duration-200">
+                        <i class="fa-solid fa-times mr-1"></i>拒绝
+                    </button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    container.innerHTML = invitationsHtml;
+}
+
+async function acceptInvitation(invitationId) {
+    const token = getAuthToken();
+    if (!token) {
+        alert('请先登录');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/invitations/${invitationId}/respond`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                action: 'accept'
+            })
+        });
+
+        if (response.ok) {
+            showMessage('已成功加入群组！', 'success');
+            // 刷新邀请列表和群组列表
+            loadInvitations();
+            loadMyGroups();
+        } else {
+            const error = await response.json();
+            throw new Error(error.detail || '接受邀请失败');
+        }
+    } catch (error) {
+        console.error('接受邀请错误:', error);
+        showMessage(`接受邀请失败: ${error.message}`, 'error');
+    }
+}
+
+async function rejectInvitation(invitationId) {
+    const token = getAuthToken();
+    if (!token) {
+        alert('请先登录');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/invitations/${invitationId}/respond`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                action: 'reject'
+            })
+        });
+
+        if (response.ok) {
+            showMessage('已拒绝邀请', 'success');
+            // 刷新邀请列表
+            loadInvitations();
+        } else {
+            const error = await response.json();
+            throw new Error(error.detail || '拒绝邀请失败');
+        }
+    } catch (error) {
+        console.error('拒绝邀请错误:', error);
+        showMessage(`拒绝邀请失败: ${error.message}`, 'error');
     }
 }
 
@@ -366,6 +523,74 @@ function displayGroups(groups) {
 
     container.innerHTML = groupsHtml;
 }
+
+// 简单的HTML转义函数 - 全局可用
+window.escapeHtml = function(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+};
+
+// 进入群组函数
+function enterGroup(groupId) {
+    console.log('进入群组:', groupId);
+    window.location.href = `/groups/${groupId}`;
+}
+
+// 消息显示函数 - 全局可用
+window.showMessage = function(message, type = 'info') {
+    // 创建消息元素
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white max-w-sm transform transition-all duration-300 translate-x-full`;
+    
+    // 根据类型设置颜色
+    if (type === 'success') {
+        messageDiv.classList.add('bg-emerald-500');
+    } else if (type === 'error') {
+        messageDiv.classList.add('bg-red-500');
+    } else {
+        messageDiv.classList.add('bg-blue-500');
+    }
+    
+    // 添加图标
+    let icon = '';
+    if (type === 'success') {
+        icon = '<i class="fa-solid fa-check-circle mr-2"></i>';
+    } else if (type === 'error') {
+        icon = '<i class="fa-solid fa-exclamation-circle mr-2"></i>';
+    } else {
+        icon = '<i class="fa-solid fa-info-circle mr-2"></i>';
+    }
+    
+    messageDiv.innerHTML = `
+        <div class="flex items-center">
+            ${icon}
+            <span>${escapeHtml(message)}</span>
+            <button onclick="this.parentElement.parentElement.remove()" class="ml-3 text-white hover:text-gray-200">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+    `;
+    
+    // 添加到页面
+    document.body.appendChild(messageDiv);
+    
+    // 显示动画
+    setTimeout(() => {
+        messageDiv.classList.remove('translate-x-full');
+    }, 100);
+    
+    // 自动隐藏
+    setTimeout(() => {
+        messageDiv.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.parentNode.removeChild(messageDiv);
+            }
+        }, 300);
+    }, 4000);
+};
 </script>
 
 {% endblock %}

@@ -34,10 +34,10 @@ let currentEditingPayment = null;
 /**
  * API函数 - 创建支付记录
  */
-async function createPayment(paymentData) {
+async function createPayment(expenseId, paymentData) {
     try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch(`/expenses/${expenseId}/payments`, {
+        const response = await fetch(`${API_BASE_URL}/expenses/${expenseId}/payments`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -64,7 +64,7 @@ async function createPayment(paymentData) {
 async function getGroupPayments(groupId) {
     try {
         const token = localStorage.getItem('access_token');
-        const response = await fetch(`${API_BASE_URL}/expenses/${groupId}/payments`, {
+        const response = await fetch(`${API_BASE_URL}/groups/${groupId}/payments`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
@@ -185,13 +185,15 @@ export async function handleSavePayment(event) {
             from_user_id: parseInt(formData.get('from_user_id')),
             to_user_id: parseInt(formData.get('to_user_id')),
             amount: Math.round(parseFloat(formData.get('amount')) * 100),
-            description: formData.get('description') || '',
-            expense_id: formData.get('expense_id') ? parseInt(formData.get('expense_id')) : null
+            description: formData.get('description') || ''
         };
-        const expenseId = formData.get('expense_id');
+
+        // 获取expense_id
+        const expenseId = formData.get('expense_id') ? parseInt(formData.get('expense_id')) : null;
         if (!expenseId) {
             throw new Error('必须选择关联的费用');
         }
+
         // 处理图片上传
         const fileInput = form.querySelector('input[type="file"]');
         if (fileInput && fileInput.files[0]) {
@@ -209,10 +211,8 @@ export async function handleSavePayment(event) {
             }
         }
 
-        const response = await createPayment({
-            ...paymentData,
-            group_id: window.currentGroupId
-        });
+        // 🚨 修复：使用正确的参数调用createPayment
+        const response = await createPayment(expenseId, paymentData);
         
         if (response) {
             showSuccessMessage('支付记录已保存');
@@ -495,6 +495,8 @@ window.openPaymentDetail = openPaymentDetail;
 window.updatePaymentFileNameDisplay = updatePaymentFileNameDisplay;
 window.updatePaymentDetailFileNameDisplay = updatePaymentDetailFileNameDisplay;
 window.populatePaymentDetailForm = populatePaymentDetailForm;
+window.createPayment = createPayment;
+window.updatePayment = updatePayment;
 window.initializePaymentForm = initializePaymentForm;
 window.initializePaymentDetailForm = initializePaymentDetailForm;
 window.refreshPaymentsList = refreshPaymentsList;
