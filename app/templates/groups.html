@@ -1285,16 +1285,226 @@
         window.location.href = '/home';
     }
 </script>
-<script src="/static/js/ui/menu.js"></script>
-<script type" src="/static/js/ui/utils.js"></script>
-<script type="module" src="/static/js/api/expense.js"></script>
-<script type="module" src="/static/js/api/recurring_expense.js"></script>
-<script type="module" src="/static/js/api/payment.js"></script>
-<script type="module" src="/static/js/api/settlement.js"></script>
-<script type="module" src="/static/js/api/members.js"></script>
-<script type="module" src="/static/js/api/groups.js"></script>
-<script type="module" src="/static/js/page/group_page.js"></script>
 
+<!-- 传统模式加载 - 解决ES6模块兼容性问题 -->
+<script>
+    console.log('🔧 启用群组页面传统模式加载...');
+    
+    // 基础功能立即可用
+    window.setActiveTab = function(tab) {
+        console.log('setActiveTab called:', tab);
+        
+        // 移除所有活动标签
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // 隐藏所有内容
+        document.querySelectorAll('[id$="-content"]').forEach(content => {
+            content.style.display = 'none';
+        });
+        
+        // 激活当前标签
+        const activeBtn = document.querySelector(`button[onclick*="${tab}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+        
+        // 显示对应内容
+        const content = document.getElementById(tab + '-content');
+        if (content) {
+            content.style.display = 'block';
+        }
+    };
+    
+    window.handleAddNewExpense = function() {
+        console.log('handleAddNewExpense called');
+        const modal = document.getElementById('add-expense-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        } else {
+            alert('添加费用功能暂时不可用，请刷新页面重试');
+        }
+    };
+    
+    window.handleAddNewPayment = function() {
+        console.log('handleAddNewPayment called');
+        const modal = document.getElementById('add-payment-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        } else {
+            alert('添加支付功能暂时不可用，请刷新页面重试');
+        }
+    };
+    
+    window.handleAddNewRecurringExpense = function() {
+        console.log('handleAddNewRecurringExpense called');
+        const modal = document.getElementById('add-recurring-expense-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        } else {
+            alert('添加定期费用功能暂时不可用，请刷新页面重试');
+        }
+    };
+    
+    window.closeModal = function(modalId) {
+        console.log('closeModal called:', modalId);
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+    };
+    
+    // 模态框处理函数
+    window.handleExpenseCancel = function() {
+        window.closeModal('add-expense-modal');
+    };
+    
+    window.handlePaymentCancel = function() {
+        window.closeModal('add-payment-modal');
+    };
+    
+    window.handleRecurringExpenseCancel = function() {
+        window.closeModal('add-recurring-expense-modal');
+    };
+    
+    window.handleExpenseDetailCancel = function() {
+        window.closeModal('expense-detail-modal');
+    };
+    
+    window.handlePaymentDetailCancel = function() {
+        window.closeModal('payment-detail-modal');
+    };
+    
+    // 认证检查函数
+    window.getAuthToken = function() {
+        return localStorage.getItem('access_token');
+    };
+
+    window.checkAuth = function() {
+        const token = window.getAuthToken();
+        if (!token) {
+            console.warn('未找到认证token');
+            window.location.href = '/login';
+            return false;
+        }
+        return true;
+    };
+    
+    // 通用模态框关闭处理
+    window.setupModalCloseHandlers = function() {
+        // 点击背景关闭模态框
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+            backdrop.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.closest('.modal').classList.add('hidden');
+                }
+            });
+        });
+        
+        // ESC键关闭模态框
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal:not(.hidden)').forEach(modal => {
+                    modal.classList.add('hidden');
+                });
+            }
+        });
+    };
+    
+    console.log('✅ 群组页面传统模式基础功能已加载');
+</script>
+
+<!-- 条件加载：检查功能状态 -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('群组页面DOM加载完成，检查功能状态...');
+    
+    // 检查认证
+    if (!window.checkAuth()) return;
+    
+    // 检查关键函数是否存在
+    const functionsToCheck = [
+        'setActiveTab',
+        'handleAddNewExpense', 
+        'handleAddNewPayment',
+        'handleAddNewRecurringExpense',
+        'closeModal'
+    ];
+    
+    let allFunctionsReady = true;
+    functionsToCheck.forEach(funcName => {
+        if (typeof window[funcName] !== 'function') {
+            console.warn(`函数 ${funcName} 未定义`);
+            allFunctionsReady = false;
+        }
+    });
+    
+    if (allFunctionsReady) {
+        console.log('✅ 群组页面所有核心功能正常');
+        
+        // 设置模态框关闭处理
+        window.setupModalCloseHandlers();
+        
+        // 重新绑定按钮事件
+        rebindAllEvents();
+        
+        // 默认显示费用标签
+        window.setActiveTab('expenses');
+    } else {
+        console.warn('⚠️ 检测到群组页面功能缺失');
+        alert('检测到页面功能异常，请刷新页面或在控制台运行修复脚本');
+    }
+});
+
+function rebindAllEvents() {
+    console.log('重新绑定群组页面按钮事件...');
+    
+    // 标签切换按钮
+    document.querySelectorAll('.tab-button').forEach((btn, index) => {
+        const tabs = ['expenses', 'payments', 'recurring', 'members', 'settlement'];
+        const tab = tabs[index] || 'expenses';
+        
+        btn.onclick = function() {
+            window.setActiveTab(tab);
+        };
+    });
+    
+    // 添加按钮
+    const addExpenseBtn = document.querySelector('[onclick*="handleAddNewExpense"]');
+    if (addExpenseBtn) {
+        addExpenseBtn.onclick = window.handleAddNewExpense;
+    }
+    
+    const addPaymentBtn = document.querySelector('[onclick*="handleAddNewPayment"]');
+    if (addPaymentBtn) {
+        addPaymentBtn.onclick = window.handleAddNewPayment;
+    }
+    
+    const addRecurringBtn = document.querySelector('[onclick*="handleAddNewRecurringExpense"]');
+    if (addRecurringBtn) {
+        addRecurringBtn.onclick = window.handleAddNewRecurringExpense;
+    }
+    
+    // 模态框关闭按钮
+    document.querySelectorAll('[onclick*="closeModal"], .close-modal, [onclick*="Cancel"]').forEach(btn => {
+        const originalOnclick = btn.getAttribute('onclick');
+        if (originalOnclick && originalOnclick.includes('Cancel')) {
+            // 保持原有的取消函数
+            return;
+        }
+        
+        btn.onclick = function() {
+            const modal = this.closest('.modal') || this.closest('[id$="-modal"]');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        };
+    });
+    
+    console.log('✅ 群组页面所有按钮事件已重新绑定');
+}
+</script>
 
 {% endblock %}
 

@@ -99,10 +99,96 @@
 
     </div>
 
-    <!-- link to login js -->
-    <script type="module" src="/static/js/page/auth_page.js"></script>
+    <!-- 传统模式登录脚本 - 避免ES6模块兼容性问题 -->
+    <script>
+        console.log('🔧 启用登录页面传统模式...');
 
+        // 显示消息函数
+        function showMessage(message, type = 'error') {
+            const messageBox = document.getElementById('message-box');
+            if (messageBox) {
+                messageBox.textContent = message;
+                messageBox.className = `p-3 mb-4 rounded-lg text-sm text-center ${type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+                messageBox.classList.remove('hidden');
+                
+                // 3秒后自动隐藏
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 3000);
+            }
+        }
 
+        // 登录处理函数
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const loginButton = document.getElementById('login-button');
+            
+            if (!email || !password) {
+                showMessage('请填写所有字段');
+                return;
+            }
+            
+            // 显示加载状态
+            loginButton.textContent = '登录中...';
+            loginButton.disabled = true;
+            
+            try {
+                const formData = new FormData();
+                formData.append('username', email);
+                formData.append('password', password);
+                
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 保存token
+                    localStorage.setItem('access_token', data.access_token);
+                    showMessage('登录成功！正在跳转...', 'success');
+                    
+                    // 跳转到主页
+                    setTimeout(() => {
+                        window.location.href = '/home';
+                    }, 1000);
+                } else {
+                    showMessage(data.detail || '登录失败，请检查用户名和密码');
+                }
+            } catch (error) {
+                console.error('登录错误:', error);
+                showMessage('网络错误，请稍后重试');
+            } finally {
+                // 恢复按钮状态
+                loginButton.textContent = '立即登录';
+                loginButton.disabled = false;
+            }
+        }
+
+        // 页面加载完成后绑定事件
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('登录页面DOM加载完成');
+            
+            const loginForm = document.getElementById('login-form');
+            if (loginForm) {
+                loginForm.addEventListener('submit', handleLogin);
+                console.log('✅ 登录表单事件已绑定');
+            }
+            
+            // 检查是否已经登录
+            const token = localStorage.getItem('access_token');
+            if (token) {
+                console.log('检测到已登录，跳转到主页');
+                window.location.href = '/home';
+            }
+        });
+
+        console.log('✅ 登录页面传统模式脚本加载完成');
+    </script>
 
 </body>
 
