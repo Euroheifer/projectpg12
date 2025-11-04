@@ -56,7 +56,37 @@ def get_group_balances_api(...):
 - ✅ `/api/groups/{id}/members` - 现在有对应的后端端点
 - ✅ `/api/groups/{id}/balances` - 新增的后端端点
 
-### 3. 余额计算逻辑
+### 3. 修复前端硬编码初始值
+
+发现并修复groups.html中的所有硬编码预设数据：
+
+**修复前**（显示预设数据）：
+```html
+<p id="balance-owed">¥150.50</p>
+<p id="balance-owed-context">给 2 位成员</p>
+<p id="balance-owing-me">¥45.00</p>
+<p id="balance-owing-me-context">从 1 位成员</p>
+<p id="settlement-summary-text">总计 2 笔待清算</p>
+费用 (<span id="expense-count">3</span>)
+定期费用 (<span id="recurring-count">2</span>)
+支付 (<span id="payment-count">2</span>)
+成员 (<span id="member-count">4</span>)
+```
+
+**修复后**（显示初始值）：
+```html
+<p id="balance-owed">¥0.00</p>
+<p id="balance-owed-context">给 0 位成员</p>
+<p id="balance-owing-me">¥0.00</p>
+<p id="balance-owing-me-context">从 0 位成员</p>
+<p id="settlement-summary-text">总计 0 笔待清算</p>
+费用 (<span id="expense-count">0</span>)
+定期费用 (<span id="recurring-count">0</span>)
+支付 (<span id="payment-count">0</span>)
+成员 (<span id="member-count">0</span>)
+```
+
+### 4. 余额计算逻辑
 
 **balanceData返回格式**：
 ```json

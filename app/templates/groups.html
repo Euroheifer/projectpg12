@@ -231,21 +231,21 @@
         <div id="group-summary" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="balance-card bg-white p-6 rounded-xl border border-danger/20 shadow-lg">
                 <p class="text-sm font-medium text-danger">您欠款 (应付)</p>
-                <p class="text-3xl font-bold text-danger mt-1" id="balance-owed">¥150.50</p>
-                <p id="balance-owed-context" class="text-xs text-gray-500 mt-2">给 2 位成员</p>
+                <p class="text-3xl font-bold text-danger mt-1" id="balance-owed">¥0.00</p>
+                <p id="balance-owed-context" class="text-xs text-gray-500 mt-2">给 0 位成员</p>
             </div>
 
             <div class="balance-card bg-white p-6 rounded-xl border border-success/20 shadow-lg">
                 <p class="text-sm font-medium text-success">被欠款 (应收)</p>
-                <p class="text-3xl font-bold text-success mt-1" id="balance-owing-me">¥45.00</p>
-                <p id="balance-owing-me-context" class="text-xs text-gray-500 mt-2">从 1 位成员</p>
+                <p class="text-3xl font-bold text-success mt-1" id="balance-owing-me">¥0.00</p>
+                <p id="balance-owing-me-context" class="text-xs text-gray-500 mt-2">从 0 位成员</p>
             </div>
 
             <div
                 class="balance-card bg-white p-6 rounded-xl border border-warning/20 shadow-lg flex flex-col justify-between">
                 <div>
                     <p class="text-sm font-medium text-warning">建议结算</p>
-                    <p id="settlement-summary-text" class="text-xl font-bold text-gray-900 mt-1">总计 2 笔待清算</p>
+                    <p id="settlement-summary-text" class="text-xl font-bold text-gray-900 mt-1">总计 0 笔待清算</p>
                 </div>
                 <button onclick="handleSettleUp()"
                     class="w-full py-2 bg-warning/80 text-white rounded-lg hover:bg-warning transition duration-150 shadow-md transform hover:scale-[1.01] active:scale-[0.99] text-sm mt-3">
@@ -265,19 +265,19 @@
             <div class="flex space-x-8 overflow-x-auto">
                 <button id="tab-expenses" onclick="setActiveTab('expenses')"
                     class="tab-button active pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
-                    费用 (<span id="expense-count">3</span>)
+                    费用 (<span id="expense-count">0</span>)
                 </button>
                 <button id="tab-recurring" onclick="setActiveTab('recurring')"
                     class="tab-button pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
-                    定期费用 (<span id="recurring-count">2</span>)
+                    定期费用 (<span id="recurring-count">0</span>)
                 </button>
                 <button id="tab-payments" onclick="setActiveTab('payments')"
                     class="tab-button pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
-                    支付 (<span id="payment-count">2</span>)
+                    支付 (<span id="payment-count">0</span>)
                 </button>
                 <button id="tab-members" onclick="setActiveTab('members')"
                     class="tab-button pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
-                    成员 (<span id="member-count">4</span>)
+                    成员 (<span id="member-count">0</span>)
                 </button>
 
                 <button id="tab-invite" onclick="setActiveTab('invite')"
@@ -336,7 +336,7 @@
         <!-- 成员内容 -->
         <div id="tab-content-members" class="hidden">
             <h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center border-b pb-2">
-                群组成员 (<span id="active-member-count">4</span> 人)
+                群组成员 (<span id="active-member-count">0</span> 人)
             </h3>
             <div id="member-list-container" class="space-y-3">
                 <!-- 成员列表将通过JavaScript动态生成 -->
