@@ -25,6 +25,7 @@ RUN openssl req -x509 -newkey rsa:4096 -nodes -out prod.pem -keyout prod.key -da
 RUN openssl req -x509 -newkey rsa:4096 -nodes -out stag.pem -keyout stag.key -days 365 \
     -subj "/C=SG/ST=Singapore/L=NUS/O=TCX2004/OU=Staging/CN=localhost"
 
+ENV REBUILD_TRIGGER=v2
 # Copy application code
 COPY app/ ./app
 

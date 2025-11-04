@@ -83,15 +83,13 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="relative flex justify-end h-16">
 
-                <!-- 居中标题 -->
                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <span class="text-xl font-bold text-gray-900 pointer-events-auto">群组管理系统</span>
                 </div>
 
-                <!-- 右侧用户菜单 -->
                 <div class="flex items-center relative z-10" id="user-menu-container">
 
-                    <button id="user-display-button" onclick="toggleUserMenu()"
+                    <button id="user-display-button"
                         class="flex items-center space-x-1 p-2 rounded-lg text-gray-700 font-medium text-sm hover:bg-gray-100 transition duration-150 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50">
                         <span id="user-display">..</span>
                         <svg id="caret-icon" class="w-4 h-4 ml-1 transform transition-transform duration-200"
@@ -104,7 +102,7 @@
                     <div id="logout-dropdown"
                         class="absolute right-0 top-full mt-2 w-40 bg-white rounded-lg shadow-xl py-1 z-10 hidden border border-gray-100">
 
-                        <button onclick="handleMyProfile(); toggleUserMenu();"
+                        <button id="profile-button"
                             class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 flex items-center space-x-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 xmlns="http://www.w3.org/2000/svg">
@@ -114,7 +112,7 @@
                             <span>我的资料</span>
                         </button>
 
-                        <button onclick="handleBackToDashboard(); toggleUserMenu();"
+                        <button id="dashboard-button"
                             class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 flex items-center space-x-2">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 xmlns="http://www.w3.org/2000/svg">
@@ -125,7 +123,7 @@
                             <span>主页</span>
                         </button>
 
-                        <button onclick="handleLogout()"
+                        <button id="logout-button"
                             class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition duration-150 flex items-center space-x-2 border-t border-gray-100 mt-1 pt-1">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                                 xmlns="http://www.w3.org/2000/svg">
@@ -146,7 +144,6 @@
         <div class="content-wrapper">
             <div class="space-y-6">
 
-                <!-- 待处理邀请卡片 -->
                 <div class="dashboard-card bg-white shadow-xl rounded-xl p-6 border-t-4 border-indigo-500 fade-in">
                     <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
                         <h2 class="text-xl font-semibold text-gray-800 flex items-center">
@@ -171,7 +168,6 @@
                     </div>
                 </div>
 
-                <!-- 我的群组卡片 -->
                 <div class="dashboard-card bg-white shadow-xl rounded-xl p-6 border-t-4 border-indigo-500 fade-in">
                     <div class="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
                         <h2 class="text-xl font-semibold text-gray-800 flex items-center">
@@ -179,8 +175,7 @@
                             我的群组
                         </h2>
                         <div class="flex space-x-3">
-                            <!-- 移除了邀请朋友按钮 -->
-                            <button onclick="handleCreateGroup()"
+                            <button id="create-group-button"
                                 class="flex items-center space-x-1 py-1 px-3 rounded-lg text-white bg-emerald-500 hover:bg-emerald-600 transition duration-150 text-sm shadow-md">
                                 <i class="fa-solid fa-plus w-3 h-3"></i>
                                 <span>创建群组</span>
@@ -189,8 +184,7 @@
                     </div>
 
                     <div id="my-groups-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[100px]">
-                        <!-- 群组卡片将在此处渲染 -->
-                    </div>
+                        </div>
                     <p id="groups-empty-state" class="text-center p-4 text-gray-500">
                         您还没有加入任何群组。
                     </p>
@@ -199,17 +193,15 @@
         </div>
     </main>
 
-    <!-- 自定义弹窗 -->
     <div id="custom-alert-modal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition duration-300 scale-100">
             <p id="alert-message" class="text-lg font-medium mb-4 text-center"></p>
-            <button onclick="closeCustomAlert()"
+            <button id="custom-alert-close-button"
                 class="w-full py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition duration-150">确定</button>
         </div>
     </div>
 
-    <!-- 退出登录确认弹窗 -->
     <div id="logout-confirm-modal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition duration-300 scale-100">
@@ -226,11 +218,11 @@
                 <p class="text-gray-600">您确定要退出登录吗？退出后需要重新登录才能访问您的群组。</p>
             </div>
             <div class="flex space-x-3">
-                <button onclick="closeLogoutConfirm()"
+                <button id="logout-cancel-button"
                     class="flex-1 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-150 font-medium">
                     取消
                 </button>
-                <button onclick="confirmLogout()"
+                <button id="logout-confirm-button"
                     class="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-150 font-medium">
                     确认退出
                 </button>
@@ -238,7 +230,6 @@
         </div>
     </div>
 
-    <!-- 创建群组弹窗 -->
     <div id="create-group-modal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full transform transition duration-300 scale-100">
@@ -252,9 +243,9 @@
                     placeholder="输入群组名称">
             </div>
             <div class="flex space-x-3">
-                <button onclick="closeCreateGroupModal()"
+                <button id="create-group-cancel-button"
                     class="flex-1 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-150">取消</button>
-                <button onclick="createNewGroup()"
+                <button id="create-group-confirm-button"
                     class="flex-1 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition duration-150">创建</button>
             </div>
         </div>
