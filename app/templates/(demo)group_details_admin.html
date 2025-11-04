@@ -214,10 +214,10 @@
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4">
                 <div class="flex items-center">
                     <h2 id="group-name-display" class="text-3xl font-extrabold text-gray-900 mb-4 sm:mb-0">
-                        周末旅行基金 <span class="text-sm font-normal text-gray-500">(ID: 1)</span>
+                        正在加载群组信息... <span class="text-sm font-normal text-gray-500">(ID: <span id="group-id-display">-</span>)</span>
                     </h2>
                     <span class="ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        管理员
+                        <span id="user-role-display">加载中...</span>
                     </span>
                 </div>
                 <div class="flex flex-wrap gap-3 mt-4 sm:mt-0"> 
@@ -246,14 +246,14 @@
             <div id="group-summary" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="balance-card bg-white p-6 rounded-xl border border-danger/20 shadow-lg">
                     <p class="text-sm font-medium text-danger">您欠款 (应付)</p>
-                    <p class="text-3xl font-bold text-danger mt-1" id="balance-owed">¥150.50</p>
-                    <p class="text-xs text-gray-500 mt-2">给 2 位成员</p>
+                    <p class="text-3xl font-bold text-danger mt-1" id="balance-owed">¥0.00</p>
+                    <p class="text-xs text-gray-500 mt-2">给 <span id="balance-owed-count">0</span> 位成员</p>
                 </div>
 
                 <div class="balance-card bg-white p-6 rounded-xl border border-success/20 shadow-lg">
                     <p class="text-sm font-medium text-success">被欠款 (应收)</p>
-                    <p class="text-3xl font-bold text-success mt-1" id="balance-owing-me">¥45.00</p>
-                    <p class="text-xs text-gray-500 mt-2">从 1 位成员</p>
+                    <p class="text-3xl font-bold text-success mt-1" id="balance-owing-me">¥0.00</p>
+                    <p class="text-xs text-gray-500 mt-2">从 <span id="balance-owing-count">0</span> 位成员</p>
                 </div>
 
                 <div class="balance-card bg-white p-6 rounded-xl border border-warning/20 shadow-lg flex flex-col justify-between">
@@ -399,7 +399,7 @@
                                     </label>
                                     <input type="text" id="group-name-input" 
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                                        placeholder="输入群组名称" value="周末旅行基金">
+                                        placeholder="输入群组名称" value="">
                                     <p class="text-xs text-gray-500 mt-1">群组名称将显示在所有成员界面中</p>
                                 </div>
                                 
@@ -1411,12 +1411,12 @@
 
         // --- 群组管理逻辑 ---
         function loadGroupSettings() {
-            // 从全局状态或API获取当前群组信息
-            const currentGroupName = document.getElementById('group-name-display').textContent.split(' (ID:')[0].trim();
-            const currentDescription = "用于记录周末旅行相关费用"; // 这里可以从数据中获取
-            
-            document.getElementById('group-name-input').value = currentGroupName;
-            document.getElementById('group-description-input').value = currentDescription;
+            // 从页面显示的群组名称获取数据
+            const groupNameElement = document.getElementById('group-name-display');
+            if (groupNameElement && !groupNameElement.textContent.includes('正在加载')) {
+                const currentGroupName = groupNameElement.textContent.split(' (ID:')[0].trim();
+                document.getElementById('group-name-input').value = currentGroupName;
+            }
         }
 
         function saveGroupSettings() {
@@ -3450,8 +3450,113 @@
             document.getElementById('custom-alert-modal').classList.add('hidden');
         }
 
+        // 群组数据加载
+        async function loadGroupData() {
+            const path = window.location.pathname;
+            const groupIdMatch = path.match(/\/groups\/(\d+)/);
+            const groupId = groupIdMatch ? parseInt(groupIdMatch[1]) : 1;
+            
+            console.log('正在加载群组数据，群组ID:', groupId);
+            
+            try {
+                // 获取群组详情
+                const groupResponse = await fetch(`/api/groups/${groupId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!groupResponse.ok) {
+                    throw new Error('无法获取群组信息');
+                }
+                
+                const groupData = await groupResponse.json();
+                console.log('获取到群组数据:', groupData);
+                
+                // 更新群组名称和ID显示
+                document.getElementById('group-name-display').innerHTML = `
+                    ${groupData.name} <span class="text-sm font-normal text-gray-500">(ID: ${groupData.id})</span>
+                `;
+                document.getElementById('group-id-display').textContent = groupData.id;
+                
+                // 更新群组编辑表单
+                document.getElementById('group-name-input').value = groupData.name;
+                
+                // 获取群组成员
+                await loadGroupMembers(groupId);
+                
+                // 获取群组余额
+                await loadGroupBalance(groupId);
+                
+            } catch (error) {
+                console.error('加载群组数据失败:', error);
+                showCustomAlert('加载群组数据失败: ' + error.message, true);
+            }
+        }
+        
+        async function loadGroupMembers(groupId) {
+            try {
+                const response = await fetch(`/groups/${groupId}/members`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const members = await response.json();
+                    console.log('获取到群组成员:', members);
+                    groupMembers = members;
+                    renderMemberList();
+                }
+            } catch (error) {
+                console.error('加载群组成员失败:', error);
+            }
+        }
+        
+        async function loadGroupBalance(groupId) {
+            try {
+                const response = await fetch(`/groups/${groupId}/balance`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const balanceData = await response.json();
+                    console.log('获取到余额数据:', balanceData);
+                    
+                    // 更新余额显示
+                    const balanceOwed = document.getElementById('balance-owed');
+                    const balanceOwedCount = document.getElementById('balance-owed-count');
+                    const balanceOwingMe = document.getElementById('balance-owing-me');
+                    const balanceOwingCount = document.getElementById('balance-owing-count');
+                    
+                    if (balanceData.total_owed) {
+                        balanceOwed.textContent = `¥${balanceData.total_owed.toFixed(2)}`;
+                    }
+                    if (balanceData.owed_to_count) {
+                        balanceOwedCount.textContent = balanceData.owed_to_count;
+                    }
+                    if (balanceData.total_owing) {
+                        balanceOwingMe.textContent = `¥${balanceData.total_owing.toFixed(2)}`;
+                    }
+                    if (balanceData.owing_from_count) {
+                        balanceOwingCount.textContent = balanceData.owing_from_count;
+                    }
+                }
+            } catch (error) {
+                console.error('加载余额数据失败:', error);
+            }
+        }
+
         // --- 页面加载初始化 ---
         document.addEventListener('DOMContentLoaded', function() {
+            // 首先加载群组数据
+            loadGroupData();
+            
             renderMemberList();
             refreshExpensesList();
             refreshPaymentsList();
