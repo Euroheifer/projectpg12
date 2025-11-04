@@ -254,6 +254,33 @@ def get_group_members(
     """Get all members of a group (requires membership)."""
     return crud.get_group_members(db, group_id=group.id)
 
+# ----------------add API prefix for groups.html----------------------------------
+@app.get("/api/groups/{group_id}/members", response_model=list[schemas.GroupMember])
+def get_group_members_api(
+    group: models.Group = Depends(get_group_with_access_check),
+    db: Session = Depends(get_db),
+):
+    """Get all members of a group (requires membership). API version with /api prefix."""
+    return crud.get_group_members(db, group_id=group.id)
+
+@app.get("/api/groups/{group_id}/balances")
+def get_group_balances_api(
+    group: models.Group = Depends(get_group_with_access_check),
+    db: Session = Depends(get_db),
+):
+    """Get balance summary for a group (requires membership)."""
+    print(f"=== 调试信息: 开始处理 /api/groups/{group.id}/balances ===")
+    try:
+        balance_data = crud.calculate_group_balances(db, group_id=group.id)
+        print(f"=== 调试信息: 成功获取余额数据 ===")
+        print(f"余额数据: {balance_data}")
+        return balance_data
+    except Exception as e:
+        print(f"=== 调试信息: 获取余额数据失败 ===")
+        print(f"错误: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to calculate balances: {str(e)}")
+# ----------------end of add API prefix for groups.html----------------------------------
+
 
 @app.post(
     "/groups/{group_id}/members/{user_id}",

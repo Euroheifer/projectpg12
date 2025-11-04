@@ -1124,3 +1124,89 @@ def get_audit_logs(db: Session, group_id: int):
     return db.query(models.AuditLog).options(
         joinedload(models.AuditLog.user)
     ).filter(models.AuditLog.group_id == group_id).order_by(models.AuditLog.timestamp.desc()).all()
+
+# ----------- Group Balance CRUD -----------
+def calculate_group_balances(db: Session, group_id: int):
+    """
+    Calculate balances for all members in a group.
+    Returns a dictionary with balance summary data.
+    """
+    # Get all group members
+    members = db.query(models.GroupMember).filter(
+        models.GroupMember.group_id == group_id
+    ).all()
+    
+    if not members:
+        return {
+            "total_owed": 0.0,
+            "total_owing": 0.0,
+            "owed_to_count": 0,
+            "owing_from_count": 0,
+            "detailed_balances": {}
+        }
+    
+    balance_summary = {
+        "total_owed": 0.0,      # Total amount this user owes to others
+        "total_owing": 0.0,     # Total amount others owe to this user
+        "owed_to_count": 0,     # Number of people this user owes money to
+        "owing_from_count": 0,  # Number of people who owe money to this user
+        "detailed_balances": {}  # Individual balance for each member
+    }
+    
+    # For each member, calculate their net balance
+    for member in members:
+        user_id = member.user_id
+        
+        # Calculate net balance for this user
+        # Get all expenses where this user was involved
+        expenses_with_splits = db.query(models.Expense).join(
+            models.ExpenseSplit
+        ).filter(
+            models.Expense.group_id == group_id,
+            models.ExpenseSplit.user_id == user_id
+        ).all()
+        
+        net_balance = 0.0
+        
+        for expense in expenses_with_splits:
+            # Get user's share for this expense
+            user_split = db.query(models.ExpenseSplit).filter(
+                models.ExpenseSplit.expense_id == expense.id,
+                models.ExpenseSplit.user_id == user_id
+            ).first()
+            
+            if not user_split:
+                continue
+                
+            # User's original share (what they should pay)
+            user_share = user_split.amount / 100.0  # Convert from cents
+            
+            # Calculate payments made by this user
+            payments_made = db.query(func.sum(models.Payment.amount)).filter(
+                models.Payment.expense_id == expense.id,
+                models.Payment.from_user_id == user_id
+            ).scalar() or 0
+            payments_made = payments_made / 100.0  # Convert from cents
+            
+            # Calculate payments received by this user
+            payments_received = db.query(func.sum(models.Payment.amount)).filter(
+                models.Payment.expense_id == expense.id,
+                models.Payment.to_user_id == user_id
+            ).scalar() or 0
+            payments_received = payments_received / 100.0  # Convert from cents
+            
+            # Net balance = what user should pay - what they actually paid + what they received
+            net_balance += (user_share - payments_made + payments_received)
+        
+        # Store individual balance
+        balance_summary["detailed_balances"][str(user_id)] = round(net_balance, 2)
+        
+        # Add to summary totals
+        if net_balance > 0:
+            balance_summary["total_owing"] += net_balance
+            balance_summary["owing_from_count"] += 1
+        elif net_balance < 0:
+            balance_summary["total_owed"] += abs(net_balance)
+            balance_summary["owed_to_count"] += 1
+    
+    return balance_summary
