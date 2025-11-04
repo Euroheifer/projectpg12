@@ -140,7 +140,7 @@
                 formData.append('username', email);
                 formData.append('password', password);
                 
-                const response = await fetch('/auth/login', {
+                const response = await fetch('/token', {
                     method: 'POST',
                     body: formData
                 });
