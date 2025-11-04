@@ -259,7 +259,7 @@
                 <div class="balance-card bg-white p-6 rounded-xl border border-warning/20 shadow-lg flex flex-col justify-between">
                     <div>
                         <p class="text-sm font-medium text-warning">建议结算</p>
-                        <p class="text-xl font-bold text-gray-900 mt-1">总计 2 笔待清算</p>
+                        <p class="text-xl font-bold text-gray-900 mt-1">总计 <span id="settlement-count">0</span> 笔待清算</p>
                     </div>
                     <button onclick="handleSettleUp()"
                         class="w-full py-2 bg-warning/80 text-white rounded-lg hover:bg-warning transition duration-150 shadow-md transform hover:scale-[1.01] active:scale-[0.99] text-sm mt-3">
@@ -3517,7 +3517,7 @@
         
         async function loadGroupBalance(groupId) {
             try {
-                const response = await fetch(`/groups/${groupId}/balance`, {
+                const response = await fetch(`/groups/${groupId}/balances`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
                         'Content-Type': 'application/json'
@@ -3545,6 +3545,13 @@
                     }
                     if (balanceData.owing_from_count) {
                         balanceOwingCount.textContent = balanceData.owing_from_count;
+                    }
+                    
+                    // 更新待清算笔数
+                    const settlementCount = document.getElementById('settlement-count');
+                    if (settlementCount) {
+                        const totalCount = (balanceData.owed_to_count || 0) + (balanceData.owing_from_count || 0);
+                        settlementCount.textContent = totalCount;
                     }
                 }
             } catch (error) {
