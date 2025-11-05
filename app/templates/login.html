@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户登录</title>
+    <!-- 引入 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 配置 Tailwind CSS 以使用 Inter 字体和自定义主题 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#4F46E5', // Indigo-600
+                        'primary-dark': '#4338CA', // Indigo-700
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #F3F4F6;
+            /* Light gray background */
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 登录表单容器 - 响应式设计 -->
+    <div id="login-container"
+        class="w-full max-w-md bg-white shadow-2xl rounded-xl p-8 md:p-10 mx-4 border border-gray-100 transition duration-300 hover:shadow-xl">
+
+        <!-- 头部/Logo -->
+        <div class="text-center mb-8">
+            <!-- 假设的 Logo 或图标 -->
+            <svg class="w-12 h-12 text-primary mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3v-3m0-4v-1a3 3 0 013-3h7a3 3 0 013 3v1">
+                </path>
+            </svg>
+            <h1 class="text-3xl font-extrabold text-gray-900">欢迎回来，请登录</h1>
+            <p class="mt-2 text-sm text-gray-500">输入您的凭证以继续</p>
+        </div>
+
+        <!-- 登录表单 -->
+        <form id="login-form">
+
+            <!-- 邮箱输入 (注意：名称设为 username 以匹配 OAuth2PasswordRequestForm) -->
+            <div class="mb-4">
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">电子邮箱</label>
+                <input type="email" id="email" name="username" required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition duration-150"
+                    placeholder="name@example.com">
+            </div>
+
+            <!-- 密码输入 -->
+            <div class="mb-6">
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                <input type="password" id="password" name="password" required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition duration-150"
+                    placeholder="您的密码">
+            </div>
+
+            <!-- 消息显示区 (代替 alert()) -->
+            <div id="message-box" class="hidden p-3 mb-4 rounded-lg text-sm text-center" role="alert"></div>
+
+            <!-- 登录按钮 -->
+            <div>
+                <button type="submit" id="login-button"
+                    class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-md text-base font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition duration-150 transform hover:scale-[1.01] active:scale-[0.99]">
+                    立即登录
+                </button>
+            </div>
+        </form>
+
+        <!-- 底部链接 -->
+        <div class="mt-6 text-center text-sm">
+            <p class="text-gray-600">
+                还没有账户？
+                <a href="/signup" id="signup-redirect-link"
+                    class="font-medium text-primary hover:text-primary-dark transition duration-150">
+                    去注册
+                </a>
+            </p>
+        </div>
+
+    </div>
+
+    <!-- link to login js -->
+    <script type="module" src="/static/js/page/auth_page.js"></script>
+
+
+
+</body>
+
+</html>
