@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- 确保标题与 FastAP app.title 匹配 -->
+<title>Project PG12</title>
+<!-- 加载 Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+/* 使用 Inter 字体 */
+body {
+font-family: 'Inter', sans-serif;
+}
+</style>
+
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self'">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    </head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
+<!-- 主容器 -->
+<div class="w-full max-w-4xl bg-white shadow-xl rounded-xl p-8 mt-10">
+<!-- 头部/标题 -->
+<header class="text-center mb-10">
+<h1 class="text-4xl font-extrabold text-indigo-700 mb-2">
+Project PG12 - 迭代 2 启动
+</h1>
+<p class="text-lg text-gray-500">
+后端服务已部署：FastAPI (Staging/Production)
+</p>
+</header>
+<!-- 内容区域 -->
+<main id="app-content" class="text-center py-12 border-t border-gray-200">
+<h2 class="text-2xl font-semibold text-gray-800 mb-4">欢迎来到 PG12！</h2>
+<p class="text-gray-600 mb-6">
+后端正在运行在：<code class="bg-gray-200 p-1 rounded">http://localhost:8080</code> (Staging)
+和 <code class="bg-gray-200 p-1 rounded">https://172.25.76.174/</code> (Production)
+</p>
+<div class="flex justify-center space-x-4 mt-8">
+<a href="/docs" target="_blank"
+class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md">
+查看 FastAPI 文档
+</a>
+<a href="/placeholder"
+class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md">
+开始使用
+</a>
+</div>
+</main>
+<!-- 认证操作区域 -->
+<section id="auth-actions" class="mt-10 pt-4 border-t border-gray-200 text-center">
+<h3 class="text-xl font-semibold text-gray-700 mb-4">用户认证</h3>
+<p class="text-sm text-gray-500 mb-4">
+点击按钮前往文档页面测试用户登录和注册路由。
+</p>
+<div class="flex justify-center space-x-4">
+<!-- 登录按钮 (链接到 /docs 路由) -->
+<!-- <button onclick="window.open('/users/signup/', '_blank')" -->
+<button onclick="window.location.href='/login'"
+class="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition duration-150 shadow-lg">
+<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+<path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+clip-rule="evenodd" />
+</svg>
+<span>登录 (Sign In)</span>
+</button>
+<!-- 注册按钮 (链接到 /docs 路由) -->
+<button onclick="window.location.href='/signup'"
+class="flex items-center space-x-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-6 rounded-lg transition duration-150 shadow-lg">
+<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+<path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a1 1 0 100 2h10a1 1 0 000-2H8z" />
+<path d="M11 14a1 1 0 100-2h7a1 1 0 000-2h-7a1 1 0 100 2z" />
+</svg>
+<span>注册 (Register)</span>
+</button>
+</div>
+</section>
+</div>
+
+    <script>
+    // 全局错误处理
+    window.addEventListener('error', function(e) {
+        console.error('页面错误:', e.error);
+        // 可以添加错误上报逻辑
+    });
+    
+    // 网络错误处理
+    window.addEventListener('unhandledrejection', function(e) {
+        console.error('未处理的Promise错误:', e.reason);
+    });
+    
+    // 表单验证增强
+    document.addEventListener('DOMContentLoaded', function() {
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                // 基础验证
+                const requiredFields = form.querySelectorAll('[required]');
+                let isValid = true;
+                
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        isValid = false;
+                        field.classList.add('border-red-500');
+                    } else {
+                        field.classList.remove('border-red-500');
+                    }
+                });
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    alert('请填写所有必填字段');
+                }
+            });
+        });
+    });
+    </script>
+    </body>
+</html>

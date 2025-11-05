@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>群组详情 | Project PG12</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+theme: {
+extend: {
+fontFamily: {
+sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif'],
+},
+colors: {
+primary: '#4F46E5', // Indigo-600
+'primary-dark': '#4338CA', // Indigo-700
+success: '#10B981', // Emerald-500
+danger: '#F87171', // Red-400
+warning: '#FBBF24', // Amber-400
+balance: '#10B981',
+unbalanced: '#F87171',
+}
+}
+}
+}
+</script>
+<style>
+body {
+background-color: #F9FAFB;
+font-family: 'Inter', sans-serif;
+min-height: 100vh;
+}
+.balance-card {
+transition: all 0.2s ease-in-out;
+}
+.tab-button.active {
+border-bottom: 3px solid #4F46E5;
+color: #4F46E5;
+font-weight: 600;
+}
+#add-expense-modal input[type="file"],
+#add-payment-modal input[type="file"],
+#expense-detail-modal input[type="file"],
+#payment-detail-modal input[type="file"] {
+display: none;
+}
+.split-toggle-btn {
+padding-top: 0.5rem;
+padding-bottom: 0.5rem;
+font-weight: 700;
+color: #4F46E5;
+background-color: white;
+transition-duration: 0.2s;
+border: none;
+border-right: 1px solid #4F46E5;
+}
+.split-toggle-btn:hover {
+background-color: #4F46E51A;
+}
+.split-toggle-btn.active {
+background-color: #4F46E5 !important;
+color: white !important;
+}
+.split-toggle-btn:last-child {
+border-right: none;
+}
+.recurring-toggle {
+transition: all 0.2s ease-in-out;
+}
+.recurring-options {
+max-height: 0;
+overflow: hidden;
+transition: max-height 0.3s ease-in-out;
+}
+.recurring-options.expanded {
+max-height: 500px;
+}
+.frequency-option {
+border: 2px solid #e5e7eb;
+border-radius: 0.5rem;
+padding: 0.75rem;
+cursor: pointer;
+transition: all 0.2s;
+}
+.frequency-option:hover {
+border-color: #4F46E5;
+background-color: #f8faff;
+}
+.frequency-option.selected {
+border-color: #4F46E5;
+background-color: #4F46E5;
+color: white;
+}
+.preview-item {
+border-left: 3px solid #4F46E5;
+background-color: #f8faff;
+}
+.participant-checkbox {
+accent-color: #4F46E5;
+}
+.expense-item {
+transition: all 0.2s ease-in-out;
+}
+.expense-item:hover {
+transform: translateY(-2px);
+}
+.readonly-field {
+background-color: #f9fafb;
+cursor: not-allowed;
+}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' cdn.tailwindcss.com cdnjs.cloudflare.com; img-src 'self' data:; connect-src 'self'">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="DENY">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    </head>
+<body>
+<nav class="bg-white shadow-md">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+<div class="grid grid-cols-3 items-center h-16">
+<div class="flex items-center justify-start">
+<button onclick="handleBackToPreviousPage()"
+class="flex items-center space-x-1 text-gray-700 hover:text-primary transition duration-150 text-sm font-medium p-2 rounded-lg hover:bg-gray-100">
+<svg class="w-5 h-5 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+xmlns="http://www.w3.org/2000/svg">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+</svg>
+<span class="hidden sm:block">Back</span>
+</button>
+</div>
+<div class="flex items-center justify-center">
+<span class="text-xl font-bold text-gray-900 truncate">Project PG12 记账本</span>
+</div>
+<div class="flex items-center relative justify-end" id="user-menu-container">
+<!-- 移除了管理员徽章 -->
+<button id="user-display-button" onclick="toggleUserMenu()"
+class="flex items-center space-x-1 p-2 rounded-lg text-gray-700 font-medium text-sm hover:bg-gray-100 transition duration-150 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50">
+<span id="user-display">张三</span>
+<svg id="caret-icon" class="w-4 h-4 ml-1 transform transition-transform duration-200" fill="none"
+stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+</svg>
+</button>
+<div id="logout-dropdown"
+class="absolute right-0 top-full mt-2 w-40 bg-white rounded-lg shadow-xl py-1 z-10 hidden border border-gray-100">
+<button onclick="handleMyProfile(); toggleUserMenu();"
+class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 flex items-center space-x-2">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+xmlns="http://www.w3.org/2000/svg">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+</svg>
+<span>我的资料</span>
+</button>
+<button onclick="handleBackToDashboard(); toggleUserMenu();"
+class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 flex items-center space-x-2">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+xmlns="http://www.w3.org/2000/svg">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+d="M3 12l2-2m0 0l7-7m0 0l7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+</svg>
+<span>主页</span>
+</button>
+<button onclick="handleLogout()"
+class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition duration-150 flex items-center space-x-2 border-t border-gray-100 mt-1 pt-1">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+xmlns="http://www.w3.org/2000/svg">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3v-3m0-6V7a3 3 0 013-3h4"></path>
+</svg>
+<span>退出登录</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</nav>
+<main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+<div class="bg-white p-6 md:p-10 rounded-xl shadow-xl border border-gray-100">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4">
+<h2 id="group-name-display" class="text-3xl font-extrabold text-gray-900 mb-4 sm:mb-0">
+周末旅行基金 <span class="text-sm font-normal text-gray-500">(ID: 1)</span>
+</h2>
+<div class="flex flex-wrap gap-3 mt-4 sm:mt-0">
+<button onclick="handleAddNewExpense()"
+class="flex items-center space-x-1 py-2 px-4 rounded-lg text-white bg-primary hover:bg-primary-dark transition duration-150 shadow-md transform hover:scale-[1.02] active:scale-[0.98] text-sm font-medium">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+xmlns="http://www.w3.org/2000/svg">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+</svg>
+<span>添加费用</span>
+</button>
+<button onclick="handleAddNewPayment()"
+class="flex items-center space-x-1 py-2 px-4 rounded-lg text-white bg-success hover:bg-emerald-600 transition duration-150 shadow-md transform hover:scale-[1.02] active:scale-[0.98] text-sm font-medium">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+xmlns="http://www.w3.org/2000/svg">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+</svg>
+<span>添加支付</span>
+</button>
+</div>
+</div>
+<div id="group-summary" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+<div class="balance-card bg-white p-6 rounded-xl border border-danger/20 shadow-lg">
+<p class="text-sm font-medium text-danger">您欠款 (应付)</p>
+<p class="text-3xl font-bold text-danger mt-1" id="balance-owed">¥150.50</p>
+<p class="text-xs text-gray-500 mt-2">给 2 位成员</p>
+</div>
+<div class="balance-card bg-white p-6 rounded-xl border border-success/20 shadow-lg">
+<p class="text-sm font-medium text-success">被欠款 (应收)</p>
+<p class="text-3xl font-bold text-success mt-1" id="balance-owing-me">¥45.00</p>
+<p class="text-xs text-gray-500 mt-2">从 1 位成员</p>
+</div>
+<div class="balance-card bg-white p-6 rounded-xl border border-warning/20 shadow-lg flex flex-col justify-between">
+<div>
+<p class="text-sm font-medium text-warning">建议结算</p>
+<p class="text-xl font-bold text-gray-900 mt-1">总计 2 笔待清算</p>
+</div>
+<button onclick="handleSettleUp()"
+class="w-full py-2 bg-warning/80 text-white rounded-lg hover:bg-warning transition duration-150 shadow-md transform hover:scale-[1.01] active:scale-[0.99] text-sm mt-3">
+<svg class="w-4 h-4 inline-block mr-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 0012 4.499c-3.562 0-6.84 1.838-8.683 4.887m17.566 2h-5.545m-4.021 0h-5.545M5.636 12A8.001 8.001 0 0012 19.5c3.562 0 6.84-1.838 8.683-4.887"></path></svg>
+<span>结算所有欠款</span>
+</button>
+</div>
+</div>
+<div class="border-b border-gray-200 mb-6">
+<div class="flex space-x-8 overflow-x-auto">
+<button id="tab-expenses" onclick="setActiveTab('expenses')"
+class="tab-button active pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
+费用 (<span id="expense-count">3</span>)
+</button>
+<button id="tab-recurring" onclick="setActiveTab('recurring')"
+class="tab-button pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
+定期费用 (<span id="recurring-count">2</span>)
+</button>
+<button id="tab-payments" onclick="setActiveTab('payments')"
+class="tab-button pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
+支付 (<span id="payment-count">2</span>)
+</button>
+<button id="tab-members" onclick="setActiveTab('members')"
+class="tab-button pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
+成员 (<span id="member-count">4</span>)
+</button>
+<button id="tab-invite" onclick="setActiveTab('invite')"
+class="tab-button pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
+邀请成员
+</button>
+</div>
+</div>
+<!-- 费用内容 -->
+<div id="tab-content-expenses">
+<h3 class="text-xl font-semibold text-gray-900 mb-4">最近的费用列表</h3>
+<div id="expenses-list" class="space-y-4">
+<!-- 费用列表将通过JavaScript动态生成 -->
+</div>
+</div>
+<!-- 定期费用内容 -->
+<div id="tab-content-recurring" class="hidden">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-xl font-semibold text-gray-900">定期费用列表</h3>
+<button onclick="handleAddNewRecurringExpense()"
+class="flex items-center space-x-1 py-2 px-4 rounded-lg text-white bg-warning hover:bg-amber-500 transition duration-150 shadow-md transform hover:scale-[1.02] active:scale-[0.98] text-sm font-medium">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+xmlns="http://www.w3.org/2000/svg">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+</svg>
+<span>添加定期费用</span>
+</button>
+</div>
+<div id="recurring-list" class="space-y-4">
+<!-- 定期费用列表将通过JavaScript动态生成 -->
+</div>
+</div>
+<!-- 支付内容 -->
+<div id="tab-content-payments" class="hidden">
+<h3 class="text-xl font-semibold text-gray-900 mb-4">最近的支付列表</h3>
+<div id="payments-list" class="space-y-4">
+<!-- 支付列表将通过JavaScript动态生成 -->
+</div>
+</div>
+<!-- 成员内容 -->
+<div id="tab-content-members" class="hidden">
+<h3 class="text-xl font-semibold text-gray-900 mb-4 flex items-center border-b pb-2">
+群组成员 (<span id="active-member-count">4</span> 人)
+</h3>
+<div id="member-list-container" class="space-y-3">
+<!-- 成员列表将通过JavaScript动态生成 -->
+</div>
+</div>
+<!-- 邀请成员内容 -->
+<div id="tab-content-invite" class="hidden">
+<h3 class="text-xl font-semibold text-gray-900 mb-4">邀请成员</h3>
+<div class="bg-white p-6 rounded-lg border border-gray-200 max-w-lg mx-auto">
+<div class="space-y-4">
+<p class="text-sm text-gray-600">请输入您希望邀请的用户的注册邮箱 (Email Address)。系统将向该邮箱发送邀请链接。</p>
+<label for="invite-user-email-input" class="block text-sm font-medium text-gray-700">要邀请的邮箱</label>
+<input type="email" required autocomplete="email" id="invite-user-email-input"
+class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+placeholder="例如: user@example.com">
+<p id="invite-loading-message" class="text-sm text-warning hidden">
+<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-warning inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+</svg>
+正在发送邀请...
+</p>
+</div>
+<div class="mt-6 flex justify-end space-x-3">
+<button onclick="clearInviteForm()"
+class="py-2 px-4 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 transition duration-150 text-sm font-medium">
+取消
+</button>
+<button onclick="inviteNewMember()" id="invite-submit-button"
+class="py-2 px-4 rounded-lg text-white bg-success hover:bg-emerald-600 transition duration-150 shadow-md text-sm font-medium">
+发送邀请
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- 模态框 -->
+<div id="custom-alert-modal"
+class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+<div
+class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition duration-300 scale-100">
+<p id="alert-message" class="text-lg font-medium mb-4 text-center"></p>
+<button onclick="closeCustomAlert()"
+class="w-full py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition duration-150">确定</button>
+</div>
+</div>
+<!-- 其他模态框和表单内容省略... -->
+
+    <script>
+    // 全局错误处理
+    window.addEventListener('error', function(e) {
+        console.error('页面错误:', e.error);
+        // 可以添加错误上报逻辑
+    });
+    
+    // 网络错误处理
+    window.addEventListener('unhandledrejection', function(e) {
+        console.error('未处理的Promise错误:', e.reason);
+    });
+    
+    // 表单验证增强
+    document.addEventListener('DOMContentLoaded', function() {
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                // 基础验证
+                const requiredFields = form.querySelectorAll('[required]');
+                let isValid = true;
+                
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        isValid = false;
+                        field.classList.add('border-red-500');
+                    } else {
+                        field.classList.remove('border-red-500');
+                    }
+                });
+                
+                if (!isValid) {
+                    e.preventDefault();
+                    alert('请填写所有必填字段');
+                }
+            });
+        });
+    });
+    </script>
+    </body>
+</html>
