@@ -1,69 +1,114 @@
-# 记账应用完整修复版本
+# 群组支出管理系统 - 精简版
 
-一个用于群组共享支出的后端系统，已完全修复所有已知问题。
+## 项目简介
 
-## 🚀 快速开始
+这是一个完整的群组支出管理系统，提供用户认证、群组管理、支出追踪、支付记录和余额结算等功能。
 
-### 方法一：一键部署
+## 技术栈
+
+### 后端
+- **FastAPI** - Python Web框架
+- **SQLAlchemy** - ORM数据库操作
+- **PostgreSQL** - 主数据库
+- **Redis** - 缓存和会话管理
+- **JWT** - 用户认证
+
+### 前端
+- **原生JavaScript** - 模块化架构
+- **HTML5 + CSS3** - 响应式设计
+- **Nginx** - 反向代理
+
+## 核心功能
+
+- ✅ 用户注册和登录
+- ✅ 创建和管理群组
+- ✅ 添加和追踪支出
+- ✅ 记录支付信息
+- ✅ 自动计算余额
+- ✅ 群组邀请管理
+- ✅ 响应式UI设计
+
+## 快速开始
+
+### 方式一：Docker Compose (推荐)
+
 ```bash
-bash 快速部署.sh
+# 启动所有服务
+docker-compose up -d
+
+# 访问应用
+# 前端: http://localhost:8080
+# 后端API: http://localhost:8000
+# API文档: http://localhost:8000/docs
 ```
 
-### 方法二：手动部署
+### 方式二：开发环境
+
 ```bash
-docker-compose down --remove-orphans
-docker-compose up -d --build
-# 访问: https://localhost:8443
+# 1. 安装Python依赖
+pip install -r requirements.txt
+
+# 2. 启动后端服务
+cd app
+uvicorn main:app --reload --port 8000
+
+# 3. 启动前端服务
+# 使用任何静态文件服务器托管frontend目录
+# 例如: python -m http.server 8080 --directory frontend
 ```
 
-## 🔧 修复内容 (2025-11-05)
+## 项目结构
 
-### ✅ 已修复的关键问题:
-1. **escapeHtml函数未定义** - 已修复为全局函数 `window.escapeHtml`
-2. **邀请功能占位符** - 已完整实现所有邀请功能（加载/接受/拒绝）
-3. **API函数命名不一致** - 已统一函数命名
-4. **消息提示功能缺失** - 已添加 `showMessage` 函数
-5. **群组详情页硬编码数据** - 已清除演示数据，改为动态加载
-
-### 🧪 验证修复:
-```bash
-bash 快速测试.sh
+```
+├── app/                 # 后端Python代码
+│   ├── main.py         # FastAPI主应用
+│   ├── models.py       # 数据库模型
+│   ├── crud.py         # 数据库操作
+│   ├── auth.py         # 认证相关
+│   ├── schemas.py      # Pydantic模式
+│   ├── dependencies.py # 依赖注入
+│   └── pages.py        # HTML页面路由
+├── frontend/            # 前端静态文件
+│   ├── index.html      # 主页面
+│   ├── dashboard.html  # 仪表板
+│   ├── styles.css      # 样式文件
+│   ├── app.js          # 应用入口
+│   └── js/             # JavaScript模块
+├── deployment/          # 部署配置
+│   ├── docker-compose.dev.yml
+│   ├── nginx/          # Nginx配置
+│   └── scripts/        # 部署脚本
+├── requirements.txt     # Python依赖
+├── docker-compose.yml  # Docker配置
+└── README.md          # 项目说明
 ```
 
-或使用详细验证：
-```bash
-bash validate_fix.sh
-bash validate_group_fix.sh
-```
+## 主要API端点
 
-```bash
-PROJECT-PG12/
-├── app/
-│   ├── main.py             # FastAPI app entry point and all routes
-│   ├── database.py         # Database connection and session management
-│   ├── models.py           # SQLAlchemy ORM models
-│   ├── schemas.py          # Pydantic Schemas for request and response models
-│   ├── crud.py             # CRUD operations for database models
-│   ├── auth.py             # User authentication and JWT handling
-│   └── dependencies.py     # Common dependencies, e.g.,get current user DB session
-├── Dockerfile              # Docker image build file
-├── docker-compose.yml      # Docker container orchestration file
-├── requirements.txt        # Python dependencies
-└── README.md               # Project documentation
+- `POST /auth/register` - 用户注册
+- `POST /auth/login` - 用户登录
+- `GET /groups` - 获取群组列表
+- `POST /groups` - 创建群组
+- `GET /expenses` - 获取支出列表
+- `POST /expenses` - 添加支出
+- `GET /payments` - 获取支付列表
+- `POST /payments` - 记录支付
 
+## 默认端口
 
-app/static/js/
-├── api/
-│   ├── auth.js              # 认证相关 API
-│   ├── expense.js           # 支出相关 API
-│   ├── groups.js            # 群组相关 API
-│   ├── invitations.js       # 邀请相关 API
-│   ├── payment.js           # 支付相关 API
-│   └── recurring-expense.js # 定期支出相关 API
-├── ui/
-│   ├── menu.js              # 顶部菜单和用户信息管理
-│   └── utils.js             # 通用 UI 工具函数
-├── pages/
-    ├── auth_page.js         # 登录/注册页面逻辑
-    ├── group_page.js        # 群组页面逻辑
-    └── home_page.js         # 主页特定逻辑
+- 前端: 8080
+- 后端API: 8000
+- PostgreSQL: 5432
+- Redis: 6379
+- Nginx: 80
+
+## 注意事项
+
+- 首次启动会自动创建数据库表
+- 建议在生产环境中修改默认密码
+- 前端已包含所有必要的JavaScript模块
+- 支持移动端响应式设计
+
+## 许可证
+
+MIT License

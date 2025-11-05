@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户仪表板 - 群组管理系统</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* 顶部导航栏 */
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .logout-btn {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #ff5252;
+            transform: translateY(-2px);
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .welcome-title {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .welcome-subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1.1rem;
+        }
+
+        /* 邀请通知区域 */
+        .invitations-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .invitation-item {
+            background: #f8f9ff;
+            border: 1px solid #e1e5f0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .invitation-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .invitation-info h4 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .invitation-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .invitation-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+
+        .btn-success {
+            background: #51cf66;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #40c057;
+        }
+
+        .btn-danger {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff5252;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #ddd;
+            color: #333;
+        }
+
+        .btn-outline:hover {
+            background: #f5f5f5;
+        }
+
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #667eea;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* 群组卡片网格 */
+        .groups-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-filter {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-input {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            width: 250px;
+            font-size: 0.9rem;
+        }
+
+        .groups-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .group-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .group-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .group-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .group-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+
+        .group-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .group-stat {
+            text-align: center;
+        }
+
+        .group-stat-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .group-stat-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .group-members {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .member-avatars {
+            display: flex;
+            margin-right: 0.5rem;
+        }
+
+        .member-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: -6px;
+            border: 2px solid white;
+        }
+
+        .member-avatar:first-child {
+            margin-left: 0;
+        }
+
+        .load-more {
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            color: white;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: #ddd;
+            margin-bottom: 1rem;
+        }
+
+        /* 创建群组模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+        }
+
+        .modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+        }
+
+        /* 通知消息 */
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 1500;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-left: 4px solid #51cf66;
+        }
+
+        .notification.error {
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .notification.info {
+            border-left: 4px solid #667eea;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 1rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+
+            .welcome-title {
+                font-size: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+
+            .groups-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .search-filter {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .search-input {
+                width: 100%;
+            }
+
+            .modal-content {
+                margin: 1rem;
+                width: calc(100% - 2rem);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="logo">
+                <i class="fas fa-users"></i>
+                群组管理系统
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <span id="userName">用户</span>
+                <button class="logout-btn" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    登出
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 欢迎区域 -->
+        <div class="welcome-section">
+            <h1 class="welcome-title">欢迎回来！</h1>
+            <p class="welcome-subtitle" id="welcomeSubtitle">管理您的群组和支出</p>
+        </div>
+
+        <!-- 加载状态 -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- 邀请通知区域 -->
+        <div class="invitations-section" id="invitationsSection" style="display: none;">
+            <h2 class="section-title">
+                <i class="fas fa-bell"></i>
+                待处理邀请
+            </h2>
+            <div id="invitationsList">
+                <!-- 邀请列表将动态插入 -->
+            </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="stats-grid" id="statsGrid" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-value" id="totalGroups">0</div>
+                <div class="stat-label">群组总数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-user-friends"></i>
+                </div>
+                <div class="stat-value" id="totalMembers">0</div>
+                <div class="stat-label">总成员数</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-yen-sign"></i>
+                </div>
+                <div class="stat-value" id="totalExpenses">￥0</div>
+                <div class="stat-label">总支出</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <div class="stat-value" id="avgExpenses">￥0</div>
+                <div class="stat-label">平均支出</div>
+            </div>
+        </div>
+
+        <!-- 群组区域 -->
+        <div class="groups-section" id="groupsSection" style="display: none;">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-layer-group"></i>
+                    我的群组
+                </h2>
+                <div class="search-filter">
+                    <input type="text" class="search-input" placeholder="搜索群组..." id="searchInput">
+                    <button class="btn btn-primary" onclick="showCreateGroupModal()">
+                        <i class="fas fa-plus"></i>
+                        创建群组
+                    </button>
+                </div>
+            </div>
+
+            <!-- 空状态 -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <i class="fas fa-users"></i>
+                <h3>还没有群组</h3>
+                <p>创建您的第一个群组开始使用</p>
+                <button class="btn btn-primary" onclick="showCreateGroupModal()">
+                    <i class="fas fa-plus"></i>
+                    创建群组
+                </button>
+            </div>
+
+            <!-- 群组卡片网格 -->
+            <div class="groups-grid" id="groupsGrid">
+                <!-- 群组卡片将动态插入 -->
+            </div>
+
+            <div class="load-more" id="loadMoreSection" style="display: none;">
+                <button class="btn btn-outline" onclick="loadMoreGroups()">
+                    <i class="fas fa-chevron-down"></i>
+                    加载更多
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建群组模态框 -->
+    <div class="modal" id="createGroupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">创建新群组</h3>
+                <button class="close-btn" onclick="hideCreateGroupModal()">×</button>
+            </div>
+            <form id="createGroupForm">
+                <div class="form-group">
+                    <label class="form-label">群组名称 *</label>
+                    <input type="text" class="form-input" id="groupName" required maxlength="50" placeholder="请输入群组名称">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">群组描述</label>
+                    <textarea class="form-textarea" id="groupDescription" maxlength="200" placeholder="请输入群组描述（可选）"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="hideCreateGroupModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        创建群组
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 通知消息 -->
+    <div class="notification" id="notification">
+        <div class="notification-content" id="notificationContent">
+            <!-- 通知内容将动态插入 -->
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentUser = null;
+        let userGroups = [];
+        let pendingInvitations = [];
+        let totalExpenses = 0;
+        let currentPage = 1;
+        const itemsPerPage = 9;
+
+        // API 配置
+        const API_BASE = '/api';
+        
+        // 初始化页面
+        document.addEventListener('DOMContentLoaded', function() {
+            loadUserInfo();
+            loadUserData();
+            setupEventListeners();
+        });
+
+        // 设置事件监听器
+        function setupEventListeners() {
+            // 搜索功能
+            document.getElementById('searchInput').addEventListener('input', debounce(filterGroups, 300));
+            
+            // 创建群组表单提交
+            document.getElementById('createGroupForm').addEventListener('submit', handleCreateGroup);
+            
+            // 模态框背景点击关闭
+            document.getElementById('createGroupModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    hideCreateGroupModal();
+                }
+            });
+        }
+
+        // 加载用户信息
+        async function loadUserInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/me`);
+                if (!response.ok) {
+                    throw new Error('获取用户信息失败');
+                }
+                
+                const user = await response.json();
+                currentUser = user;
+                
+                // 更新用户信息显示
+                document.getElementById('userName').textContent = user.username || user.name;
+                document.getElementById('userAvatar').textContent = (user.username || user.name || 'U').charAt(0).toUpperCase();
+                document.getElementById('welcomeSubtitle').textContent = `欢迎回来，${user.username || user.name}！管理您的群组和支出`;
+                
+            } catch (error) {
+                console.error('加载用户信息失败:', error);
+                showNotification('加载用户信息失败', 'error');
+            }
+        }
+
+        // 加载用户数据
+        async function loadUserData() {
+            try {
+                // 隐藏加载状态
+                document.getElementById('loading').style.display = 'none';
+                
+                // 并行加载数据
+                const [groupsResult, invitationsResult] = await Promise.allSettled([
+                    loadUserGroups(),
+                    loadPendingInvitations()
+                ]);
+                
+                // 显示主要内容
+                document.getElementById('invitationsSection').style.display = 'block';
+                document.getElementById('statsGrid').style.display = 'grid';
+                document.getElementById('groupsSection').style.display = 'block';
+                
+            } catch (error) {
+                console.error('加载用户数据失败:', error);
+                showNotification('加载数据失败', 'error');
+            }
+        }
+
+        // 加载用户群组
+        async function loadUserGroups() {
+            try {
+                const response = await fetch(`${API_BASE}/groups/`);
+                if (!response.ok) {
+                    throw new Error('获取群组列表失败');
+                }
+                
+                const groups = await response.json();
+                userGroups = groups || [];
+                
+                // 更新统计信息
+                updateStatistics();
+                
+                // 显示群组
+                displayGroups();
+                
+                // 如果群组为空，显示空状态
+                if (userGroups.length === 0) {
+                    document.getElementById('emptyState').style.display = 'block';
+                    document.getElementById('groupsGrid').style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('加载群组失败:', error);
+                userGroups = [];
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('groupsGrid').style.display = 'none';
+            }
+        }
+
+        // 加载待处理邀请
+        async function loadPendingInvitations() {
+            try {
+                const response = await fetch(`${API_BASE}/invitations/pending`);
+                if (!response.ok) {
+                    throw new Error('获取邀请列表失败');
+                }
+                
+                const invitations = await response.json();
+                pendingInvitations = invitations || [];
+                
+                displayInvitations();
+                
+            } catch (error) {
+                console.error('加载邀请失败:', error);
+                pendingInvitations = [];
+                displayInvitations();
+            }
+        }
+
+        // 显示邀请列表
+        function displayInvitations() {
+            const invitationsList = document.getElementById('invitationsList');
+            const invitationsSection = document.getElementById('invitationsSection');
+            
+            if (pendingInvitations.length === 0) {
+                invitationsSection.style.display = 'none';
+                return;
+            }
+            
+            invitationsList.innerHTML = '';
+            
+            pendingInvitations.forEach(invitation => {
+                const invitationElement = document.createElement('div');
+                invitationElement.className = 'invitation-item';
+                invitationElement.innerHTML = `
+                    <div class="invitation-info">
+                        <h4>${invitation.group_name || '未知群组'}</h4>
+                        <p>邀请人: ${invitation.inviter_name || '未知用户'}</p>
+                        <p>创建时间: ${formatDate(invitation.created_at)}</p>
+                    </div>
+                    <div class="invitation-actions">
+                        <button class="btn btn-success" onclick="handleInvitation('${invitation.id}', 'accept')">
+                            <i class="fas fa-check"></i>
+                            接受
+                        </button>
+                        <button class="btn btn-danger" onclick="handleInvitation('${invitation.id}', 'reject')">
+                            <i class="fas fa-times"></i>
+                            拒绝
+                        </button>
+                    </div>
+                `;
+                invitationsList.appendChild(invitationElement);
+            });
+        }
+
+        // 处理邀请
+        async function handleInvitation(invitationId, action) {
+            try {
+                const response = await fetch(`${API_BASE}/invitations/${invitationId}/${action}`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`${action === 'accept' ? '接受' : '拒绝'}邀请失败`);
+                }
+                
+                // 移除邀请
+                pendingInvitations = pendingInvitations.filter(inv => inv.id !== invitationId);
+                displayInvitations();
+                
+                // 如果接受了邀请，重新加载群组
+                if (action === 'accept') {
+                    loadUserGroups();
+                }
+                
+                showNotification(`${action === 'accept' ? '已接受' : '已拒绝'}邀请`, 'success');
+                
+            } catch (error) {
+                console.error('处理邀请失败:', error);
+                showNotification('处理邀请失败', 'error');
+            }
+        }
+
+        // 更新统计信息
+        function updateStatistics() {
+            const totalGroups = userGroups.length;
+            let totalMembers = 0;
+            
+            // 计算总成员数
+            userGroups.forEach(group => {
+                totalMembers += group.member_count || 0;
+            });
+            
+            // 计算总支出（这里需要从后端获取实际的支出数据）
+            totalExpenses = 0; // 暂时设为0，等待后端API
+            
+            const avgExpenses = totalGroups > 0 ? Math.round(totalExpenses / totalGroups) : 0;
+            
+            // 更新显示
+            document.getElementById('totalGroups').textContent = totalGroups;
+            document.getElementById('totalMembers').textContent = totalMembers;
+            document.getElementById('totalExpenses').textContent = `￥${totalExpenses}`;
+            document.getElementById('avgExpenses').textContent = `￥${avgExpenses}`;
+        }
+
+        // 显示群组
+        function displayGroups() {
+            const groupsGrid = document.getElementById('groupsGrid');
+            const loadMoreSection = document.getElementById('loadMoreSection');
+            
+            // 清空网格
+            groupsGrid.innerHTML = '';
+            
+            // 获取当前页的群组
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const groupsToShow = userGroups.slice(startIndex, endIndex);
+            
+            if (groupsToShow.length === 0 && currentPage === 1) {
+                document.getElementById('emptyState').style.display = 'block';
+                groupsGrid.style.display = 'none';
+                return;
+            }
+            
+            document.getElementById('emptyState').style.display = 'none';
+            groupsGrid.style.display = 'grid';
+            
+            groupsToShow.forEach(group => {
+                const groupElement = createGroupCard(group);
+                groupsGrid.appendChild(groupElement);
+            });
+            
+            // 显示/隐藏加载更多按钮
+            loadMoreSection.style.display = endIndex < userGroups.length ? 'block' : 'none';
+        }
+
+        // 创建群组卡片
+        function createGroupCard(group) {
+            const card = document.createElement('div');
+            card.className = 'group-card';
+            card.onclick = () => openGroupDetail(group.id);
+            
+            // 生成成员头像
+            const memberAvatars = generateMemberAvatars(group.members || []);
+            
+            card.innerHTML = `
+                <div class="group-header">
+                    <div>
+                        <div class="group-name">${group.name || '未命名群组'}</div>
+                        <div class="group-description">${group.description || '暂无描述'}</div>
+                    </div>
+                </div>
+                <div class="group-stats">
+                    <div class="group-stat">
+                        <div class="group-stat-value">${group.member_count || 0}</div>
+                        <div class="group-stat-label">成员</div>
+                    </div>
+                    <div class="group-stat">
+                        <div class="group-stat-value">￥${group.total_expense || 0}</div>
+                        <div class="group-stat-label">总支出</div>
+                    </div>
+                </div>
+                <div class="group-members">
+                    <div class="member-avatars">
+                        ${memberAvatars}
+                    </div>
+                    <span class="group-stat-label">成员列表</span>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // 生成成员头像
+        function generateMemberAvatars(members) {
+            if (members.length === 0) {
+                return '<div class="member-avatar">?</div>';
+            }
+            
+            const maxAvatars = 4;
+            const displayedMembers = members.slice(0, maxAvatars);
+            const remainingCount = Math.max(0, members.length - maxAvatars);
+            
+            return displayedMembers.map(member => {
+                const initial = member.name ? member.name.charAt(0).toUpperCase() : 'U';
+                return `<div class="member-avatar" title="${member.name || member.username}">${initial}</div>`;
+            }).join('') + (remainingCount > 0 ? `<div class="member-avatar" title="还有${remainingCount}位成员">+${remainingCount}</div>` : '');
+        }
+
+        // 过滤群组
+        function filterGroups() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (searchTerm === '') {
+                displayGroups();
+                return;
+            }
+            
+            const filteredGroups = userGroups.filter(group => 
+                group.name && group.name.toLowerCase().includes(searchTerm) ||
+                group.description && group.description.toLowerCase().includes(searchTerm)
+            );
+            
+            // 临时显示过滤结果
+            const groupsGrid = document.getElementById('groupsGrid');
+            groupsGrid.innerHTML = '';
+            
+            if (filteredGroups.length === 0) {
+                groupsGrid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <h3>未找到匹配的群组</h3>
+                        <p>尝试使用其他关键词搜索</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            filteredGroups.forEach(group => {
+                const groupElement = createGroupCard(group);
+                groupsGrid.appendChild(groupElement);
+            });
+        }
+
+        // 加载更多群组
+        function loadMoreGroups() {
+            currentPage++;
+            displayGroups();
+        }
+
+        // 打开群组详情
+        function openGroupDetail(groupId) {
+            // 跳转到群组详情页面
+            window.location.href = `group.html?id=${groupId}`;
+        }
+
+        // 显示创建群组模态框
+        function showCreateGroupModal() {
+            document.getElementById('createGroupModal').classList.add('show');
+            document.getElementById('groupName').focus();
+        }
+
+        // 隐藏创建群组模态框
+        function hideCreateGroupModal() {
+            document.getElementById('createGroupModal').classList.remove('show');
+            document.getElementById('createGroupForm').reset();
+        }
+
+        // 处理创建群组
+        async function handleCreateGroup(event) {
+            event.preventDefault();
+            
+            const groupName = document.getElementById('groupName').value.trim();
+            const groupDescription = document.getElementById('groupDescription').value.trim();
+            
+            if (!groupName) {
+                showNotification('请输入群组名称', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/groups/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: groupName,
+                        description: groupDescription
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('创建群组失败');
+                }
+                
+                const newGroup = await response.json();
+                
+                // 添加到群组列表
+                userGroups.unshift(newGroup);
+                
+                // 更新显示
+                updateStatistics();
+                displayGroups();
+                hideCreateGroupModal();
+                
+                showNotification('群组创建成功！', 'success');
+                
+            } catch (error) {
+                console.error('创建群组失败:', error);
+                showNotification('创建群组失败，请重试', 'error');
+            }
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const content = document.getElementById('notificationContent');
+            
+            content.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // 登出
+        function logout() {
+            if (confirm('确定要登出吗？')) {
+                // 清除本地存储
+                localStorage.removeItem('token');
+                // 跳转到登录页面
+                window.location.href = 'login.html';
+            }
+        }
+
+        // 格式化日期
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+    </script>
+</body>
+</html>

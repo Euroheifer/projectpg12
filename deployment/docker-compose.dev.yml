@@ -1,0 +1,138 @@
+version: '3.8'
+
+services:
+  # PostgreSQL数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: expense_dev_postgres
+    environment:
+      POSTGRES_DB: expense_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev_password_2024
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deployment/docker/db/postgresql.dev.conf:/etc/postgresql/postgresql.conf
+    networks:
+      - expense_dev_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis缓存
+  redis:
+    image: redis:7-alpine
+    container_name: expense_dev_redis
+    command: redis-server /etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./deployment/docker/redis/redis.dev.conf:/etc/redis/redis.conf
+    networks:
+      - expense_dev_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # 后端API服务
+  backend:
+    build:
+      context: .
+      dockerfile: deployment/docker/Dockerfile.backend.dev
+    container_name: expense_dev_backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:dev_password_2024@postgres:5432/expense_dev
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=development_super_secret_key_change_this_2024
+      - ACCESS_TOKEN_EXPIRE_MINUTES=120
+      - ENVIRONMENT=development
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/__pycache__
+      - dev_uploads:/app/uploads
+      - dev_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - expense_dev_network
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Nginx反向代理
+  nginx:
+    image: nginx:alpine
+    container_name: expense_dev_nginx
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+      - ./deployment/nginx/nginx.dev.conf:/etc/nginx/nginx.conf
+      - ./deployment/ssl:/etc/nginx/ssl
+      - dev_uploads:/var/www/uploads
+      - dev_logs:/var/log/nginx
+    depends_on:
+      - backend
+    networks:
+      - expense_dev_network
+    restart: unless-stopped
+
+  # pgAdmin数据库管理工具
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: expense_dev_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@expense.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - expense_dev_network
+    restart: unless-stopped
+
+  # Redis Commander Redis管理工具
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: expense_dev_redis_commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - expense_dev_network
+    restart: unless-stopped
+
+# 数据卷
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+  dev_uploads:
+    driver: local
+  dev_logs:
+    driver: local
+
+# 网络
+networks:
+  expense_dev_network:
+    driver: bridge
