@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UI组件库演示</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="js/components.css">
+    <link rel="stylesheet" href="js/search.css">
+    <style>
+        .demo-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            border: 1px solid var(--color-border);
+            border-radius: var(--border-radius-lg);
+            background-color: var(--color-bg-secondary);
+        }
+        
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .demo-component {
+            padding: 1rem;
+            background-color: var(--color-bg-primary);
+            border-radius: var(--border-radius-md);
+            text-align: center;
+        }
+        
+        .code-example {
+            background-color: var(--color-bg-tertiary);
+            padding: 1rem;
+            border-radius: var(--border-radius-md);
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <span>💡</span>
+            <span>UI组件库演示</span>
+        </div>
+        <div class="navbar-nav">
+            <a href="#components">组件</a>
+            <a href="#theme">主题</a>
+            <a href="#search">搜索</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 组件演示区域 -->
+        <section id="components" class="demo-section">
+            <h2>🧩 UI组件库</h2>
+            <p>统一的UI组件系统，支持状态管理、事件系统和无障碍访问</p>
+            
+            <div class="demo-grid">
+                <!-- 按钮组件 -->
+                <div class="demo-component">
+                    <h4>按钮组件</h4>
+                    <button id="demo-button" class="btn btn-primary">点击测试</button>
+                </div>
+                
+                <!-- 表单组件 -->
+                <div class="demo-component">
+                    <h4>表单组件</h4>
+                    <form id="demo-form">
+                        <div class="form-group">
+                            <input type="text" class="form-input" placeholder="输入内容" required>
+                        </div>
+                        <button type="submit" class="btn btn-secondary">提交</button>
+                    </form>
+                </div>
+                
+                <!-- 卡片组件 -->
+                <div class="demo-component">
+                    <h4>卡片组件</h4>
+                    <div id="demo-card"></div>
+                </div>
+                
+                <!-- 模态框组件 -->
+                <div class="demo-component">
+                    <h4>模态框组件</h4>
+                    <button id="demo-modal-btn" class="btn btn-outline">打开模态框</button>
+                    <div id="demo-modal"></div>
+                </div>
+                
+                <!-- 加载指示器 -->
+                <div class="demo-component">
+                    <h4>加载指示器</h4>
+                    <div id="demo-loading"></div>
+                </div>
+                
+                <!-- 空状态 -->
+                <div class="demo-component">
+                    <h4>空状态</h4>
+                    <div id="demo-empty"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 主题系统演示 -->
+        <section id="theme" class="demo-section">
+            <h2>🎨 主题系统</h2>
+            <p>支持亮色/暗黑主题切换，系统主题检测和自定义主题</p>
+            
+            <div class="demo-grid">
+                <div class="demo-component">
+                    <h4>主题切换</h4>
+                    <p>当前主题: <span id="current-theme">自动检测</span></p>
+                    <button id="toggle-theme" class="btn btn-outline">切换主题</button>
+                </div>
+                
+                <div class="demo-component">
+                    <h4>主题状态</h4>
+                    <div id="theme-status">
+                        <p>系统主题: <span id="system-theme">检测中...</span></p>
+                        <p>存储主题: <span id="saved-theme">无</span></p>
+                    </div>
+                </div>
+                
+                <div class="demo-component">
+                    <h4>颜色示例</h4>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <div style="width: 20px; height: 20px; background: var(--color-primary); border-radius: 4px;"></div>
+                        <div style="width: 20px; height: 20px; background: var(--color-success); border-radius: 4px;"></div>
+                        <div style="width: 20px; height: 20px; background: var(--color-warning); border-radius: 4px;"></div>
+                        <div style="width: 20px; height: 20px; background: var(--color-error); border-radius: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 搜索功能演示 -->
+        <section id="search" class="demo-section">
+            <h2>🔍 搜索功能</h2>
+            <p>全局搜索、实时过滤、高级筛选器和搜索历史管理</p>
+            
+            <!-- 搜索框将在这里自动生成 -->
+            <div id="search-demo-container" style="margin: 2rem 0;">
+                <h4>搜索演示</h4>
+                <p>尝试搜索: "群组", "费用", "活动" 等关键词</p>
+            </div>
+            
+            <div class="demo-grid">
+                <div class="demo-component">
+                    <h4>搜索统计</h4>
+                    <div id="search-stats">
+                        <p>历史记录: <span id="history-count">0</span></p>
+                        <p>收藏搜索: <span id="favorites-count">0</span></p>
+                    </div>
+                </div>
+                
+                <div class="demo-component">
+                    <h4>筛选器测试</h4>
+                    <button id="test-filters" class="btn btn-outline">应用测试筛选</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 通知演示 -->
+        <section class="demo-section">
+            <h2>🔔 通知系统</h2>
+            <p>不同类型的通知消息，支持自动关闭和手动关闭</p>
+            
+            <div class="demo-grid">
+                <div class="demo-component">
+                    <h4>成功通知</h4>
+                    <button id="notify-success" class="btn btn-success">显示成功</button>
+                </div>
+                
+                <div class="demo-component">
+                    <h4>错误通知</h4>
+                    <button id="notify-error" class="btn btn-danger">显示错误</button>
+                </div>
+                
+                <div class="demo-component">
+                    <h4>警告通知</h4>
+                    <button id="notify-warning" class="btn btn-warning">显示警告</button>
+                </div>
+                
+                <div class="demo-component">
+                    <h4>信息通知</h4>
+                    <button id="notify-info" class="btn btn-primary">显示信息</button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- JavaScript文件 -->
+    <script src="js/components.js"></script>
+    <script src="js/theme.js"></script>
+    <script src="js/search.js"></script>
+    
+    <script>
+        // 页面加载完成后初始化演示
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeDemo();
+        });
+
+        function initializeDemo() {
+            // 初始化UI组件
+            initializeComponents();
+            
+            // 初始化主题系统
+            initializeTheme();
+            
+            // 初始化搜索功能
+            initializeSearch();
+            
+            // 初始化通知系统
+            initializeNotifications();
+            
+            // 更新主题状态显示
+            updateThemeStatus();
+            
+            // 更新搜索统计
+            updateSearchStats();
+        }
+
+        function initializeComponents() {
+            // 按钮组件演示
+            const demoButton = document.getElementById('demo-button');
+            const button = new Button(demoButton, {
+                text: '点击测试',
+                variant: 'primary',
+                onClick: () => {
+                    Notification.show({
+                        type: 'info',
+                        title: '按钮点击',
+                        message: '按钮组件工作正常!'
+                    });
+                }
+            });
+
+            // 表单组件演示
+            const demoForm = document.getElementById('demo-form');
+            const form = new Form(demoForm, {
+                onSubmit: (data) => {
+                    Notification.show({
+                        type: 'success',
+                        title: '表单提交',
+                        message: `提交内容: ${JSON.stringify(data)}`
+                    });
+                }
+            });
+
+            // 卡片组件演示
+            const demoCard = document.getElementById('demo-card');
+            const card = new Card(demoCard, {
+                title: '示例卡片',
+                collapsible: true
+            });
+            card.setContent(`
+                <p>这是一个可折叠的卡片组件。</p>
+                <p>点击卡片标题可以展开或收起内容。</p>
+            `);
+
+            // 模态框演示
+            const modalElement = document.getElementById('demo-modal');
+            const modal = new Modal(modalElement, {
+                title: '演示模态框',
+                closable: true,
+                footer: '<button class="btn btn-primary" id="modal-ok">确定</button>'
+            });
+            
+            modal.setContent(`
+                <p>这是一个模态框组件演示。</p>
+                <p>支持多种配置选项和事件处理。</p>
+            `);
+
+            const modalBtn = document.getElementById('demo-modal-btn');
+            modalBtn.addEventListener('click', () => {
+                modal.open();
+            });
+
+            // 模态框确定按钮
+            setTimeout(() => {
+                const modalOk = document.getElementById('modal-ok');
+                if (modalOk) {
+                    modalOk.addEventListener('click', () => {
+                        modal.close();
+                    });
+                }
+            }, 100);
+
+            // 加载指示器演示
+            const demoLoading = document.getElementById('demo-loading');
+            const loading = new LoadingIndicator(demoLoading, {
+                type: 'spinner',
+                text: '加载中...'
+            });
+            
+            // 3秒后隐藏加载指示器
+            setTimeout(() => {
+                loading.hide();
+                Notification.show({
+                    type: 'success',
+                    title: '加载完成',
+                    message: '加载指示器演示完成!'
+                });
+            }, 3000);
+
+            // 空状态演示
+            const demoEmpty = document.getElementById('demo-empty');
+            const emptyState = new EmptyState(demoEmpty, {
+                icon: '📝',
+                title: '暂无数据',
+                description: '这里还没有任何内容',
+                action: {
+                    text: '添加内容',
+                    onClick: () => {
+                        Notification.show({
+                            type: 'info',
+                            title: '操作提示',
+                            message: '这是空状态组件的交互演示!'
+                        });
+                    }
+                }
+            });
+        }
+
+        function initializeTheme() {
+            // 主题切换演示
+            const toggleThemeBtn = document.getElementById('toggle-theme');
+            toggleThemeBtn.addEventListener('click', () => {
+                window.themeManager.toggleTheme();
+                updateThemeStatus();
+            });
+
+            // 监听主题变化
+            window.themeManager.onThemeChange(() => {
+                updateThemeStatus();
+            });
+        }
+
+        function initializeSearch() {
+            // 将搜索框添加到演示容器
+            const searchContainer = document.querySelector('.search-container');
+            const demoContainer = document.getElementById('search-demo-container');
+            if (searchContainer && demoContainer) {
+                demoContainer.appendChild(searchContainer);
+            }
+        }
+
+        function initializeNotifications() {
+            // 通知演示按钮
+            const notifyButtons = {
+                success: document.getElementById('notify-success'),
+                error: document.getElementById('notify-error'),
+                warning: document.getElementById('notify-warning'),
+                info: document.getElementById('notify-info')
+            };
+
+            notifyButtons.success.addEventListener('click', () => {
+                Notification.show({
+                    type: 'success',
+                    title: '操作成功',
+                    message: '您的操作已成功完成!'
+                });
+            });
+
+            notifyButtons.error.addEventListener('click', () => {
+                Notification.show({
+                    type: 'error',
+                    title: '操作失败',
+                    message: '操作过程中出现错误，请重试。'
+                });
+            });
+
+            notifyButtons.warning.addEventListener('click', () => {
+                Notification.show({
+                    type: 'warning',
+                    title: '警告提示',
+                    message: '请注意，操作需要谨慎。'
+                });
+            });
+
+            notifyButtons.info.addEventListener('click', () => {
+                Notification.show({
+                    type: 'info',
+                    title: '信息提示',
+                    message: '这是一条信息提示消息。'
+                });
+            });
+        }
+
+        function updateThemeStatus() {
+            const currentTheme = window.themeManager.getCurrentTheme();
+            const systemTheme = window.themeManager.detectSystemTheme();
+            const savedTheme = localStorage.getItem('theme');
+
+            document.getElementById('current-theme').textContent = currentTheme;
+            document.getElementById('system-theme').textContent = systemTheme;
+            document.getElementById('saved-theme').textContent = savedTheme || '无';
+        }
+
+        function updateSearchStats() {
+            const history = new window.SearchHistory();
+            const favorites = new window.SearchFavorites();
+
+            document.getElementById('history-count').textContent = history.getHistory().length;
+            document.getElementById('favorites-count').textContent = favorites.getFavorites().length;
+        }
+
+        // 筛选器测试
+        document.getElementById('test-filters').addEventListener('click', () => {
+            window.searchManager.filters = {
+                status: 'completed',
+                dateRange: {
+                    start: new Date('2024-01-01'),
+                    end: new Date('2024-12-31')
+                }
+            };
+            
+            Notification.show({
+                type: 'info',
+                title: '筛选器已应用',
+                message: '已设置状态筛选和日期范围筛选'
+            });
+        });
+    </script>
+</body>
+</html>

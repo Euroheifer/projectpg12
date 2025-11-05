@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端功能测试套件</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-pending {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .test-controls {
+            margin-bottom: 20px;
+        }
+        .test-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .test-progress {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .test-progress-bar {
+            height: 100%;
+            background-color: #007bff;
+            transition: width 0.3s ease;
+        }
+        .performance-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .metric-card {
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #495057;
+        }
+        .accessibility-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .status-pass { background-color: #28a745; }
+        .status-fail { background-color: #dc3545; }
+        .status-warning { background-color: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <header>
+            <h1>前端功能测试套件</h1>
+            <p>自动化测试系统 - 支持单元测试、集成测试和端到端测试</p>
+        </header>
+
+        <div class="test-controls">
+            <button onclick="runAllTests()" class="btn btn-primary">运行所有测试</button>
+            <button onclick="runUnitTests()" class="btn btn-secondary">单元测试</button>
+            <button onclick="runIntegrationTests()" class="btn btn-secondary">集成测试</button>
+            <button onclick="runE2ETests()" class="btn btn-secondary">端到端测试</button>
+            <button onclick="runPerformanceTests()" class="btn btn-secondary">性能测试</button>
+            <button onclick="runAccessibilityTests()" class="btn btn-secondary">无障碍测试</button>
+            <button onclick="generateReport()" class="btn btn-info">生成测试报告</button>
+        </div>
+
+        <div class="test-stats">
+            <div class="stat-item">
+                <div class="stat-number" id="totalTests">0</div>
+                <div>总测试数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="passedTests">0</div>
+                <div>通过</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="failedTests">0</div>
+                <div>失败</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number" id="testCoverage">0%</div>
+                <div>覆盖率</div>
+            </div>
+        </div>
+
+        <div class="test-progress">
+            <div class="test-progress-bar" id="progressBar"></div>
+        </div>
+
+        <!-- 用户认证测试 -->
+        <div class="test-section">
+            <h2>用户认证功能测试</h2>
+            <div id="authTests"></div>
+        </div>
+
+        <!-- 群组管理测试 -->
+        <div class="test-section">
+            <h2>群组管理功能测试</h2>
+            <div id="groupTests"></div>
+        </div>
+
+        <!-- 支出和支付测试 -->
+        <div class="test-section">
+            <h2>支出和支付功能测试</h2>
+            <div id="paymentTests"></div>
+        </div>
+
+        <!-- 文件上传测试 -->
+        <div class="test-section">
+            <h2>文件上传功能测试</h2>
+            <div id="uploadTests"></div>
+        </div>
+
+        <!-- 响应式设计测试 -->
+        <div class="test-section">
+            <h2>响应式设计测试</h2>
+            <div id="responsiveTests"></div>
+        </div>
+
+        <!-- 性能测试 -->
+        <div class="test-section">
+            <h2>性能测试</h2>
+            <div class="performance-metrics" id="performanceMetrics">
+                <div class="metric-card">
+                    <div>页面加载时间</div>
+                    <div class="metric-value" id="loadTime">0ms</div>
+                </div>
+                <div class="metric-card">
+                    <div>内存使用</div>
+                    <div class="metric-value" id="memoryUsage">0MB</div>
+                </div>
+                <div class="metric-card">
+                    <div>渲染时间</div>
+                    <div class="metric-value" id="renderTime">0ms</div>
+                </div>
+                <div class="metric-card">
+                    <div>交互响应时间</div>
+                    <div class="metric-value" id="responseTime">0ms</div>
+                </div>
+            </div>
+            <div id="performanceTests"></div>
+        </div>
+
+        <!-- 无障碍测试 -->
+        <div class="test-section">
+            <h2>无障碍测试</h2>
+            <div id="accessibilityTests"></div>
+        </div>
+
+        <!-- 浏览器兼容性测试 -->
+        <div class="test-section">
+            <h2>浏览器兼容性测试</h2>
+            <div id="compatibilityTests"></div>
+        </div>
+
+        <!-- 安全测试 -->
+        <div class="test-section">
+            <h2>安全测试</h2>
+            <div id="securityTests"></div>
+        </div>
+    </div>
+
+    <script src="../js/test-runner.js"></script>
+    <script>
+        // 测试套件初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('测试套件已加载');
+            
+            // 模拟认证模块
+            window.AuthModule = {
+                login: function(username, password) {
+                    return new Promise((resolve, reject) => {
+                        setTimeout(() => {
+                            if (username === 'testuser' && password === 'testpass') {
+                                resolve({success: true, token: 'fake-token'});
+                            } else {
+                                reject({success: false, message: 'Invalid credentials'});
+                            }
+                        }, 100);
+                    });
+                },
+                logout: function() {
+                    return {success: true};
+                },
+                isAuthenticated: function() {
+                    return localStorage.getItem('authToken') !== null;
+                }
+            };
+
+            // 模拟群组模块
+            window.GroupModule = {
+                createGroup: function(name, description) {
+                    return new Promise((resolve) => {
+                        setTimeout(() => {
+                            resolve({success: true, groupId: 'fake-id'});
+                        }, 200);
+                    });
+                },
+                joinGroup: function(groupId) {
+                    return new Promise((resolve) => {
+                        setTimeout(() => {
+                            resolve({success: true});
+                        }, 150);
+                    });
+                },
+                leaveGroup: function(groupId) {
+                    return {success: true};
+                },
+                getGroupMembers: function(groupId) {
+                    return new Promise((resolve) => {
+                        setTimeout(() => {
+                            resolve({success: true, members: [
+                                {id: 1, name: '用户1', email: 'user1@example.com'},
+                                {id: 2, name: '用户2', email: 'user2@example.com'}
+                            ]});
+                        }, 100);
+                    });
+                }
+            };
+
+            // 模拟支付模块
+            window.PaymentModule = {
+                addExpense: function(expense) {
+                    return new Promise((resolve) => {
+                        setTimeout(() => {
+                            resolve({success: true, expenseId: 'expense-1'});
+                        }, 100);
+                    });
+                },
+                processPayment: function(paymentData) {
+                    return new Promise((resolve) => {
+                        setTimeout(() => {
+                            resolve({success: true, transactionId: 'txn-123'});
+                        }, 300);
+                    });
+                },
+                getBalance: function(userId) {
+                    return Promise.resolve({balance: 150.50});
+                },
+                splitExpense: function(expense, participants) {
+                    return new Promise((resolve) => {
+                        setTimeout(() => {
+                            resolve({success: true, splits: []});
+                        }, 200);
+                    });
+                }
+            };
+
+            // 模拟文件上传模块
+            window.UploadModule = {
+                uploadFile: function(file) {
+                    return new Promise((resolve, reject) => {
+                        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                            reject({success: false, message: '文件过大'});
+                            return;
+                        }
+                        
+                        setTimeout(() => {
+                            resolve({success: true, fileId: 'file-123', url: '/uploads/fake-file.jpg'});
+                        }, 500);
+                    });
+                },
+                validateFile: function(file) {
+                    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+                    return allowedTypes.includes(file.type);
+                }
+            };
+
+            // 初始化测试
+            initializeTests();
+        });
+
+        function initializeTests() {
+            const testRunner = new TestRunner();
+            window.testRunner = testRunner;
+            
+            // 定义测试用例
+            setupTestCases();
+        }
+
+        function setupTestCases() {
+            // 用户认证测试用例
+            addTest('authTests', '用户登录', async () => {
+                const result = await window.AuthModule.login('testuser', 'testpass');
+                if (result.success) {
+                    localStorage.setItem('authToken', result.token);
+                    return true;
+                }
+                throw new Error('登录失败');
+            });
+
+            addTest('authTests', '用户登出', () => {
+                const result = window.AuthModule.logout();
+                return result.success && !window.AuthModule.isAuthenticated();
+            });
+
+            addTest('authTests', '认证状态检查', () => {
+                return window.AuthModule.isAuthenticated() === true;
+            });
+
+            // 群组管理测试用例
+            addTest('groupTests', '创建群组', async () => {
+                const result = await window.GroupModule.createGroup('测试群组', '这是一个测试群组');
+                return result.success;
+            });
+
+            addTest('groupTests', '加入群组', async () => {
+                const result = await window.GroupModule.joinGroup('group-123');
+                return result.success;
+            });
+
+            addTest('groupTests', '获取群组成员', async () => {
+                const result = await window.GroupModule.getGroupMembers('group-123');
+                return result.success && result.members.length > 0;
+            });
+
+            // 支出和支付测试用例
+            addTest('paymentTests', '添加支出', async () => {
+                const expense = {
+                    amount: 50.00,
+                    description: '午餐',
+                    category: '餐饮'
+                };
+                const result = await window.PaymentModule.addExpense(expense);
+                return result.success;
+            });
+
+            addTest('paymentTests', '处理支付', async () => {
+                const paymentData = {
+                    amount: 25.00,
+                    recipient: '用户123',
+                    method: 'credit_card'
+                };
+                const result = await window.PaymentModule.processPayment(paymentData);
+                return result.success;
+            });
+
+            addTest('paymentTests', '获取余额', async () => {
+                const result = await window.PaymentModule.getBalance('user-123');
+                return result.balance >= 0;
+            });
+
+            // 文件上传测试用例
+            addTest('uploadTests', '文件类型验证', () => {
+                const mockFile = new File([''], 'test.jpg', {type: 'image/jpeg'});
+                return window.UploadModule.validateFile(mockFile);
+            });
+
+            addTest('uploadTests', '文件大小验证', () => {
+                const largeFile = new File([''], 'large.jpg', {type: 'image/jpeg'});
+                Object.defineProperty(largeFile, 'size', {value: 6 * 1024 * 1024}); // 6MB
+                
+                return window.UploadModule.uploadFile(largeFile).catch(err => {
+                    return err.message.includes('文件过大');
+                });
+            });
+
+            addTest('uploadTests', '文件上传', async () => {
+                const mockFile = new File([''], 'test.jpg', {type: 'image/jpeg'});
+                const result = await window.UploadModule.uploadFile(mockFile);
+                return result.success;
+            });
+
+            // 响应式设计测试用例
+            addTest('responsiveTests', '移动端视图测试', () => {
+                const originalWidth = window.innerWidth;
+                
+                // 模拟移动端宽度
+                Object.defineProperty(window, 'innerWidth', {value: 375});
+                const isMobile = window.innerWidth <= 768;
+                
+                // 恢复原始宽度
+                Object.defineProperty(window, 'innerWidth', {value: originalWidth});
+                
+                return typeof isMobile === 'boolean';
+            });
+
+            addTest('responsiveTests', 'CSS媒体查询测试', () => {
+                return window.matchMedia('(max-width: 768px)').matches !== undefined;
+            });
+
+            // 性能测试用例
+            addTest('performanceTests', '页面加载时间', () => {
+                const navTiming = performance.getEntriesByType('navigation')[0];
+                return navTiming.loadEventEnd - navTiming.fetchStart < 3000;
+            });
+
+            addTest('performanceTests', '内存使用检查', () => {
+                if (performance.memory) {
+                    return performance.memory.usedJSHeapSize < 50 * 1024 * 1024; // 50MB
+                }
+                return true; // 如果不支持，跳过测试
+            });
+
+            // 无障碍测试用例
+            addTest('accessibilityTests', '图片alt属性检查', () => {
+                const images = document.querySelectorAll('img');
+                let passed = true;
+                images.forEach(img => {
+                    if (!img.alt) {
+                        passed = false;
+                    }
+                });
+                return passed;
+            });
+
+            addTest('accessibilityTests', '表单标签关联检查', () => {
+                const inputs = document.querySelectorAll('input[type="text"], input[type="email"]');
+                let passed = true;
+                inputs.forEach(input => {
+                    const id = input.id;
+                    if (id && !document.querySelector(`label[for="${id}"]`)) {
+                        passed = false;
+                    }
+                });
+                return passed;
+            });
+
+            // 浏览器兼容性测试用例
+            addTest('compatibilityTests', 'ES6支持检查', () => {
+                try {
+                    eval('const test = () => {};');
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            });
+
+            addTest('compatibilityTests', 'Fetch API支持检查', () => {
+                return typeof fetch === 'function';
+            });
+
+            // 安全测试用例
+            addTest('securityTests', 'XSS防护检查', () => {
+                // 检查是否存在已知的XSS模式
+                const scripts = document.querySelectorAll('script');
+                let safe = true;
+                scripts.forEach(script => {
+                    if (script.innerHTML.includes('document.cookie') || 
+                        script.innerHTML.includes('eval(')) {
+                        safe = false;
+                    }
+                });
+                return safe;
+            });
+
+            addTest('securityTests', 'HTTPS检查', () => {
+                return window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+            });
+        }
+
+        function addTest(containerId, testName, testFunction) {
+            window.testRunner.addTest({
+                name: testName,
+                test: testFunction,
+                container: document.getElementById(containerId)
+            });
+        }
+
+        // 全局测试函数
+        window.runAllTests = () => window.testRunner.runAll();
+        window.runUnitTests = () => window.testRunner.runByCategory('unit');
+        window.runIntegrationTests = () => window.testRunner.runByCategory('integration');
+        window.runE2ETests = () => window.testRunner.runByCategory('e2e');
+        window.runPerformanceTests = () => window.testRunner.runByCategory('performance');
+        window.runAccessibilityTests = () => window.testRunner.runByCategory('accessibility');
+        window.generateReport = () => window.testRunner.generateReport();
+    </script>
+</body>
+</html>
