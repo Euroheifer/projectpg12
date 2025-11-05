@@ -78,36 +78,6 @@ wait_for_service() {
     return 1
 }
 
-wait_for_docker_health() {
-    local container=$1
-    local name=$2
-    local max_attempts=30
-    local attempt=1
-    
-    print_info "等待 $name 服务就绪..."
-    
-    while [ $attempt -le $max_attempts ]; do
-        health_status=$(docker inspect --format='{{.State.Health.Status}}' "$container" 2>/dev/null || echo "none")
-        
-        if [ "$health_status" = "none" ]; then
-            if docker ps --filter "name=$container" --filter "status=running" --format '{{.Names}}' | grep -q "$container"; then
-                print_success "$name 服务就绪"
-                return 0
-            fi
-        elif [ "$health_status" = "healthy" ]; then
-            print_success "$name 服务就绪"
-            return 0
-        fi
-        
-        echo -n "."
-        sleep 2
-        attempt=$((attempt + 1))
-    done
-    
-    print_error "$name 服务启动超时"
-    return 1
-}
-
 # 主函数
 main() {
     echo ""
@@ -169,10 +139,10 @@ main() {
     print_info "等待服务启动..."
     
     # 等待数据库
-    wait_for_docker_health "expense_dev_postgres" "PostgreSQL数据库"
+    wait_for_service "http://localhost:5432" "PostgreSQL数据库"
     
     # 等待Redis
-    wait_for_docker_health "expense_dev_redis" "Redis缓存"
+    wait_for_service "http://localhost:6379" "Redis缓存"
     
     # 等待后端API
     wait_for_service "http://localhost:8000/health" "FastAPI后端"

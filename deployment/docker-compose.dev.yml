@@ -13,7 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/db/postgresql.dev.conf:/etc/postgresql/postgresql.conf
+      - ./deployment/docker/db/postgresql.dev.conf:/etc/postgresql/postgresql.conf
     networks:
       - expense_dev_network
     healthcheck:
@@ -31,7 +31,7 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-      - ./docker/redis/redis.dev.conf:/etc/redis/redis.conf
+      - ./deployment/docker/redis/redis.dev.conf:/etc/redis/redis.conf
     networks:
       - expense_dev_network
     healthcheck:
@@ -43,7 +43,7 @@ services:
   # 后端API服务
   backend:
     build:
-      context: ..
+      context: .
       dockerfile: deployment/docker/Dockerfile.backend.dev
     container_name: expense_dev_backend
     environment:
@@ -55,7 +55,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ..:/app
+      - .:/app
       - /app/__pycache__
       - dev_uploads:/app/uploads
       - dev_logs:/app/logs
@@ -78,8 +78,8 @@ services:
       - "8443:443"
     volumes:
       - ./frontend:/usr/share/nginx/html
-      - ./nginx/nginx.dev.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
+      - ./deployment/nginx/nginx.dev.conf:/etc/nginx/nginx.conf
+      - ./deployment/ssl:/etc/nginx/ssl
       - dev_uploads:/var/www/uploads
       - dev_logs:/var/log/nginx
     depends_on:
