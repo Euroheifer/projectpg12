@@ -1516,7 +1516,7 @@ function rebindAllEvents() {
     
     // 标签切换按钮
     document.querySelectorAll('.tab-button').forEach((btn, index) => {
-        const tabs = ['expenses', 'payments', 'recurring', 'members', 'settlement'];
+        const tabs = ['expenses', 'recurring', 'payments', 'members', 'invite', 'manage', 'audit'];
         const tab = tabs[index] || 'expenses';
         
         btn.onclick = function() {
