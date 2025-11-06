@@ -1137,7 +1137,7 @@ export function closeDeleteConfirm() {
     const modal = document.getElementById('delete-confirm-modal');
     if (modal) {
         modal.classList.add('hidden');
-    });
+    }
 }
 
 

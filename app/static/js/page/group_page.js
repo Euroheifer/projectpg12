@@ -1043,7 +1043,75 @@ async function saveGroupSettingsAPI(groupName, groupDescription) {
     }
 }
 
+// 确保所有全局函数都被正确定义
+function ensureGlobalFunctions() {
+    console.log('验证全局函数是否正确暴露...');
+    
+    // 检查关键函数是否存在
+    const requiredFunctions = [
+        'setActiveTab',
+        'goBackToHome', 
+        'initializePage',
+        'showCustomAlert',
+        'loadExpensesList',
+        'loadMembersList'
+    ];
+    
+    requiredFunctions.forEach(funcName => {
+        if (typeof window[funcName] !== 'function') {
+            console.error(`全局函数 ${funcName} 未定义！`);
+        } else {
+            console.log(`✓ ${funcName} 已正确定义`);
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function () {
     console.log('DOM content loaded, starting group page initialization...');
-    initializePage();
+    
+    // 延迟初始化，确保其他模块已加载
+    setTimeout(() => {
+        try {
+            initializePage();
+            ensureGlobalFunctions();
+        } catch (error) {
+            console.error('初始化群组页面时发生错误:', error);
+            showCustomAlert('Error', '页面初始化失败，请刷新页面重试', 'error');
+        }
+    }, 100);
 });
+
+// 在模块加载完成后也验证一次
+setTimeout(ensureGlobalFunctions, 1000);
+
+// 立即暴露所有函数到全局 - 解决函数未定义问题
+(function exposeGlobalFunctions() {
+    console.log('立即暴露全局函数到window对象...');
+    
+    try {
+        // 核心功能函数
+        window.initializePage = initializePage;
+        window.setActiveTab = setActiveTab;
+        window.toggleUserMenu = toggleUserMenu;
+        window.handleBackToPreviousPage = handleBackToPreviousPage;
+        window.handleBackToDashboard = handleBackToDashboard;
+        window.handleMyProfile = handleMyProfile;
+        window.handleLogoutUser = handleLogoutUser;
+        window.loadExpensesList = loadExpensesList;
+        window.loadMembersList = loadMembersList;
+        window.showCustomAlert = showCustomAlert;
+        
+        // HTML调用的函数
+        window.goBackToHome = function() {
+            window.location.href = '/home';
+        };
+        
+        window.resetGroupSettings = function() {
+            populateGroupManagementFields();
+        };
+        
+        console.log('✓ 所有全局函数已暴露完成');
+    } catch (error) {
+        console.error('暴露全局函数时发生错误:', error);
+    }
+})();
