@@ -859,12 +859,14 @@ window.handleDetailCancel = function() {
     }
 };
 
-window.handleSaveRecurringExpense = function(event) {
+// 定期费用保存事件的包装器 - 避免与recurring_expense.js中的函数冲突
+window.saveRecurringExpenseHandler = function(event) {
     event.preventDefault();
-    // 直接调用实际的实现函数
-    if (typeof handleSaveRecurringExpense === 'function') {
-        handleSaveRecurringExpense(event);
+    // 调用recurring_expense.js中导出的handleSaveRecurringExpense函数
+    if (window.handleSaveRecurringExpense) {
+        window.handleSaveRecurringExpense(event);
     } else {
+        console.error('定期费用保存函数未加载');
         showCustomAlert('Info', 'Recurring expense save feature is under development');
     }
 };
@@ -976,12 +978,14 @@ window.handleSavePayment = function(event) {
     }
 };
 
-window.handleUpdateExpense = function(event) {
+// 费用更新事件的包装器 - 避免与expense.js中的函数冲突
+window.updateExpenseHandler = function(event) {
     event.preventDefault();
-    // 直接调用实际的实现函数
-    if (typeof handleUpdateExpense === 'function') {
-        handleUpdateExpense(event);
+    // 调用expense.js中导出的handleUpdateExpense函数
+    if (window.handleUpdateExpense) {
+        window.handleUpdateExpense(event);
     } else {
+        console.error('费用更新函数未加载');
         showCustomAlert('Error', '费用更新功能暂未就绪');
     }
 };
