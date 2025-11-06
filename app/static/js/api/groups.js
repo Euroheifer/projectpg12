@@ -202,21 +202,322 @@ export async function getGroupRecurringExpenses(groupId) {
 }
 
 
-// HTML中调用的其他函数：
+// ==============
+// 群组设置管理功能
+// ==============
+
+// 重置群组设置
 export function resetGroupSettings() {
     console.log('重置群组设置');
+    
+    // 重置表单字段
+    const groupNameInput = document.getElementById('group-name-settings');
+    const groupDescriptionInput = document.getElementById('group-description-settings');
+    
+    if (groupNameInput) {
+        // 从当前群组数据重置
+        const currentName = groupNameInput.getAttribute('data-original-name') || '';
+        groupNameInput.value = currentName;
+    }
+    
+    if (groupDescriptionInput) {
+        const currentDescription = groupDescriptionInput.getAttribute('data-original-description') || '';
+        groupDescriptionInput.value = currentDescription;
+    }
+    
+    showCustomAlert('群组设置已重置');
 }
 
-export function saveGroupSettings() {
-    console.log('保存群组设置');
+// 更新群组设置
+export async function updateGroupSettings(groupId, settings = null) {
+    try {
+        console.log(`更新群组设置，群组ID: ${groupId}`);
+        
+        // 如果没有传递settings，从表单获取
+        if (!settings) {
+            const groupNameInput = document.getElementById('group-name-settings');
+            const groupDescriptionInput = document.getElementById('group-description-settings');
+            
+            if (!groupNameInput) {
+                throw new Error('找不到群组名称输入框');
+            }
+            
+            settings = {
+                name: groupNameInput.value.trim(),
+                description: groupDescriptionInput ? groupDescriptionInput.value.trim() : ''
+            };
+        }
+        
+        if (!settings.name) {
+            showCustomAlert('群组名称不能为空');
+            return;
+        }
+        
+        const response = await fetch(`/groups/${groupId}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAuthToken()}`
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        if (response.ok) {
+            const updatedGroup = await response.json();
+            console.log('群组设置更新成功:', updatedGroup);
+            showCustomAlert('群组设置更新成功');
+            
+            // 更新表单中的原始值
+            const groupNameInput = document.getElementById('group-name-settings');
+            const groupDescriptionInput = document.getElementById('group-description-settings');
+            
+            if (groupNameInput) {
+                groupNameInput.setAttribute('data-original-name', updatedGroup.name);
+            }
+            if (groupDescriptionInput) {
+                groupDescriptionInput.setAttribute('data-original-description', updatedGroup.description || '');
+            }
+            
+            return updatedGroup;
+        } else {
+            const errorData = await response.json();
+            console.error('更新群组设置失败:', errorData);
+            throw new Error(errorData.detail || '更新群组设置失败');
+        }
+    } catch (error) {
+        console.error('更新群组设置错误:', error);
+        showCustomAlert(error.message || '更新群组设置失败，请重试');
+        throw error;
+    }
 }
 
+// 删除群组
+export async function deleteGroup(groupId, groupName) {
+    try {
+        console.log(`删除群组: ${groupName} (ID: ${groupId})`);
+        
+        // 确认删除
+        const confirmMessage = `确定要删除群组 "${groupName}" 吗？\n\n此操作不可撤销，将删除群组的所有数据。`;
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+        
+        const response = await fetch(`/groups/${groupId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${getAuthToken()}`
+            }
+        });
+        
+        if (response.ok) {
+            console.log('群组删除成功');
+            showCustomAlert('群组删除成功');
+            
+            // 跳转到群组列表页面
+            setTimeout(() => {
+                window.location.href = '/groups';
+            }, 1000);
+            
+            return true;
+        } else {
+            const errorData = await response.json();
+            console.error('删除群组失败:', errorData);
+            throw new Error(errorData.detail || '删除群组失败');
+        }
+    } catch (error) {
+        console.error('删除群组错误:', error);
+        showCustomAlert(error.message || '删除群组失败，请重试');
+        throw error;
+    }
+}
+
+// ==============
+// 审计日志管理功能
+// ==============
+
+// 获取审计日志数据
+export async function loadAuditLog(groupId, page = 1, limit = 50) {
+    try {
+        console.log(`加载审计日志，群组ID: ${groupId}`);
+        
+        const response = await fetch(`/groups/${groupId}/audit-trail?page=${page}&limit=${limit}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${getAuthToken()}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || '获取审计日志失败');
+        }
+        
+        const auditLogs = await response.json();
+        console.log('审计日志数据获取成功:', auditLogs);
+        
+        // 渲染审计日志
+        renderAuditLog(auditLogs);
+        
+        return auditLogs;
+    } catch (error) {
+        console.error('加载审计日志错误:', error);
+        showCustomAlert(error.message || '加载审计日志失败');
+        throw error;
+    }
+}
+
+// 渲染审计日志显示
+export function renderAuditLog(auditLogs) {
+    try {
+        console.log('渲染审计日志:', auditLogs);
+        
+        const auditLogContainer = document.getElementById('audit-log-container');
+        if (!auditLogContainer) {
+            console.warn('找不到审计日志容器元素');
+            return;
+        }
+        
+        if (!auditLogs || auditLogs.length === 0) {
+            auditLogContainer.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-history text-4xl mb-4"></i>
+                    <p>暂无审计日志记录</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // 渲染审计日志列表
+        const auditLogHtml = auditLogs.map(log => {
+            const timestamp = new Date(log.timestamp).toLocaleString('zh-CN');
+            const action = getAuditActionText(log.action);
+            const actionIcon = getAuditActionIcon(log.action);
+            
+            return `
+                <div class="audit-log-item border-l-4 border-blue-400 bg-blue-50 p-4 mb-3">
+                    <div class="flex items-start space-x-3">
+                        <div class="audit-icon text-blue-600 text-lg">
+                            ${actionIcon}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between">
+                                <h4 class="text-sm font-medium text-gray-900">
+                                    ${action}
+                                </h4>
+                                <time class="text-xs text-gray-500" datetime="${log.timestamp}">
+                                    ${timestamp}
+                                </time>
+                            </div>
+                            <div class="mt-1 text-sm text-gray-600">
+                                <p>操作用户ID: ${log.user_id}</p>
+                                <p>记录ID: ${log.id}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        auditLogContainer.innerHTML = `
+            <div class="audit-logs-header mb-4">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+                    <i class="fas fa-shield-alt mr-2 text-blue-600"></i>
+                    审计日志
+                    <span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                        ${auditLogs.length} 条记录
+                    </span>
+                </h3>
+            </div>
+            <div class="audit-logs-list">
+                ${auditLogHtml}
+            </div>
+        `;
+        
+        // 添加滚动和动画效果
+        auditLogContainer.classList.add('audit-log-container');
+        auditLogContainer.scrollTop = 0;
+        
+    } catch (error) {
+        console.error('渲染审计日志错误:', error);
+        showCustomAlert('渲染审计日志失败');
+    }
+}
+
+// 获取审计操作文本
+function getAuditActionText(action) {
+    const actionMap = {
+        'create': '创建群组',
+        'update': '更新群组',
+        'delete': '删除群组',
+        'add_member': '添加成员',
+        'remove_member': '移除成员',
+        'add_expense': '添加费用',
+        'update_expense': '更新费用',
+        'delete_expense': '删除费用',
+        'add_payment': '添加支付',
+        'delete_payment': '删除支付',
+        'invite_user': '邀请用户',
+        'accept_invitation': '接受邀请',
+        'decline_invitation': '拒绝邀请'
+    };
+    
+    return actionMap[action] || `未知操作: ${action}`;
+}
+
+// 获取审计操作图标
+function getAuditActionIcon(action) {
+    const iconMap = {
+        'create': '<i class="fas fa-plus-circle"></i>',
+        'update': '<i class="fas fa-edit"></i>',
+        'delete': '<i class="fas fa-trash-alt"></i>',
+        'add_member': '<i class="fas fa-user-plus"></i>',
+        'remove_member': '<i class="fas fa-user-minus"></i>',
+        'add_expense': '<i class="fas fa-receipt"></i>',
+        'update_expense': '<i class="fas fa-receipt"></i>',
+        'delete_expense': '<i class="fas fa-receipt"></i>',
+        'add_payment': '<i class="fas fa-credit-card"></i>',
+        'delete_payment': '<i class="fas fa-credit-card"></i>',
+        'invite_user': '<i class="fas fa-envelope"></i>',
+        'accept_invitation': '<i class="fas fa-check"></i>',
+        'decline_invitation': '<i class="fas fa-times"></i>'
+    };
+    
+    return iconMap[action] || '<i class="fas fa-info-circle"></i>';
+}
+
+// 兼容旧版函数名
 export function loadAuditLogs() {
     console.log('加载审计日志');
+    const groupId = getCurrentGroupId();
+    if (groupId) {
+        loadAuditLog(groupId);
+    } else {
+        showCustomAlert('无法获取当前群组ID');
+    }
 }
 
 export function renderAuditLogList() {
     console.log('渲染审计日志列表');
+    // 留空以兼容现有代码，实际在loadAuditLog中处理
+}
+
+// 获取当前群组ID
+export function getCurrentGroupId() {
+    // 从URL中提取群组ID
+    const urlParts = window.location.pathname.split('/');
+    if (urlParts.length >= 3 && urlParts[1] === 'groups') {
+        const groupId = parseInt(urlParts[2]);
+        return isNaN(groupId) ? null : groupId;
+    }
+    
+    // 从页面元素中获取
+    const groupIdElement = document.getElementById('current-group-id');
+    if (groupIdElement) {
+        return parseInt(groupIdElement.value);
+    }
+    
+    return null;
 }
 
 export function redirectToGroupDetail(groupId, groupName) {
@@ -238,11 +539,59 @@ try {
     window.getGroupExpenses = getGroupExpenses;
     window.getGroupPayments = getGroupPayments;
     window.getGroupRecurringExpenses = getGroupRecurringExpenses;
+    
+    // 新增的群组管理功能
+    window.updateGroupSettings = updateGroupSettings;
+    window.deleteGroup = deleteGroup;
+    window.resetGroupSettings = resetGroupSettings;
+    window.saveGroupSettings = updateGroupSettings;
+    
+    // 审计日志功能
+    window.loadAuditLog = loadAuditLog;
+    window.loadAuditLogs = loadAuditLogs;
+    window.renderAuditLog = renderAuditLog;
+    window.renderAuditLogList = renderAuditLogList;
+    window.getCurrentGroupId = getCurrentGroupId;
 
-    // ... (其他函数)
     console.log('groups.js: 全局暴露完成');
 } catch (error) {
     console.warn('groups.js: 全局暴露失败，可能是模块环境:', error);
+}
+
+// 添加CSS样式（如果需要）
+if (typeof document !== 'undefined') {
+    const style = document.createElement('style');
+    style.textContent = `
+        .audit-log-container {
+            max-height: 600px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+        
+        .audit-log-item {
+            transition: all 0.2s ease;
+        }
+        
+        .audit-log-item:hover {
+            background-color: rgba(59, 130, 246, 0.05);
+            border-left-color: #2563eb;
+        }
+        
+        .audit-icon {
+            width: 24px;
+            text-align: center;
+        }
+        
+        .audit-logs-header {
+            position: sticky;
+            top: 0;
+            background-color: white;
+            padding-bottom: 1rem;
+            z-index: 10;
+            border-bottom: 1px solid #e5e7eb;
+        }
+    `;
+    document.head.appendChild(style);
 }
 
 

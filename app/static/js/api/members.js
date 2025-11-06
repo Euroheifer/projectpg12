@@ -1,10 +1,99 @@
 // member_management.js - 成员管理、邀请、角色设置
-import { requireAdmin, isValidEmail } from '../ui/utils.js';
+import { requireAdmin, isValidEmail, getAuthToken } from '../ui/utils.js';
+
 // --- 全局状态 ---
 
 // 成员管理状态
 let memberToRemove = null;
 let memberToUpdateRole = null;
+
+// --- 辅助函数 ---
+
+/**
+ * 从URL中提取群组ID
+ * @returns {number|null} 群组ID，如果无法获取则返回null
+ */
+function getGroupIdFromURL() {
+    try {
+        const path = window.location.pathname;
+        // 尝试从路径中提取群组ID：/group/{group_id}/details
+        const match = path.match(/\/group\/(\d+)\/details/);
+        if (match) {
+            return parseInt(match[1]);
+        }
+        
+        // 尝试从查询参数中获取：?group_id={id}
+        const urlParams = new URLSearchParams(window.location.search);
+        const groupIdFromQuery = urlParams.get('group_id');
+        if (groupIdFromQuery) {
+            return parseInt(groupIdFromQuery);
+        }
+        
+        // 尝试从页面元素中获取
+        const groupIdElement = document.getElementById('current-group-id');
+        if (groupIdElement) {
+            return parseInt(groupIdElement.value);
+        }
+        
+        console.warn('无法从URL中获取群组ID:', path);
+        return null;
+    } catch (error) {
+        console.error('获取群组ID时发生错误:', error);
+        return null;
+    }
+}
+
+/**
+ * 显示加载状态
+ * @param {string} type - 操作类型 ('update-role' | 'remove-member')
+ */
+function showLoadingState(type) {
+    const modal = type === 'update-role' ? 
+        document.getElementById('role-update-modal') : 
+        document.getElementById('remove-modal');
+    
+    if (modal) {
+        const loadingElement = modal.querySelector('.loading-spinner') || 
+                              modal.querySelector('[class*="loading"]');
+        
+        if (loadingElement) {
+            loadingElement.classList.remove('hidden');
+        }
+        
+        // 禁用按钮
+        const confirmButton = modal.querySelector('button[onclick*="confirm"]');
+        if (confirmButton) {
+            confirmButton.disabled = true;
+            confirmButton.textContent = '处理中...';
+        }
+    }
+}
+
+/**
+ * 隐藏加载状态
+ * @param {string} type - 操作类型 ('update-role' | 'remove-member')
+ */
+function hideLoadingState(type) {
+    const modal = type === 'update-role' ? 
+        document.getElementById('role-update-modal') : 
+        document.getElementById('remove-modal');
+    
+    if (modal) {
+        const loadingElement = modal.querySelector('.loading-spinner') || 
+                              modal.querySelector('[class*="loading"]');
+        
+        if (loadingElement) {
+            loadingElement.classList.add('hidden');
+        }
+        
+        // 恢复按钮
+        const confirmButton = modal.querySelector('button[onclick*="confirm"]');
+        if (confirmButton) {
+            confirmButton.disabled = false;
+            confirmButton.textContent = type === 'update-role' ? '确认更新' : '确认移除';
+        }
+    }
+}
 
 /* export function renderMemberList() {
     const container = document.getElementById('member-list-container');
@@ -232,13 +321,38 @@ export const handleUpdateRole = requireAdmin(function (memberId, memberName) {
     const roleMessage = document.getElementById('role-update-message');
 
     if (roleModal && roleMessage) {
-        const member = window.groupMembers.find(m => parseInt(m.id) === parseInt(memberId));
+        // 查找成员，支持多种ID字段
+        const member = window.groupMembers.find(m => 
+            parseInt(m.id) === parseInt(memberId) || 
+            parseInt(m.user_id) === parseInt(memberId)
+        );
+        
         if (member) {
-            const action = member.role === 'admin' ? '取消管理员' : '设为管理员';
-            roleMessage.textContent = `确定要将成员 "${memberName}" ${action}吗？`;
+            // 检查管理员状态，支持多种字段
+            const isAdmin = member.is_admin === true || member.role === 'admin';
+            const action = isAdmin ? '取消管理员' : '设为管理员';
+            const warningText = isAdmin ? '' : '（管理员可以管理群组所有设置）';
+            
+            roleMessage.innerHTML = `
+                确定要将成员 "${memberName}" ${action}吗？<br>
+                <small class="text-gray-500">${warningText}</small>
+            `;
+            
             roleModal.classList.remove('hidden');
             roleModal.dataset.memberId = memberId;
+            
+            console.log('打开角色更新模态框:', {
+                memberId,
+                memberName,
+                isAdmin,
+                member: member
+            });
+        } else {
+            console.error('未找到要更新角色的成员:', memberId);
+            window.showCustomAlert('错误', '未找到该成员');
         }
+    } else {
+        console.error('找不到角色更新模态框元素');
     }
 });
 
@@ -247,34 +361,244 @@ export const handleRemoveMember = requireAdmin(function (memberId, memberName) {
     const removeMessage = document.getElementById('remove-message');
 
     if (removeModal && removeMessage) {
-        removeMessage.textContent = `确定要将成员 "${memberName}" 从群组中移除吗？`;
-        removeModal.classList.remove('hidden');
-        removeModal.dataset.memberId = memberId;
+        // 查找成员，支持多种ID字段
+        const member = window.groupMembers.find(m => 
+            parseInt(m.id) === parseInt(memberId) || 
+            parseInt(m.user_id) === parseInt(memberId)
+        );
+        
+        if (member) {
+            // 检查是否为管理员，支持多种字段
+            const isAdmin = member.is_admin === true || member.role === 'admin';
+            
+            if (isAdmin) {
+                window.showCustomAlert('错误', '不能移除群组管理员');
+                return;
+            }
+            
+            // 再次确认移除操作
+            removeMessage.innerHTML = `
+                确定要将成员 "${memberName}" 从群组中移除吗？<br>
+                <small class="text-red-500">此操作不可撤销，成员将无法再查看此群组的费用信息。</small>
+            `;
+            
+            removeModal.classList.remove('hidden');
+            removeModal.dataset.memberId = memberId;
+            
+            console.log('打开移除成员模态框:', {
+                memberId,
+                memberName,
+                member: member
+            });
+        } else {
+            console.error('未找到要移除的成员:', memberId);
+            window.showCustomAlert('错误', '未找到该成员');
+        }
+    } else {
+        console.error('找不到移除成员模态框元素');
     }
 });
 
-export function confirmUpdateRole() {
-    console.log('更新成员角色');
-    window.showCustomAlert('成功', '成员角色已更新');
-    cancelUpdateRole();
-    window.loadMembersList();
+export async function confirmUpdateRole() {
+    const modal = document.getElementById('role-update-modal');
+    const memberId = modal?.dataset?.memberId;
+    
+    if (!memberId) {
+        window.showCustomAlert('错误', '未找到要更新的成员');
+        return;
+    }
+
+    // 显示加载状态
+    showLoadingState('update-role');
+
+    try {
+        // 获取当前群组ID
+        const groupId = window.CURRENT_GROUP_ID || window.GROUP_ID || getGroupIdFromURL();
+        if (!groupId) {
+            throw new Error('无法获取群组ID');
+        }
+
+        // 获取成员信息
+        const member = window.groupMembers.find(m => 
+            parseInt(m.id) === parseInt(memberId) || parseInt(m.user_id) === parseInt(memberId)
+        );
+        
+        if (!member) {
+            throw new Error('未找到该成员');
+        }
+
+        // 决定新的管理员状态（取反）
+        const currentIsAdmin = member.is_admin === true || member.role === 'admin';
+        const newAdminStatus = !currentIsAdmin;
+        
+        console.log('更新成员角色:', {
+            memberId,
+            groupId,
+            currentIsAdmin,
+            newAdminStatus
+        });
+
+        const token = getAuthToken();
+        if (!token) {
+            throw new Error('未找到认证令牌，请重新登录');
+        }
+
+        // 调用更新管理员状态的API
+        const response = await fetch(`/groups/${groupId}/members/${memberId}/admin`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                is_admin: newAdminStatus
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('角色更新成功:', result);
+            
+            const action = newAdminStatus ? '设置为管理员' : '取消管理员权限';
+            window.showCustomAlert('成功', `成员角色已${action}`);
+            
+            cancelUpdateRole();
+            
+            // 重新加载成员列表
+            if (window.loadMembersList) {
+                await window.loadMembersList();
+            } else {
+                // 如果没有loadMembersList函数，刷新页面
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        } else {
+            const errorData = await response.json();
+            console.error('API错误响应:', errorData);
+            
+            let errorMessage = '更新角色失败';
+            if (errorData.detail) {
+                if (errorData.detail.includes('not a member')) {
+                    errorMessage = '该用户不是群组成员';
+                } else if (errorData.detail.includes('Only admin')) {
+                    errorMessage = '只有管理员可以修改权限';
+                } else {
+                    errorMessage = errorData.detail;
+                }
+            }
+            
+            throw new Error(errorMessage);
+        }
+    } catch (error) {
+        console.error('更新角色错误:', error);
+        window.showCustomAlert('错误', error.message || '更新角色失败，请重试');
+    } finally {
+        // 隐藏加载状态
+        hideLoadingState('update-role');
+    }
 }
 
-export function confirmRemoveMember() {
-    console.log('移除成员');
-    window.showCustomAlert('成功', '成员已移除');
-    cancelRemoveMember();
-    window.loadMembersList();
+export async function confirmRemoveMember() {
+    const modal = document.getElementById('remove-modal');
+    const memberId = modal?.dataset?.memberId;
+    
+    if (!memberId) {
+        window.showCustomAlert('错误', '未找到要移除的成员');
+        return;
+    }
+
+    // 最终确认对话框
+    if (!window.confirm('确定要将该成员从群组中移除吗？此操作不可撤销。')) {
+        return;
+    }
+
+    // 显示加载状态
+    showLoadingState('remove-member');
+
+    try {
+        // 获取当前群组ID
+        const groupId = window.CURRENT_GROUP_ID || window.GROUP_ID || getGroupIdFromURL();
+        if (!groupId) {
+            throw new Error('无法获取群组ID');
+        }
+
+        console.log('移除成员:', {
+            memberId,
+            groupId
+        });
+
+        const token = getAuthToken();
+        if (!token) {
+            throw new Error('未找到认证令牌，请重新登录');
+        }
+
+        // 调用移除成员的API
+        const response = await fetch(`/groups/${groupId}/members/${memberId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            console.log('成员移除成功');
+            
+            window.showCustomAlert('成功', '成员已从群组中移除');
+            
+            cancelRemoveMember();
+            
+            // 重新加载成员列表
+            if (window.loadMembersList) {
+                await window.loadMembersList();
+            } else {
+                // 如果没有loadMembersList函数，刷新页面
+                setTimeout(() => window.location.reload(), 1000);
+            }
+        } else {
+            const errorData = await response.json();
+            console.error('API错误响应:', errorData);
+            
+            let errorMessage = '移除成员失败';
+            if (errorData.detail) {
+                if (errorData.detail.includes('Cannot remove the group admin')) {
+                    errorMessage = '不能移除群组管理员';
+                } else if (errorData.detail.includes('not a member')) {
+                    errorMessage = '该用户不是群组成员';
+                } else {
+                    errorMessage = errorData.detail;
+                }
+            }
+            
+            throw new Error(errorMessage);
+        }
+    } catch (error) {
+        console.error('移除成员错误:', error);
+        window.showCustomAlert('错误', error.message || '移除成员失败，请重试');
+    } finally {
+        // 隐藏加载状态
+        hideLoadingState('remove-member');
+    }
 }
 
 export function cancelUpdateRole() {
     const modal = document.getElementById('role-update-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+        modal.classList.add('hidden');
+        // 重置加载状态
+        hideLoadingState('update-role');
+        // 清理数据
+        delete modal.dataset.memberId;
+    }
 }
 
 export function cancelRemoveMember() {
     const modal = document.getElementById('remove-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+        modal.classList.add('hidden');
+        // 重置加载状态
+        hideLoadingState('remove-member');
+        // 清理数据
+        delete modal.dataset.memberId;
+    }
 }
 
 // 邀请成员功能
@@ -317,9 +641,24 @@ export async function inviteNewMember() {
     }
 }
 
+// 键盘事件处理
+document.addEventListener('keydown', function(event) {
+    // ESC键关闭模态框
+    if (event.key === 'Escape') {
+        const roleModal = document.getElementById('role-update-modal');
+        const removeModal = document.getElementById('remove-modal');
+        
+        if (roleModal && !roleModal.classList.contains('hidden')) {
+            cancelUpdateRole();
+        }
+        
+        if (removeModal && !removeModal.classList.contains('hidden')) {
+            cancelRemoveMember();
+        }
+    }
+});
 
 // 暴露所有成员管理相关函数到全局 window 对象
-
 window.renderMemberList = renderMemberList;
 window.toggleMemberManagementMenu = toggleMemberManagementMenu;
 window.handleUpdateRole = handleUpdateRole;
@@ -330,9 +669,8 @@ window.cancelUpdateRole = cancelUpdateRole;
 window.cancelRemoveMember = cancelRemoveMember;
 window.clearInviteForm = clearInviteForm;
 window.inviteNewMember = inviteNewMember;
+window.getGroupIdFromURL = getGroupIdFromURL;
 window.isValidEmail = isValidEmail;
-
-
 
 console.log('成员管理模块已加载，所有函数已暴露到全局');
 

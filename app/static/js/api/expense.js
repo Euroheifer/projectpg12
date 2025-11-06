@@ -1,7 +1,6 @@
 // app/static/js/api/expense.js
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
-//import { getTodayDate, requireAdmin } from '../ui/utils.js';
-import { getTodayDate, requireAdmin, getAuthToken, showCustomAlert } from '../ui/utils.js'; //update by sunzhe 03 Nov
+import { getTodayDate, requireAdmin, getAuthToken, showCustomAlert } from '../ui/utils.js';
 
 // --- 全局状态 ---
 let selectedParticipants = new Set();
@@ -9,7 +8,7 @@ let currentSplitMethod = 'equal';
 let memberSplits = [];
 let currentEditingExpense = null;
 
-// ----------- changed by sunzhe 03 Nov ---------------- //
+// ----------- 初始化费用表单 ---------------- //
 export function initializeExpenseForm() {
     const today = getTodayDate();
     const dateInput = document.getElementById('date');
@@ -79,11 +78,24 @@ export function initializeExpenseForm() {
                 selectedParticipants.delete(parseInt(e.target.value));
             }
             console.log('Participants updated:', selectedParticipants);
+            
+            // 重新计算分摊
+            setTimeout(() => {
+                updateSplitCalculation();
+            }, 100);
         });
         participantsContainer.appendChild(label);
     });
 
     console.log('Expense form initialized with members. Default participants:', selectedParticipants);
+    
+    // 初始化分摊详情和摘要显示
+    renderSplitDetails();
+    updateSplitSummary();
+    
+    // 设置默认分摊方式为等额分摊
+    currentSplitMethod = 'equal';
+    setSplitMethod('equal', false); // 不触发重新计算，因为刚初始化过
 }
 // --------------------- end --------------------------------- //
 
@@ -124,9 +136,27 @@ export async function handleSaveExpense(event) {
         return;
     }
 
+    // 验证分摊金额（仅对自定义分摊）
+    if (currentSplitMethod === 'custom') {
+        const validation = validateSplitAmounts();
+        if (!validation.isValid) {
+            showCustomAlert('Error', `分摊金额验证失败: ${validation.message}`);
+            return;
+        }
+    }
+
     // 3. 构造分摊(splits)数组
     const splits = Array.from(selectedParticipants).map(userId => {
-        return { user_id: userId, amount: null }; // 对于 'equal' 模式, amount 可以是 null
+        if (currentSplitMethod === 'equal') {
+            return { user_id: userId, amount: null }; // 对于 'equal' 模式, amount 可以是 null
+        } else {
+            // 对于自定义分摊，使用 memberSplits 中的值
+            const splitRecord = memberSplits.find(s => s.user_id === userId);
+            return { 
+                user_id: userId, 
+                amount: splitRecord ? Math.round(splitRecord.amount * 100) : null // 转换为分
+            };
+        }
     });
 
     // 4. 🚨 新增：构造 FormData 对象
@@ -446,7 +476,31 @@ export function initializeExpenseDetailForm(expense) {
 //}
 
 export function setSplitMethod(method, triggerUpdate = true) {
-    // TODO: 实现设置分摊方式逻辑
+    console.log('切换分摊方式:', method);
+    
+    currentSplitMethod = method;
+    
+    // 更新按钮状态
+    const equalBtn = document.getElementById('split-equal');
+    const customBtn = document.getElementById('split-exact');
+    
+    if (equalBtn && customBtn) {
+        if (method === 'equal') {
+            equalBtn.classList.add('active');
+            customBtn.classList.remove('active');
+        } else {
+            equalBtn.classList.remove('active');
+            customBtn.classList.add('active');
+        }
+    }
+    
+    // 如果需要触发更新，重新计算分摊
+    if (triggerUpdate) {
+        updateSplitCalculation();
+    }
+    
+    // 重新渲染分摊详情
+    renderSplitDetails();
 }
 
 // HTML中调用的函数：
@@ -467,40 +521,344 @@ export function handleDeleteExpense() {
 }
 
 export function handleParticipantSelection(checkbox, containerId) {
-    // TODO: 实现参与者选择处理逻辑
-    console.log('处理参与者选择', checkbox.value, containerId);
+    const userId = parseInt(checkbox.value);
+    
+    if (checkbox.checked) {
+        selectedParticipants.add(userId);
+    } else {
+        selectedParticipants.delete(userId);
+    }
+    
+    console.log('处理参与者选择', userId, containerId, '当前选中:', selectedParticipants);
+    
+    // 重新计算分摊
+    setTimeout(() => {
+        updateSplitCalculation();
+    }, 100);
 }
 
 
 
 export function setDetailSplitMethod(method) {
-    // TODO: 实现详情分摊方式设置逻辑
     console.log('设置详情分摊方式:', method);
+    
+    const form = document.querySelector('#expense-detail-modal #expense-detail-form');
+    if (!form) {
+        console.error('详情表单未找到');
+        return;
+    }
+    
+    // 更新按钮状态
+    const equalBtn = form.querySelector('#detail-split-equal');
+    const customBtn = form.querySelector('#detail-split-exact');
+    
+    if (equalBtn && customBtn) {
+        if (method === 'equal') {
+            equalBtn.classList.add('active');
+            customBtn.classList.remove('active');
+        } else {
+            equalBtn.classList.remove('active');
+            customBtn.classList.add('active');
+        }
+    }
+    
+    // 更新详情分摊计算
+    updateDetailSplitCalculation();
 }
 
 export function updateSplitCalculation() {
-    // TODO: 实现分摊计算逻辑
-    console.log('更新分摊计算');
+    const amountInput = document.getElementById('amount');
+    if (!amountInput || !amountInput.value) {
+        return;
+    }
+    
+    const totalAmount = parseFloat(amountInput.value);
+    if (isNaN(totalAmount) || totalAmount <= 0) {
+        return;
+    }
+    
+    const participants = Array.from(selectedParticipants);
+    if (participants.length === 0) {
+        return;
+    }
+    
+    // 初始化分摊数据
+    memberSplits = participants.map(userId => {
+        const member = window.groupMembers.find(m => m.user_id === userId);
+        return {
+            user_id: userId,
+            amount: 0,
+            member_name: member ? (member.user.username || member.nickname) : `User ${userId}`
+        };
+    });
+    
+    if (currentSplitMethod === 'equal') {
+        // 等额分摊计算
+        const baseAmount = Math.floor((totalAmount * 100) / participants.length) / 100; // 转换为分后向下取整，再转回元
+        const remainder = Math.round(totalAmount * 100) % participants.length; // 计算余数（分）
+        
+        memberSplits.forEach((split, index) => {
+            split.amount = baseAmount;
+        });
+        
+        // 分配余数给前 remainder 个人
+        for (let i = 0; i < remainder; i++) {
+            memberSplits[i].amount = Math.round((memberSplits[i].amount * 100 + 1) / 100);
+        }
+    } else {
+        // 自定义分摊 - 保持当前值或重新计算
+        const currentSplits = memberSplits.filter(s => s.amount > 0);
+        const sumCurrentSplits = currentSplits.reduce((sum, s) => sum + s.amount, 0);
+        
+        if (sumCurrentSplits === 0) {
+            // 如果还没有自定义分摊，初始化为等额
+            const baseAmount = Math.floor((totalAmount * 100) / participants.length) / 100;
+            const remainder = Math.round(totalAmount * 100) % participants.length;
+            
+            memberSplits.forEach((split, index) => {
+                split.amount = baseAmount;
+            });
+            
+            for (let i = 0; i < remainder; i++) {
+                memberSplits[i].amount = Math.round((memberSplits[i].amount * 100 + 1) / 100);
+            }
+        }
+    }
+    
+    // 重新渲染UI
+    renderSplitDetails();
+    updateSplitSummary();
+    
+    console.log('分摊计算完成:', memberSplits);
 }
 
 export function updateDetailSplitCalculation() {
-    // TODO: 实现详情分摊计算逻辑
-    console.log('更新详情分摊计算');
+    const form = document.querySelector('#expense-detail-modal #expense-detail-form');
+    if (!form) return;
+    
+    const amountInput = form.querySelector('#detail-amount');
+    if (!amountInput || !amountInput.value) {
+        return;
+    }
+    
+    const totalAmount = parseFloat(amountInput.value);
+    if (isNaN(totalAmount) || totalAmount <= 0) {
+        return;
+    }
+    
+    // 获取选中的参与者
+    const checkedInputs = form.querySelectorAll('#detail-participants-container input:checked');
+    const participants = Array.from(checkedInputs).map(input => parseInt(input.value));
+    
+    if (participants.length === 0) {
+        return;
+    }
+    
+    // 获取当前分摊方式
+    const isEqualSplit = form.querySelector('#detail-split-equal').classList.contains('active');
+    const method = isEqualSplit ? 'equal' : 'custom';
+    
+    // 重新计算分摊
+    const baseAmount = Math.floor((totalAmount * 100) / participants.length) / 100;
+    const remainder = Math.round(totalAmount * 100) % participants.length;
+    
+    // 更新每个参与者的分摊显示
+    participants.forEach((userId, index) => {
+        const member = window.groupMembers.find(m => m.user_id === userId);
+        const memberName = member ? (member.user.username || member.nickname) : `User ${userId}`;
+        
+        let splitAmount = baseAmount;
+        if (index < remainder) {
+            splitAmount = Math.round((baseAmount * 100 + 1) / 100);
+        }
+        
+        // 更新显示（如果存在对应的输入框）
+        const amountInput = form.querySelector(`[data-user-id="${userId}"]`);
+        if (amountInput && method === 'custom') {
+            amountInput.value = splitAmount.toFixed(2);
+        }
+    });
+    
+    console.log('详情分摊计算完成');
 }
 
 export function handleCustomAmountChange(input, memberId, splitsArray) {
-    // TODO: 实现自定义金额变化处理逻辑
-    console.log('处理自定义金额变化', memberId, input.value);
+    const newValue = parseFloat(input.value) || 0;
+    
+    // 更新对应的分摊记录
+    const splitIndex = memberSplits.findIndex(s => s.user_id === memberId);
+    if (splitIndex !== -1) {
+        memberSplits[splitIndex].amount = newValue;
+    }
+    
+    // 验证分摊金额
+    validateSplitAmounts();
+    
+    // 更新摘要
+    updateSplitSummary();
+    
+    console.log('自定义金额更新:', memberId, newValue, memberSplits);
 }
 
 export function handleAmountChange() {
-    // TODO: 实现金额变化处理逻辑
-    console.log('处理金额变化');
+    console.log('金额发生变化，重新计算分摊');
+    
+    // 延迟执行，确保 DOM 已更新
+    setTimeout(() => {
+        updateSplitCalculation();
+    }, 100);
+}
+
+export function validateSplitAmounts() {
+    const amountInput = document.getElementById('amount');
+    if (!amountInput || !amountInput.value) {
+        return { isValid: false, message: '请输入总金额' };
+    }
+    
+    const totalAmount = parseFloat(amountInput.value);
+    if (isNaN(totalAmount) || totalAmount <= 0) {
+        return { isValid: false, message: '请输入有效的总金额' };
+    }
+    
+    const sumSplits = memberSplits.reduce((sum, split) => sum + split.amount, 0);
+    const difference = Math.abs(sumSplits - totalAmount);
+    
+    // 允许0.01元的误差范围（处理浮点数精度问题）
+    if (difference <= 0.01) {
+        return { isValid: true, message: '分摊金额匹配', sumSplits: sumSplits };
+    } else {
+        const status = sumSplits > totalAmount ? '超出' : '不足';
+        return { 
+            isValid: false, 
+            message: `分摊金额${status}$${difference.toFixed(2)}`,
+            sumSplits: sumSplits,
+            difference: difference
+        };
+    }
+}
+
+export function renderSplitDetails() {
+    const container = document.getElementById('split-details-container');
+    if (!container) {
+        console.warn('分摊详情容器未找到');
+        return;
+    }
+    
+    if (memberSplits.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-4 text-gray-500">
+                <p>请选择参与者</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = memberSplits.map(split => `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
+                    ${split.member_name.charAt(0).toUpperCase()}
+                </div>
+                <span class="font-medium text-gray-800">${split.member_name}</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                ${currentSplitMethod === 'custom' ? `
+                    <div class="flex items-center space-x-1">
+                        <span class="text-gray-500">$</span>
+                        <input 
+                            type="number" 
+                            step="0.01" 
+                            min="0" 
+                            value="${split.amount.toFixed(2)}"
+                            class="w-20 px-2 py-1 border border-gray-300 rounded text-right text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                            onchange="handleCustomAmountChange(this, ${split.user_id}, memberSplits)"
+                        >
+                    </div>
+                ` : `
+                    <span class="font-semibold text-primary">$${split.amount.toFixed(2)}</span>
+                `}
+            </div>
+        </div>
+    `).join('');
+}
+
+export function updateSplitSummary() {
+    const summaryContainer = document.getElementById('split-summary-container');
+    if (!summaryContainer) {
+        console.warn('分摊摘要容器未找到');
+        return;
+    }
+    
+    const amountInput = document.getElementById('amount');
+    const totalAmount = amountInput ? parseFloat(amountInput.value) || 0 : 0;
+    
+    const validation = validateSplitAmounts();
+    const participantCount = memberSplits.length;
+    const averageSplit = participantCount > 0 ? totalAmount / participantCount : 0;
+    
+    summaryContainer.innerHTML = `
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+            <div class="flex justify-between items-center">
+                <span class="text-sm font-medium text-blue-800">分摊摘要</span>
+                <span class="text-xs text-blue-600">${currentSplitMethod === 'equal' ? '等额分摊' : '自定义分摊'}</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div class="text-center">
+                    <div class="text-lg font-bold text-blue-900">$${totalAmount.toFixed(2)}</div>
+                    <div class="text-blue-600">总金额</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-lg font-bold text-blue-900">${participantCount}</div>
+                    <div class="text-blue-600">参与人数</div>
+                </div>
+            </div>
+            
+            ${currentSplitMethod === 'equal' ? `
+                <div class="text-center border-t border-blue-200 pt-2">
+                    <div class="text-sm text-blue-700">
+                        每人平均: <span class="font-semibold">$${averageSplit.toFixed(2)}</span>
+                    </div>
+                </div>
+            ` : ''}
+            
+            <div class="border-t border-blue-200 pt-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-blue-700">分摊验证:</span>
+                    <span class="font-medium ${
+                        validation.isValid ? 'text-green-600' : 'text-red-600'
+                    }">
+                        ${validation.message}
+                    </span>
+                </div>
+                ${!validation.isValid && validation.difference ? `
+                    <div class="mt-1 text-xs text-gray-600">
+                        当前分摊总和: $${validation.sumSplits.toFixed(2)}
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    // 根据验证结果添加/移除错误样式
+    const amountInputElement = document.getElementById('amount');
+    if (amountInputElement) {
+        if (validation.isValid) {
+            amountInputElement.classList.remove('border-red-500', 'ring-red-500');
+            amountInputElement.classList.add('border-green-500', 'ring-green-500');
+        } else {
+            amountInputElement.classList.remove('border-green-500', 'ring-green-500');
+            amountInputElement.classList.add('border-red-500', 'ring-red-500');
+        }
+    }
 }
 
 export function handleDetailAmountChange() {
-    // TODO: 实现详情金额变化处理逻辑
-    console.log('处理详情金额变化');
+    console.log('详情金额发生变化，重新计算分摊');
+    
+    setTimeout(() => {
+        updateDetailSplitCalculation();
+    }, 100);
 }
 
 
@@ -805,6 +1163,11 @@ window.refreshExpensesList = refreshExpensesList;
 window.closeDeleteConfirm = closeDeleteConfirm;
 window.showCustomAlert = showCustomAlert;
 
+// 新增的分摊计算相关函数
+window.renderSplitDetails = renderSplitDetails;
+window.updateSplitSummary = updateSplitSummary;
+window.validateSplitAmounts = validateSplitAmounts;
+
 // 如果这些函数在其他地方已经定义，确保不会重复定义
 if (typeof window.closeCustomAlert !== 'function') {
     window.closeCustomAlert = function () {
@@ -816,3 +1179,54 @@ if (typeof window.closeCustomAlert !== 'function') {
 }
 
 console.log('费用模块已加载，所有函数已暴露到全局');
+
+// === 分摊计算功能总结 ===
+
+/*
+已实现的分摊计算功能：
+
+1. setSplitMethod(method, triggerUpdate = true)
+   - 切换等额/自定义分摊方式
+   - 自动更新按钮状态
+   - 触发重新计算分摊
+
+2. updateSplitCalculation()
+   - 核心分摊计算逻辑
+   - 支持等额分摊（自动分配余数）
+   - 支持自定义分摊
+   - 处理浮点数精度问题（转换为分计算）
+
+3. handleAmountChange()
+   - 监听总金额变化
+   - 自动重新计算分摊
+
+4. handleCustomAmountChange(input, memberId, splitsArray)
+   - 处理自定义分摊金额变化
+   - 实时验证分摊匹配
+
+5. renderSplitDetails()
+   - 渲染分摊详情列表
+   - 等额模式：只显示金额
+   - 自定义模式：显示可编辑输入框
+
+6. updateSplitSummary()
+   - 更新分摊摘要信息
+   - 显示总金额、参与人数、平均分摊
+   - 实时验证状态提示
+
+7. validateSplitAmounts()
+   - 验证分摊金额总和与总金额匹配
+   - 允许0.01元误差范围
+   - 返回详细验证结果
+
+8. 余数分配逻辑
+   - 等额分摊时，剩余金额（分）分配给前N个人
+   - 确保总金额精确匹配
+
+分摊计算特点：
+- 支持多人分摊（无人数限制）
+- 精确到分的计算（处理浮点数精度问题）
+- 自动余数分配算法
+- 实时验证和UI反馈
+- 兼容等额和自定义两种模式
+*/

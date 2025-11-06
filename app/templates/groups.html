@@ -1063,7 +1063,7 @@
                     class="w-full py-3 bg-warning text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-amber-500 transition duration-200 transform hover:scale-[1.005] active:scale-[0.99]">
                     保存定期费用
                 </button>
-                <button type="button" onclick="handleRecur()"
+                <button type="button" onclick="handleRecurringCancel()"
                     class="w-full py-2 mt-2 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition duration-150">
                     取消
                 </button>
@@ -1280,13 +1280,8 @@
 
 {% block extra_js %}
 
-<script>
-    function goBackToHome() {
-        window.location.href = '/home';
-    }
-</script>
 <script src="/static/js/ui/menu.js"></script>
-<script type" src="/static/js/ui/utils.js"></script>
+<script type="module" src="/static/js/ui/utils.js"></script>
 <script type="module" src="/static/js/api/expense.js"></script>
 <script type="module" src="/static/js/api/recurring_expense.js"></script>
 <script type="module" src="/static/js/api/payment.js"></script>

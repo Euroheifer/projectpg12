@@ -1,6 +1,13 @@
 // payment.js - 支付相关的CRUD操作、表单处理
 
-import { getTodayDate } from '../ui/utils.js';
+import { 
+    getTodayDate, 
+    getAuthToken, 
+    amountToCents, 
+    centsToAmountString, 
+    showCustomAlert,
+    requireAdmin 
+} from '../ui/utils.js';
 
 // --- 全局状态 ---
 let currentEditingPayment = null;
@@ -9,156 +16,757 @@ let currentEditingPayment = null;
  * 初始化支付表单
  */
 export function initializePaymentForm() {
-    // TODO: 实现支付表单初始化逻辑
     console.log('初始化支付表单');
 
-    // TODO: 设置默认日期
-    // TODO: 根据权限设置付款人选择器
-    // TODO: 初始化收款人选择器
-    // TODO: 初始化费用选择器
-    // TODO: 绑定事件监听器
+    // 设置默认日期
+    const dateInput = document.getElementById('payment-date');
+    if (dateInput) {
+        dateInput.value = getTodayDate();
+    }
+
+    // 获取群组成员列表
+    const members = window.groupMembers || [];
+    
+    // 初始化付款人选择器
+    const payerSelect = document.getElementById('payment-payer');
+    if (payerSelect) {
+        payerSelect.innerHTML = '';
+        
+        if (members.length === 0) {
+            payerSelect.innerHTML = '<option value="">未找到成员</option>';
+        } else {
+            members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.user_id;
+                option.textContent = member.user.username || member.nickname || `用户 ${member.user_id}`;
+                
+                // 设置当前用户为默认付款人
+                if (member.user_id === window.CURRENT_USER_ID) {
+                    option.selected = true;
+                }
+                payerSelect.appendChild(option);
+            });
+        }
+    }
+
+    // 初始化收款人选择器
+    const payeeSelect = document.getElementById('payment-payee');
+    if (payeeSelect) {
+        payeeSelect.innerHTML = '';
+        
+        if (members.length === 0) {
+            payeeSelect.innerHTML = '<option value="">未找到成员</option>';
+        } else {
+            members.forEach(member => {
+                const option = document.createElement('option');
+                option.value = member.user_id;
+                option.textContent = member.user.username || member.nickname || `用户 ${member.user_id}`;
+                payeeSelect.appendChild(option);
+            });
+        }
+    }
+
+    // 绑定事件监听器
+    bindPaymentFormEvents();
+}
+
+/**
+ * 绑定支付表单事件监听器
+ */
+function bindPaymentFormEvents() {
+    // 文件上传事件
+    const fileInput = document.getElementById('payment-attachment');
+    if (fileInput) {
+        fileInput.addEventListener('change', updatePaymentFileNameDisplay);
+    }
+
+    // 表单提交事件
+    const form = document.getElementById('payment-form');
+    if (form) {
+        form.addEventListener('submit', handleSavePayment);
+    }
+}
+
+/**
+ * 表单验证
+ */
+function validatePaymentForm(formData) {
+    const errors = [];
+
+    // 验证付款人
+    if (!formData.get('payer_id')) {
+        errors.push('请选择付款人');
+    }
+
+    // 验证收款人
+    if (!formData.get('payee_id')) {
+        errors.push('请选择收款人');
+    }
+
+    // 验证付款人和收款人不能相同
+    if (formData.get('payer_id') === formData.get('payee_id')) {
+        errors.push('付款人和收款人不能是同一个人');
+    }
+
+    // 验证金额
+    const amount = formData.get('amount');
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        errors.push('请输入有效的金额');
+    }
+
+    // 验证日期
+    if (!formData.get('date')) {
+        errors.push('请选择日期');
+    }
+
+    return errors;
 }
 
 /**
  * 保存支付
  */
 export async function handleSavePayment(event) {
-    // TODO: 实现支付保存逻辑
     event.preventDefault();
     console.log('保存支付');
 
-    // TODO: 表单验证
-    // TODO: 数据组装
-    // TODO: API调用保存支付
-    // TODO: 处理响应
-    // TODO: 关闭弹窗
-    // TODO: 刷新支付列表
+    const form = document.getElementById('payment-form');
+    if (!form) return;
+
+    try {
+        // 获取表单数据
+        const formData = new FormData(form);
+        
+        // 表单验证
+        const errors = validatePaymentForm(formData);
+        if (errors.length > 0) {
+            showCustomAlert('表单验证失败', errors.join('<br>'));
+            return;
+        }
+
+        // 转换金额为分
+        const amountInCents = amountToCents(formData.get('amount'));
+        formData.set('amount', amountInCents);
+
+        // 获取认证令牌和群组ID
+        const token = getAuthToken();
+        const groupId = window.currentGroupId;
+        
+        if (!groupId) {
+            throw new Error('群组ID不存在');
+        }
+
+        // API调用
+        const response = await fetch(`/groups/${groupId}/payments`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            let errorMessage = '保存支付失败';
+
+            if (errorData.detail) {
+                if (typeof errorData.detail === 'string') {
+                    errorMessage = errorData.detail;
+                } else if (Array.isArray(errorData.detail)) {
+                    errorMessage = errorData.detail.map(err => {
+                        let field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : '未知字段';
+                        return `${field}: ${err.msg}`;
+                    }).join('<br>');
+                } else {
+                    errorMessage = JSON.stringify(errorData.detail);
+                }
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        // 成功处理
+        showCustomAlert('成功', '支付记录保存成功');
+        
+        // 关闭弹窗
+        const modal = document.getElementById('add-payment-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+
+        // 重置表单
+        form.reset();
+        initializePaymentForm();
+
+        // 刷新支付列表
+        refreshPaymentsList();
+
+    } catch (error) {
+        console.error('保存支付错误:', error);
+        showCustomAlert('错误', error.message || '保存支付时发生未知错误');
+    }
 }
 
 /**
  * 更新支付
  */
 export async function handleUpdatePayment(event) {
-    // TODO: 实现支付更新逻辑
     event.preventDefault();
     console.log('更新支付');
 
-    // TODO: 表单验证
-    // TODO: 数据组装
-    // TODO: API调用更新支付
-    // TODO: 处理响应
-    // TODO: 关闭弹窗
-    // TODO: 刷新支付列表
+    const form = document.getElementById('payment-detail-form');
+    if (!form || !currentEditingPayment) return;
+
+    try {
+        // 获取表单数据
+        const formData = new FormData(form);
+        
+        // 表单验证
+        const errors = validatePaymentForm(formData);
+        if (errors.length > 0) {
+            showCustomAlert('表单验证失败', errors.join('<br>'));
+            return;
+        }
+
+        // 转换金额为分
+        const amountInCents = amountToCents(formData.get('amount'));
+        formData.set('amount', amountInCents);
+
+        // 获取认证令牌和群组ID
+        const token = getAuthToken();
+        const groupId = window.currentGroupId;
+        
+        if (!groupId) {
+            throw new Error('群组ID不存在');
+        }
+
+        // API调用
+        const response = await fetch(`/groups/${groupId}/payments/${currentEditingPayment.id}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            let errorMessage = '更新支付失败';
+
+            if (errorData.detail) {
+                if (typeof errorData.detail === 'string') {
+                    errorMessage = errorData.detail;
+                } else if (Array.isArray(errorData.detail)) {
+                    errorMessage = errorData.detail.map(err => {
+                        let field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : '未知字段';
+                        return `${field}: ${err.msg}`;
+                    }).join('<br>');
+                } else {
+                    errorMessage = JSON.stringify(errorData.detail);
+                }
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        // 成功处理
+        showCustomAlert('成功', '支付记录更新成功');
+        
+        // 关闭弹窗
+        const modal = document.getElementById('payment-detail-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+
+        // 刷新支付列表
+        refreshPaymentsList();
+
+    } catch (error) {
+        console.error('更新支付错误:', error);
+        showCustomAlert('错误', error.message || '更新支付时发生未知错误');
+    }
 }
 
 /**
  * 删除支付
  */
-export async function handleDeletePayment() {
-    // TODO: 实现支付删除逻辑
-    console.log('删除支付');
+export async function handleDeletePayment(paymentId) {
+    if (!paymentId) {
+        showCustomAlert('错误', '支付ID不存在');
+        return;
+    }
 
-    // TODO: 确认删除
-    // TODO: API调用删除支付
-    // TODO: 处理响应
-    // TODO: 关闭弹窗
-    // TODO: 刷新支付列表
+    // 确认删除
+    const confirmed = confirm('确定要删除这个支付记录吗？此操作无法撤销。');
+    if (!confirmed) return;
+
+    try {
+        // 获取认证令牌和群组ID
+        const token = getAuthToken();
+        const groupId = window.currentGroupId;
+        
+        if (!groupId) {
+            throw new Error('群组ID不存在');
+        }
+
+        // API调用
+        const response = await fetch(`/groups/${groupId}/payments/${paymentId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            let errorMessage = '删除支付失败';
+
+            if (errorData.detail) {
+                if (typeof errorData.detail === 'string') {
+                    errorMessage = errorData.detail;
+                } else {
+                    errorMessage = JSON.stringify(errorData.detail);
+                }
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        // 成功处理
+        showCustomAlert('成功', '支付记录删除成功');
+
+        // 关闭相关弹窗
+        const detailModal = document.getElementById('payment-detail-modal');
+        if (detailModal) {
+            detailModal.classList.add('hidden');
+        }
+
+        // 刷新支付列表
+        refreshPaymentsList();
+
+    } catch (error) {
+        console.error('删除支付错误:', error);
+        showCustomAlert('错误', error.message || '删除支付时发生未知错误');
+    }
 }
 
 /**
- * 确认删除支付
+ * 确认删除支付（用于确认弹窗）
  */
-export async function confirmDeletePayment() {
-    // TODO: 实现确认删除支付逻辑
-    console.log('确认删除支付');
+export async function confirmDeletePayment(paymentId) {
+    console.log('确认删除支付', paymentId);
+    
+    if (!paymentId) {
+        showCustomAlert('错误', '支付ID不存在');
+        return;
+    }
 
-    // TODO: API调用删除支付
-    // TODO: 处理响应
-    // TODO: 关闭确认弹窗
-    // TODO: 关闭详情弹窗
-    // TODO: 刷新支付列表
+    // 调用删除函数
+    await handleDeletePayment(paymentId);
+
+    // 关闭确认弹窗
+    const confirmModal = document.getElementById('delete-payment-confirm-modal');
+    if (confirmModal) {
+        confirmModal.classList.add('hidden');
+    }
 }
 
 /**
  * 填充支付详情表单
  */
 export function populatePaymentDetailForm(payment) {
-    // TODO: 实现支付详情表单填充逻辑
     console.log('填充支付详情表单', payment);
 
-    // TODO: 填充表单字段
-    // TODO: 设置收款人选择
-    // TODO: 设置费用选择
-    // TODO: 根据权限设置表单可编辑状态
+    if (!payment) return;
+
+    // 获取表单元素
+    const form = document.getElementById('payment-detail-form');
+    if (!form) return;
+
+    // 填充基本信息
+    const amountField = document.getElementById('payment-detail-amount');
+    if (amountField) {
+        amountField.value = centsToAmountString(payment.amount);
+    }
+
+    const dateField = document.getElementById('payment-detail-date');
+    if (dateField) {
+        dateField.value = payment.date;
+    }
+
+    const descriptionField = document.getElementById('payment-detail-description');
+    if (descriptionField) {
+        descriptionField.value = payment.description || '';
+    }
+
+    // 设置付款人和收款人
+    const payerSelect = document.getElementById('payment-detail-payer');
+    const payeeSelect = document.getElementById('payment-detail-payee');
+
+    if (payerSelect) {
+        payerSelect.value = payment.payer_id;
+    }
+
+    if (payeeSelect) {
+        payeeSelect.value = payment.payee_id;
+    }
+
+    // 设置表单可编辑状态（基于权限）
+    const isAdmin = window.IS_CURRENT_USER_ADMIN;
+    const isOwner = payment.payer_id === window.CURRENT_USER_ID;
+
+    // 只有管理员或支付人自己可以编辑
+    const canEdit = isAdmin || isOwner;
+
+    Array.from(form.elements).forEach(element => {
+        if (element.tagName === 'BUTTON') return; // 跳过按钮
+        
+        if (element.type === 'file') {
+            // 文件输入框始终可操作，但显示当前文件状态
+            const currentFileDisplay = element.parentElement.querySelector('.current-file');
+            if (currentFileDisplay) {
+                if (payment.has_file) {
+                    currentFileDisplay.textContent = '已有附件';
+                    currentFileDisplay.className = 'current-file text-sm text-blue-600';
+                } else {
+                    currentFileDisplay.textContent = '无附件';
+                    currentFileDisplay.className = 'current-file text-sm text-gray-500';
+                }
+            }
+        } else {
+            element.disabled = !canEdit;
+        }
+    });
+
+    // 设置操作按钮可见性
+    const editButton = document.getElementById('payment-detail-edit-btn');
+    const deleteButton = document.getElementById('payment-detail-delete-btn');
+    const saveButton = document.getElementById('payment-detail-save-btn');
+    const cancelButton = document.getElementById('payment-detail-cancel-btn');
+
+    if (canEdit) {
+        if (editButton) editButton.style.display = 'none';
+        if (saveButton) saveButton.style.display = 'inline-block';
+        if (cancelButton) cancelButton.style.display = 'inline-block';
+        if (deleteButton) deleteButton.style.display = 'inline-block';
+    } else {
+        if (editButton) editButton.style.display = 'none';
+        if (saveButton) saveButton.style.display = 'none';
+        if (cancelButton) cancelButton.style.display = 'none';
+        if (deleteButton) deleteButton.style.display = 'none';
+    }
 }
 
 /**
  * 刷新支付列表
  */
-export function refreshPaymentsList() {
-    // TODO: 实现支付列表刷新逻辑
+export async function refreshPaymentsList() {
     console.log('刷新支付列表');
 
-    // TODO: API调用获取支付列表
-    // TODO: 更新全局支付列表
-    // TODO: 渲染支付列表UI
+    try {
+        // 获取认证令牌和群组ID
+        const token = getAuthToken();
+        const groupId = window.currentGroupId;
+        
+        if (!groupId) {
+            throw new Error('群组ID不存在');
+        }
+
+        // API调用获取支付列表
+        const response = await fetch(`/groups/${groupId}/payments`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            let errorMessage = '获取支付列表失败';
+
+            if (errorData.detail) {
+                if (typeof errorData.detail === 'string') {
+                    errorMessage = errorData.detail;
+                } else {
+                    errorMessage = JSON.stringify(errorData.detail);
+                }
+            }
+
+            throw new Error(errorMessage);
+        }
+
+        // 获取支付列表数据
+        const payments = await response.json();
+        window.paymentsList = payments; // 更新全局支付列表
+
+        // 渲染支付列表UI
+        renderPaymentsList(payments);
+
+    } catch (error) {
+        console.error('刷新支付列表错误:', error);
+        showCustomAlert('错误', error.message || '获取支付列表时发生未知错误');
+    }
+}
+
+/**
+ * 渲染支付列表UI
+ */
+function renderPaymentsList(payments) {
+    const container = document.getElementById('payments-list');
+    if (!container) {
+        console.error('支付列表容器未找到');
+        return;
+    }
+
+    // 清空现有内容
+    container.innerHTML = '';
+
+    if (!payments || payments.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <p>暂无支付记录</p>
+            </div>
+        `;
+        return;
+    }
+
+    // 渲染每个支付记录
+    payments.forEach(payment => {
+        const paymentCard = createPaymentCard(payment);
+        container.appendChild(paymentCard);
+    });
+}
+
+/**
+ * 创建支付记录卡片
+ */
+function createPaymentCard(payment) {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-lg shadow p-4 border border-gray-200';
+
+    // 转换金额显示
+    const amountDisplay = centsToAmountString(payment.amount);
+    
+    // 获取成员信息（如果可用）
+    const payerName = getMemberNameById(payment.payer_id);
+    const payeeName = getMemberNameById(payment.payee_id);
+
+    card.innerHTML = `
+        <div class="flex justify-between items-start">
+            <div class="flex-1">
+                <div class="flex items-center gap-2 mb-2">
+                    <h3 class="font-semibold text-lg text-gray-900">
+                        ¥${amountDisplay}
+                    </h3>
+                    ${payment.has_file ? '<span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">有附件</span>' : ''}
+                </div>
+                <p class="text-sm text-gray-600 mb-1">
+                    ${payerName} → ${payeeName}
+                </p>
+                <p class="text-sm text-gray-500">
+                    ${payment.date}
+                </p>
+                ${payment.description ? `<p class="text-sm text-gray-700 mt-2">${payment.description}</p>` : ''}
+            </div>
+            <div class="flex gap-2">
+                <button 
+                    class="text-blue-600 hover:text-blue-800 text-sm"
+                    onclick="openPaymentDetail(${payment.id})"
+                >
+                    查看
+                </button>
+                ${(window.IS_CURRENT_USER_ADMIN || payment.payer_id === window.CURRENT_USER_ID) ? `
+                    <button 
+                        class="text-red-600 hover:text-red-800 text-sm"
+                        onclick="handleDeletePayment(${payment.id})"
+                    >
+                        删除
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+
+    return card;
+}
+
+/**
+ * 根据ID获取成员名称
+ */
+function getMemberNameById(userId) {
+    const members = window.groupMembers || [];
+    const member = members.find(m => m.user_id === userId);
+    if (member) {
+        return member.user.username || member.nickname || `用户 ${userId}`;
+    }
+    return `用户 ${userId}`;
 }
 
 /**
  * 打开支付详情
  */
 export function openPaymentDetail(paymentId) {
-    // TODO: 实现打开支付详情逻辑
     console.log('打开支付详情', paymentId);
 
-    // TODO: API调用获取支付详情
-    // TODO: 设置当前编辑支付
-    // TODO: 填充详情表单
-    // TODO: 打开详情弹窗
+    // 查找支付记录
+    const payment = window.paymentsList?.find(p => p.id === paymentId);
+    
+    if (!payment) {
+        showCustomAlert('错误', '未找到支付记录');
+        return;
+    }
+
+    // 设置当前编辑支付
+    currentEditingPayment = payment;
+
+    // 填充详情表单
+    populatePaymentDetailForm(payment);
+
+    // 初始化支付详情表单
+    initializePaymentDetailForm(payment);
+
+    // 打开详情弹窗
+    const modal = document.getElementById('payment-detail-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
 }
 
 /**
  * 更新支付文件名显示
  */
 export function updatePaymentFileNameDisplay(input) {
-    // TODO: 实现支付文件名显示更新逻辑
     console.log('更新支付文件名显示', input.files[0]?.name);
 
-    // TODO: 更新文件名显示文本
+    const fileNameSpan = document.getElementById('payment-file-name');
+    if (fileNameSpan) {
+        if (input.files && input.files[0]) {
+            fileNameSpan.textContent = `已选择: ${input.files[0].name}`;
+            fileNameSpan.className = 'text-sm text-green-600';
+        } else {
+            fileNameSpan.textContent = '未选择文件';
+            fileNameSpan.className = 'text-sm text-gray-500';
+        }
+    }
 }
 
 /**
  * 更新支付详情文件名显示
  */
 export function updatePaymentDetailFileNameDisplay(input) {
-    // TODO: 实现支付详情文件名显示更新逻辑
     console.log('更新支付详情文件名显示', input.files[0]?.name);
 
-    // TODO: 更新文件名显示文本
+    const fileNameSpan = document.getElementById('payment-detail-file-name');
+    if (fileNameSpan) {
+        if (input.files && input.files[0]) {
+            fileNameSpan.textContent = `已选择: ${input.files[0].name}`;
+            fileNameSpan.className = 'text-sm text-green-600';
+        } else {
+            fileNameSpan.textContent = '未选择新文件';
+            fileNameSpan.className = 'text-sm text-gray-500';
+        }
+    }
 }
+
+/**
+ * 初始化支付详情表单
+ */
 export function initializePaymentDetailForm(payment) {
-    // TODO: 实现初始化支付详情表单逻辑
     console.log('初始化支付详情表单:', payment);
-}
-export function handleAddNewPayment(payment) {
-    // TODO: 实现初始化支付详情表单逻辑
-    console.log('add new payment', payment);
+
+    // 绑定事件监听器
+    bindPaymentDetailFormEvents();
 }
 
-export function handlePaymentCancel(payment) {
-    // TODO: 实现初始化支付详情表单逻辑
-    console.log('cancel', payment);
+/**
+ * 绑定支付详情表单事件
+ */
+function bindPaymentDetailFormEvents() {
+    // 详情表单文件上传事件
+    const detailFileInput = document.getElementById('payment-detail-attachment');
+    if (detailFileInput) {
+        detailFileInput.addEventListener('change', updatePaymentDetailFileNameDisplay);
+    }
+
+    // 详情表单提交事件
+    const detailForm = document.getElementById('payment-detail-form');
+    if (detailForm) {
+        detailForm.addEventListener('submit', handleUpdatePayment);
+    }
 }
-export function handlePaymentDetailCancel(payment) {
-    // TODO: 实现初始化支付详情表单逻辑
-    console.log('cancel', payment);
+
+/**
+ * 处理添加新支付
+ */
+export function handleAddNewPayment() {
+    console.log('add new payment');
+    
+    // 重置当前编辑支付
+    currentEditingPayment = null;
+
+    // 初始化表单
+    initializePaymentForm();
+
+    // 清空文件选择
+    const fileInput = document.getElementById('payment-attachment');
+    if (fileInput) {
+        fileInput.value = '';
+        updatePaymentFileNameDisplay(fileInput);
+    }
+
+    // 打开添加支付弹窗
+    const modal = document.getElementById('add-payment-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
 }
-export function closeDeletePaymentConfirm(payment) {
-    // TODO: 实现初始化支付详情表单逻辑
-    console.log('cancel', payment);
+
+/**
+ * 处理支付取消
+ */
+export function handlePaymentCancel() {
+    console.log('cancel payment form');
+
+    // 关闭添加支付弹窗
+    const modal = document.getElementById('add-payment-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+
+    // 重置表单
+    const form = document.getElementById('payment-form');
+    if (form) {
+        form.reset();
+    }
 }
+
+/**
+ * 处理支付详情取消
+ */
+export function handlePaymentDetailCancel() {
+    console.log('cancel payment detail');
+
+    // 关闭详情弹窗
+    const modal = document.getElementById('payment-detail-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+
+    // 清除当前编辑支付
+    currentEditingPayment = null;
+}
+
+/**
+ * 关闭删除支付确认弹窗
+ */
+export function closeDeletePaymentConfirm() {
+    const modal = document.getElementById('delete-payment-confirm-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
 // 暴露所有支付相关函数到全局 window 对象
-
 window.handleSavePayment = handleSavePayment;
 window.handleUpdatePayment = handleUpdatePayment;
 window.handleDeletePayment = handleDeletePayment;

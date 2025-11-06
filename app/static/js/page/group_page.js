@@ -42,6 +42,10 @@ import {
     inviteNewMember
 } from '../api/members.js';
 
+import {
+    initializeSettlementModule
+} from '../api/settlement.js';
+
 // --- Added: Function to get user info, adapted from home_page.js edit by sunzhe ---
 async function fetchCurrentUser() {
     try {
@@ -135,6 +139,12 @@ async function initializePage() {
 
         // 6. Load data lists
         await loadDataLists();
+
+        // 7. Initialize settlement module
+        if (window.currentGroupId) {
+            window.CURRENT_GROUP_ID = window.currentGroupId; // 统一变量名为大写
+            initializeSettlementModule();
+        }
 
         console.log(`Group page initialization complete - Group: ${window.currentGroupId}, User: ${window.CURRENT_USER_NAME}, Permission: ${window.IS_CURRENT_USER_ADMIN ? 'Admin' : 'Member'}`);
 
@@ -603,9 +613,6 @@ function refreshRecurringList() {
 }
 
 // --- Modal Functions ---
-function handleSettleUp() {
-    showCustomAlert('Settle Up Feature', 'Settle all debts feature is under development');
-}
 window.handleAddNewExpense = function () {
     console.log('Show add expense modal');
 	
@@ -670,13 +677,6 @@ window.handleBackToPreviousPage = handleBackToPreviousPage;
 window.handleBackToDashboard = handleBackToDashboard;
 window.handleMyProfile = handleMyProfile;
 window.handleLogoutUser = handleLogoutUser;
-window.handleSettleUp = handleSettleUp;
-window.handleAddNewExpense = handleAddNewExpense;
-window.handleAddNewPayment = handleAddNewPayment;
-window.handleAddNewRecurringExpense = handleAddNewRecurringExpense;
-window.handleRecurringCancel = handleRecurringCancel;
-window.handleCancel = handleCancel;
-window.handlePaymentCancel = handlePaymentCancel;
 window.loadExpensesList = loadExpensesList;
 
 // Export data loading functions
@@ -684,6 +684,213 @@ window.loadMembersList = loadMembersList;
 
 // Export other necessary functions
 window.showCustomAlert = showCustomAlert;
+
+// Export missing functions that are called in HTML
+window.goBackToHome = function() {
+    window.location.href = '/home';
+};
+
+window.resetGroupSettings = function() {
+    const groupNameInput = document.getElementById('group-name-input');
+    const groupDescriptionInput = document.getElementById('group-description-input');
+    if (window.currentGroup) {
+        groupNameInput.value = window.currentGroup.name || '';
+        groupDescriptionInput.value = window.currentGroup.description || '';
+    }
+};
+
+window.saveGroupSettings = function() {
+    showCustomAlert('Info', 'Group settings save feature is under development');
+};
+
+window.closeCustomAlert = function() {
+    const modal = document.getElementById('custom-alert-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+window.closeDeleteConfirm = function() {
+    const modal = document.getElementById('delete-confirm-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+window.confirmDeleteExpense = function() {
+    // This function should be implemented in expense.js
+    if (window.confirmDeleteExpenseFromDetail) {
+        window.confirmDeleteExpenseFromDetail();
+    }
+};
+
+window.handleAmountChange = function() {
+    // This function should be implemented in expense.js
+    if (window.updateSplitDetails) {
+        window.updateSplitDetails();
+    }
+};
+
+window.updateFileNameDisplay = function(input) {
+    const fileNameDisplay = document.getElementById('file-name-display');
+    if (fileNameDisplay && input.files && input.files.length > 0) {
+        fileNameDisplay.textContent = input.files[0].name;
+    }
+};
+
+window.setSplitMethod = function(method) {
+    // This function should be implemented in expense.js
+    console.log('Setting split method to:', method);
+    if (window.updateSplitMethod) {
+        window.updateSplitMethod(method);
+    }
+};
+
+window.updatePaymentFileNameDisplay = function(input) {
+    const fileNameDisplay = document.getElementById('payment-file-name-display');
+    if (fileNameDisplay && input.files && input.files.length > 0) {
+        fileNameDisplay.textContent = input.files[0].name;
+    }
+};
+
+window.handleDetailAmountChange = function() {
+    // This function should be implemented in expense.js
+    if (window.updateDetailSplitDetails) {
+        window.updateDetailSplitDetails();
+    }
+};
+
+window.setDetailSplitMethod = function(method) {
+    // This function should be implemented in expense.js
+    console.log('Setting detail split method to:', method);
+    if (window.updateDetailSplitMethod) {
+        window.updateDetailSplitMethod(method);
+    }
+};
+
+window.handleDeleteExpense = function() {
+    // This function should be implemented in expense.js
+    if (window.showDeleteExpenseConfirm) {
+        window.showDeleteExpenseConfirm();
+    }
+};
+
+window.handleDetailCancel = function() {
+    const modal = document.getElementById('expense-detail-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+window.handleSaveRecurringExpense = function(event) {
+    event.preventDefault();
+    showCustomAlert('Info', 'Recurring expense save feature is under development');
+};
+
+window.handleRecurringAmountChange = function() {
+    // This function should be implemented in recurring_expense.js
+    console.log('Recurring amount changed');
+};
+
+window.selectFrequency = function(frequency) {
+    // This function should be implemented in recurring_expense.js
+    console.log('Selected frequency:', frequency);
+};
+
+window.setRecurringSplitMethod = function(method) {
+    // This function should be implemented in recurring_expense.js
+    console.log('Setting recurring split method to:', method);
+};
+
+window.handleEnableRecurringExpense = function() {
+    showCustomAlert('Info', 'Enable recurring expense feature is under development');
+};
+
+window.handleDeleteRecurringExpense = function() {
+    showCustomAlert('Info', 'Delete recurring expense feature is under development');
+};
+
+window.handleRecurringDetailCancel = function() {
+    const modal = document.getElementById('recurring-detail-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+window.handleEditRecurringExpense = function() {
+    showCustomAlert('Info', 'Edit recurring expense feature is under development');
+};
+
+window.updatePaymentDetailFileNameDisplay = function(input) {
+    const fileNameDisplay = document.getElementById('payment-detail-file-name-display');
+    if (fileNameDisplay && input.files && input.files.length > 0) {
+        fileNameDisplay.textContent = input.files[0].name;
+    }
+};
+
+window.handleDeletePayment = function() {
+    // This function should be implemented in payment.js
+    if (window.showDeletePaymentConfirm) {
+        window.showDeletePaymentConfirm();
+    }
+};
+
+window.handlePaymentDetailCancel = function() {
+    const modal = document.getElementById('payment-detail-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+// Additional missing functions
+window.clearInviteForm = function() {
+    const emailInput = document.getElementById('invite-user-email-input');
+    if (emailInput) {
+        emailInput.value = '';
+    }
+};
+
+window.closeDeletePaymentConfirm = function() {
+    const modal = document.getElementById('delete-payment-confirm-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+window.confirmDeletePayment = function() {
+    // This function should be implemented in payment.js
+    if (window.confirmDeletePaymentFromDetail) {
+        window.confirmDeletePaymentFromDetail();
+    }
+};
+
+window.handleDisableRecurringExpense = function() {
+    showCustomAlert('Info', 'Disable recurring expense feature is under development');
+};
+
+window.handleSavePayment = function(event) {
+    event.preventDefault();
+    // This function should be implemented in payment.js
+    if (window.savePayment) {
+        window.savePayment(event);
+    }
+};
+
+window.handleUpdateExpense = function(event) {
+    event.preventDefault();
+    // This function should be implemented in expense.js
+    if (window.updateExpense) {
+        window.updateExpense(event);
+    }
+};
+
+window.handleUpdatePayment = function(event) {
+    event.preventDefault();
+    // This function should be implemented in payment.js
+    if (window.updatePayment) {
+        window.updatePayment(event);
+    }
+};
 
 
 document.addEventListener('DOMContentLoaded', function () {
