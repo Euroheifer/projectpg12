@@ -380,6 +380,14 @@ export function updateRecurringPreview() {
 }
 
 /**
+ * 处理定期费用金额变化
+ */
+export function handleRecurringAmountChange() {
+    console.log('定期费用金额变化');
+    updatePreviewSummary();
+}
+
+/**
  * 保存定期费用
  */
 export async function handleSaveRecurringExpense(event) {
