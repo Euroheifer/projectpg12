@@ -489,16 +489,7 @@ function getAuditActionIcon(action) {
     return iconMap[action] || '<i class="fas fa-info-circle"></i>';
 }
 
-// 兼容旧版函数名
-export function loadAuditLogs() {
-    console.log('加载审计日志');
-    const groupId = getCurrentGroupId();
-    if (groupId) {
-        loadAuditLog(groupId);
-    } else {
-        showCustomAlert('无法获取当前群组ID');
-    }
-}
+// loadAuditLogs函数的完整实现在文件后面
 
 export function renderAuditLogList() {
     console.log('渲染审计日志列表');
@@ -551,10 +542,10 @@ try {
     
     // 审计日志功能
     window.loadAuditLog = loadAuditLog;
-    window.loadAuditLogs = loadAuditLogs;
     window.renderAuditLog = renderAuditLog;
     window.renderAuditLogList = renderAuditLogList;
     window.getCurrentGroupId = getCurrentGroupId;
+    // loadAuditLogs 将在文件末尾暴露
 
     console.log('groups.js: 全局暴露完成');
 } catch (error) {
