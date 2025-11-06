@@ -169,20 +169,20 @@ export async function getGroupExpenses(groupId) {
     return await response.json();
 }
 
+/**
+ * 注意：此函数已被弃用
+ * 支付API是基于费用的，而不是基于群组的
+ * 请使用 getExpensePayments(expenseId) 替代
+ * 
+ * API 路由: 不存在 /groups/{group_id}/payments
+ * 正确路由: /expenses/{expense_id}/payments
+ */
 export async function getGroupPayments(groupId) {
+    console.warn('getGroupPayments 已弃用 - 请使用 getExpensePayments(expenseId)');
     const token = getAuthToken();
-    const response = await fetch(`/groups/${groupId}/payments`, {
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        }
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail || '获取群组支付失败');
-    }
-    return await response.json();
+    
+    // 返回空数组，避免前端崩溃
+    return [];
 }
 
 export async function getGroupRecurringExpenses(groupId) {

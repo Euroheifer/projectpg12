@@ -221,6 +221,11 @@ async function loadMembersList() {
     // Add try...catch to capture rendering errors from renderMemberList
     try {
         renderMemberList();
+        
+        // 如果定期费用表单已初始化，更新其成员列表
+        if (window.updateRecurringFormMembers) {
+            window.updateRecurringFormMembers();
+        }
     } catch (error) {
         console.error('Failed to render member list (from members.js):', error);
         // Don't let the whole page crash even if rendering fails

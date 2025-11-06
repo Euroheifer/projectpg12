@@ -332,3 +332,65 @@ RecurringExpenseUpdate.model_rebuild()
 RecurringExpenseCreate.model_rebuild()
 ExpenseCreateWithSplits.model_rebuild()
 # --- 粘贴结束 ---
+
+
+# ******************** Settlement Schemas ******************** #
+class SettlementBase(BaseModel):
+    group_id: int
+    settlement_type: str  # "full", "partial"
+    total_amount: int
+    description: Optional[str] = None
+
+
+class SettlementCreate(SettlementBase):
+    pass
+
+
+class Settlement(SettlementBase):
+    id: int
+    status: str  # "pending", "completed", "failed"
+    created_by: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SettlementBase(BaseModel):
+    group_id: int
+    from_user_id: int
+    to_user_id: int
+    amount: float  # Changed from int to float for Yuan amounts
+    notes: Optional[str] = None
+
+
+class SettlementCreate(SettlementBase):
+    pass
+
+
+class Settlement(SettlementBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class SettlementHistory(BaseModel):
+    id: int
+    group_id: int
+    from_user_id: int
+    to_user_id: int
+    from_username: Optional[str] = None
+    to_username: Optional[str] = None
+    amount: float
+    created_at: datetime
+    notes: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class SettlementHistoryResponse(BaseModel):
+    settlements: List[SettlementHistory]
+    total: int

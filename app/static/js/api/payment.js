@@ -147,16 +147,16 @@ export async function handleSavePayment(event) {
         const amountInCents = amountToCents(formData.get('amount'));
         formData.set('amount', amountInCents);
 
-        // 获取认证令牌和群组ID
+        // 获取认证令牌和费用ID
         const token = getAuthToken();
-        const groupId = window.currentGroupId;
+        const expenseId = window.currentExpenseId;
         
-        if (!groupId) {
-            throw new Error('群组ID不存在');
+        if (!expenseId) {
+            throw new Error('费用ID不存在');
         }
 
         // API调用
-        const response = await fetch(`/groups/${groupId}/payments`, {
+        const response = await fetch(`/expenses/${expenseId}/payments`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -231,16 +231,16 @@ export async function handleUpdatePayment(event) {
         const amountInCents = amountToCents(formData.get('amount'));
         formData.set('amount', amountInCents);
 
-        // 获取认证令牌和群组ID
+        // 获取认证令牌和费用ID
         const token = getAuthToken();
-        const groupId = window.currentGroupId;
+        const expenseId = window.currentExpenseId;
         
-        if (!groupId) {
-            throw new Error('群组ID不存在');
+        if (!expenseId) {
+            throw new Error('费用ID不存在');
         }
 
         // API调用
-        const response = await fetch(`/groups/${groupId}/payments/${currentEditingPayment.id}`, {
+        const response = await fetch(`/expenses/${expenseId}/payments/${paymentId}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -300,16 +300,16 @@ export async function handleDeletePayment(paymentId) {
     if (!confirmed) return;
 
     try {
-        // 获取认证令牌和群组ID
+        // 获取认证令牌和费用ID
         const token = getAuthToken();
-        const groupId = window.currentGroupId;
+        const expenseId = window.currentExpenseId;
         
-        if (!groupId) {
-            throw new Error('群组ID不存在');
+        if (!expenseId) {
+            throw new Error('费用ID不存在');
         }
 
         // API调用
-        const response = await fetch(`/groups/${groupId}/payments/${paymentId}`, {
+        const response = await fetch(`/expenses/${expenseId}/payments/${paymentId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -463,16 +463,16 @@ export async function refreshPaymentsList() {
     console.log('刷新支付列表');
 
     try {
-        // 获取认证令牌和群组ID
+        // 获取认证令牌和费用ID
         const token = getAuthToken();
-        const groupId = window.currentGroupId;
+        const expenseId = window.currentExpenseId;
         
-        if (!groupId) {
-            throw new Error('群组ID不存在');
+        if (!expenseId) {
+            throw new Error('费用ID不存在');
         }
 
         // API调用获取支付列表
-        const response = await fetch(`/groups/${groupId}/payments`, {
+        const response = await fetch(`/expenses/${expenseId}/payments`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,

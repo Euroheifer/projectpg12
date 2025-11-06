@@ -26,11 +26,21 @@ export function initializeRecurringExpenseForm() {
         recurringExpenseState.startDate = today;
     }
 
-    // 初始化付款人选择器
-    initializePayerSelector();
+    // 检查组员数据是否已加载
+    if (!window.groupMembers || window.groupMembers.length === 0) {
+        console.warn('组员数据尚未加载，定期费用表单可能无法正常初始化');
+        // 可以选择延迟初始化，或者显示提示信息
+        setTimeout(() => {
+            initializePayerSelector();
+            initializeParticipantSelection();
+        }, 1000);
+    } else {
+        // 初始化付款人选择器
+        initializePayerSelector();
 
-    // 初始化参与者选择
-    initializeParticipantSelection();
+        // 初始化参与者选择
+        initializeParticipantSelection();
+    }
 
     // 初始化分摊方式
     initializeSplitMethod();
@@ -48,15 +58,22 @@ export function initializeRecurringExpenseForm() {
 function initializePayerSelector() {
     const payerSelect = document.getElementById('recurring-payer');
     if (payerSelect) {
-        // 从全局参与者列表中加载选项
-        if (window.participants && window.participants.length > 0) {
+        // 从全局组员列表中加载选项，使用 groupMembers 而不是 participants
+        if (window.groupMembers && window.groupMembers.length > 0) {
             payerSelect.innerHTML = '<option value="">请选择付款人</option>';
-            window.participants.forEach(participant => {
+            window.groupMembers.forEach(member => {
                 const option = document.createElement('option');
-                option.value = participant.id;
-                option.textContent = participant.name;
+                // 使用member.id或member.user_id作为值，确保兼容性
+                const memberId = member.id || member.user_id;
+                option.value = memberId;
+                // 使用member.username作为显示名称，确保兼容性
+                const memberName = member.username || member.name || '未知用户';
+                option.textContent = memberName;
                 payerSelect.appendChild(option);
             });
+        } else {
+            // 如果没有数据，显示提示信息
+            payerSelect.innerHTML = '<option value="">暂无可选付款人</option>';
         }
     }
 }
@@ -66,18 +83,22 @@ function initializePayerSelector() {
  */
 function initializeParticipantSelection() {
     const participantContainer = document.getElementById('recurring-participants');
-    if (participantContainer && window.participants) {
+    if (participantContainer && window.groupMembers) {
         participantContainer.innerHTML = '';
-        window.participants.forEach(participant => {
+        window.groupMembers.forEach(member => {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            checkbox.id = `participant-${participant.id}`;
-            checkbox.value = participant.id;
+            // 使用member.id或member.user_id作为值，确保兼容性
+            const memberId = member.id || member.user_id;
+            checkbox.id = `participant-${memberId}`;
+            checkbox.value = memberId;
             checkbox.addEventListener('change', handleParticipantToggle);
             
             const label = document.createElement('label');
-            label.setAttribute('for', `participant-${participant.id}`);
-            label.textContent = participant.name;
+            label.setAttribute('for', `participant-${memberId}`);
+            // 使用member.username作为显示名称，确保兼容性
+            const memberName = member.username || member.name || '未知用户';
+            label.textContent = memberName;
             
             const container = document.createElement('div');
             container.appendChild(checkbox);
@@ -117,6 +138,22 @@ function initializeFrequencySelection() {
     
     // 默认选择每日
     selectFrequency('daily');
+}
+
+/**
+ * 更新定期费用表单中的成员列表
+ */
+export function updateRecurringFormMembers() {
+    console.log('更新定期费用表单中的成员列表');
+    
+    // 重新初始化付款人选择器
+    initializePayerSelector();
+    
+    // 重新初始化参与者选择
+    initializeParticipantSelection();
+    
+    // 重新计算分摊详情
+    updateSplitDetailDisplay();
 }
 
 /**
@@ -771,13 +808,18 @@ function updateSplitDetailDisplay() {
     detailContainer.innerHTML = '';
     
     recurringMemberSplits.forEach(split => {
-        const participant = window.participants?.find(p => p.id.toString() === split.participantId);
-        const participantName = participant ? participant.name : `参与者${split.participantId}`;
+        // 从 groupMembers 中查找参与者，确保兼容性
+        const member = window.groupMembers?.find(m => 
+            m.id?.toString() === split.participantId || 
+            m.user_id?.toString() === split.participantId
+        );
+        // 使用member.username或member.name作为显示名称
+        const memberName = member?.username || member?.name || `参与者${split.participantId}`;
         
         const detailElement = document.createElement('div');
         detailElement.className = 'split-detail-item';
         detailElement.innerHTML = `
-            <span class="participant">${participantName}</span>
+            <span class="participant">${memberName}</span>
             <span class="amount">¥${split.amount.toFixed(2)}</span>
             <span class="percentage">${split.percentage}%</span>
         `;
@@ -982,3 +1024,4 @@ window.setRecurringSplitMethod = setRecurringSplitMethod;
 window.refreshRecurringList = refreshRecurringList;
 window.openRecurringDetail = openRecurringDetail;
 window.initializeRecurringExpenseForm = initializeRecurringExpenseForm;
+window.updateRecurringFormMembers = updateRecurringFormMembers;

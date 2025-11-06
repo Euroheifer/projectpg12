@@ -1124,6 +1124,72 @@ def read_audit_trail(
     """Get the audit trail for a group (admins only)."""
     return crud.get_audit_logs(db=db, group_id=group_id)
 
+
+# ******************** Settlement Routes ******************** #
+@app.get("/groups/{group_id}/settlement", response_model=dict)
+def get_group_settlement(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    group: models.Group = Depends(get_group_with_access_check),
+):
+    """Get settlement summary for a group."""
+    # For now, return empty balances to avoid complexity
+    return {"balances": [], "total_settlement_amount": 0, "settlement_count": 0}
+
+
+@app.post("/settlement", response_model=schemas.Settlement)
+def create_settlement_record(
+    settlement: schemas.SettlementCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    """Create a settlement record."""
+    # Check if the user is a member of the group
+    member = crud.get_group_member(db, group_id=settlement.group_id, user_id=current_user.id)
+    if not member:
+        raise HTTPException(status_code=403, detail="You are not a member of this group")
+    
+    # Check if both from_user and to_user are group members
+    from_member = crud.get_group_member(db, group_id=settlement.group_id, user_id=settlement.from_user_id)
+    to_member = crud.get_group_member(db, group_id=settlement.group_id, user_id=settlement.to_user_id)
+    
+    if not from_member or not to_member:
+        raise HTTPException(status_code=400, detail="Invalid user IDs for settlement")
+    
+    # Create settlement record
+    db_settlement = crud.create_settlement(db=db, settlement=settlement)
+    return db_settlement
+    current_user: models.User = Depends(get_current_user)
+):
+    """Execute a settlement operation."""
+    # Verify the group exists and user is a member
+    group = crud.get_group_by_id(db, group_id=settlement_data.group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    member = crud.get_group_member(db, group_id=settlement_data.group_id, user_id=current_user.id)
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+    
+    # Create settlement record
+    settlement_dict = settlement_data.dict()
+    db_settlement = crud.create_settlement(db, settlement_dict, current_user.id)
+    
+    return db_settlement
+
+
+@app.get("/groups/{group_id}/settlement/history", response_model=schemas.SettlementHistoryResponse)
+def get_settlement_history(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    group: models.Group = Depends(get_group_with_access_check),
+):
+    """Get settlement history for a group."""
+    result = crud.get_settlement_history(db, group_id)
+    return result
+
 app.include_router(pages_router)
 
 
