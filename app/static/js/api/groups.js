@@ -489,16 +489,7 @@ function getAuditActionIcon(action) {
     return iconMap[action] || '<i class="fas fa-info-circle"></i>';
 }
 
-// 兼容旧版函数名
-export function loadAuditLogs() {
-    console.log('加载审计日志');
-    const groupId = getCurrentGroupId();
-    if (groupId) {
-        loadAuditLog(groupId);
-    } else {
-        showCustomAlert('无法获取当前群组ID');
-    }
-}
+// loadAuditLogs函数的完整实现在文件后面
 
 export function renderAuditLogList() {
     console.log('渲染审计日志列表');
@@ -551,10 +542,10 @@ try {
     
     // 审计日志功能
     window.loadAuditLog = loadAuditLog;
-    window.loadAuditLogs = loadAuditLogs;
     window.renderAuditLog = renderAuditLog;
     window.renderAuditLogList = renderAuditLogList;
     window.getCurrentGroupId = getCurrentGroupId;
+    // loadAuditLogs 将在文件末尾暴露
 
     console.log('groups.js: 全局暴露完成');
 } catch (error) {
@@ -597,6 +588,200 @@ if (typeof document !== 'undefined') {
     document.head.appendChild(style);
 }
 
+// ==================== 群组管理功能 ====================
 
+/**
+ * 保存群组设置
+ */
+export async function saveGroupSettings() {
+    const groupNameInput = document.getElementById('group-name-input');
+    const groupDescriptionInput = document.getElementById('group-description-input');
+    const messageElement = document.getElementById('save-group-settings-message');
+    
+    if (!groupNameInput || !groupDescriptionInput) {
+        showCustomAlert('错误', '找不到群组设置表单元素');
+        return;
+    }
+    
+    const groupName = groupNameInput.value.trim();
+    const groupDescription = groupDescriptionInput.value.trim();
+    
+    if (!groupName) {
+        if (messageElement) {
+            messageElement.textContent = '群组名称不能为空';
+            messageElement.className = 'mt-2 p-2 text-sm rounded bg-red-100 text-red-700';
+            messageElement.classList.remove('hidden');
+        }
+        return;
+    }
+    
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            showCustomAlert('错误', '用户未登录，请重新登录');
+            return;
+        }
+        
+        const groupId = window.currentGroupId;
+        if (!groupId) {
+            showCustomAlert('错误', '无法确定当前群组ID');
+            return;
+        }
+        
+        // 显示加载状态
+        if (messageElement) {
+            messageElement.textContent = '正在保存...';
+            messageElement.className = 'mt-2 p-2 text-sm rounded bg-blue-100 text-blue-700';
+            messageElement.classList.remove('hidden');
+        }
+        
+        const response = await fetch(`/groups/${groupId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: groupName,
+                description: groupDescription
+            })
+        });
+        
+        if (response.ok) {
+            const updatedGroup = await response.json();
+            console.log('群组设置已更新:', updatedGroup);
+            
+            // 更新全局群组数据
+            window.currentGroup = updatedGroup;
+            
+            // 更新页面显示
+            if (window.currentGroup) {
+                const nameDisplay = document.getElementById('group-name-display');
+                const descriptionDisplay = document.getElementById('group-description-display');
+                
+                if (nameDisplay) nameDisplay.textContent = updatedGroup.name;
+                if (descriptionDisplay) descriptionDisplay.textContent = updatedGroup.description || '无描述';
+            }
+            
+            // 显示成功消息
+            if (messageElement) {
+                messageElement.textContent = '群组设置已成功保存！';
+                messageElement.className = 'mt-2 p-2 text-sm rounded bg-green-100 text-green-700';
+            }
+            
+            showCustomAlert('成功', '群组设置已成功保存！', 'success');
+            
+            // 3秒后隐藏消息
+            setTimeout(() => {
+                if (messageElement) {
+                    messageElement.classList.add('hidden');
+                }
+            }, 3000);
+            
+        } else {
+            const errorData = await response.json().catch(() => ({}));
+            const errorMessage = errorData.detail || `保存失败 (状态码: ${response.status})`;
+            
+            console.error('保存群组设置失败:', errorMessage);
+            
+            if (messageElement) {
+                messageElement.textContent = `保存失败: ${errorMessage}`;
+                messageElement.className = 'mt-2 p-2 text-sm rounded bg-red-100 text-red-700';
+            }
+            
+            showCustomAlert('错误', `保存失败: ${errorMessage}`);
+        }
+        
+    } catch (error) {
+        console.error('保存群组设置时发生错误:', error);
+        
+        if (messageElement) {
+            messageElement.textContent = '保存时发生网络错误，请检查网络连接';
+            messageElement.className = 'mt-2 p-2 text-sm rounded bg-red-100 text-red-700';
+        }
+        
+        showCustomAlert('错误', '保存时发生网络错误，请检查网络连接');
+    }
+}
+
+/**
+ * 加载审计日志
+ */
+export async function loadAuditLogs() {
+    const container = document.getElementById('audit-log-content');
+    if (!container) return;
+    
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            container.innerHTML = '<p class="text-center text-gray-500">用户未登录</p>';
+            return;
+        }
+        
+        const groupId = window.currentGroupId;
+        if (!groupId) {
+            container.innerHTML = '<p class="text-center text-gray-500">无法确定当前群组</p>';
+            return;
+        }
+        
+        // 显示加载状态
+        container.innerHTML = '<div class="text-center text-gray-500">正在加载审计日志...</div>';
+        
+        const response = await fetch(`/groups/${groupId}/audit-logs`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const logs = await response.json();
+            
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500">暂无审计日志</p>';
+                return;
+            }
+            
+            // 渲染审计日志
+            const logsHTML = logs.map(log => {
+                const timestamp = new Date(log.created_at).toLocaleString('zh-CN');
+                const username = log.user?.username || log.username || '未知用户';
+                const action = log.action || '未知操作';
+                const details = log.details || '';
+                
+                return `
+                    <div class="p-3 bg-white rounded border border-gray-200 hover:border-gray-300 transition duration-150">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-600">${timestamp}</p>
+                                <p class="text-base font-medium text-gray-900 mt-1">用户 ${username} ${action}</p>
+                                ${details ? `<p class="text-sm text-gray-500 mt-1">${details}</p>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                                    审计日志
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = logsHTML;
+            
+        } else {
+            console.log('审计日志API暂未实现，返回空数据');
+            container.innerHTML = '<p class="text-center text-gray-500">审计日志功能暂未实现</p>';
+            return [];
+        }
+        
+    } catch (error) {
+        console.error('加载审计日志时发生错误:', error);
+        container.innerHTML = '<p class="text-center text-red-500">加载审计日志时发生错误</p>';
+    }
+}
+
+// 暴露到全局
+window.saveGroupSettings = saveGroupSettings;
+window.loadAuditLogs = loadAuditLogs;
 
 

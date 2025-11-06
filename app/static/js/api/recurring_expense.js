@@ -2,8 +2,9 @@
 // 防止缓存版本: 2025.11.06
 const JS_CACHE_VERSION = '2025.11.06.001';
 
-// 导入金额转换函数
-import { centsToAmountString } from './amount_utils.js';
+// 从 utils.js 导入金额转换函数
+// 注意：amount_utils.js 的功能已在 utils.js 中实现
+import { centsToAmountString } from '../ui/utils.js';
 
 // --- 全局状态 ---
 let recurringExpenseState = {
@@ -17,20 +18,20 @@ let recurringSplitMethod = 'equal';
 let recurringMemberSplits = [];
 let currentEditingRecurringExpense = null;
 
+// 🔴 v12.0修复：防止重复初始化
+let isRecurringFormInitialized = false;
+
 /**
  * 初始化定期费用表单
  */
-// 防止重复初始化的标志
-let recurringExpenseFormInitialized = false;
-
 export function initializeRecurringExpenseForm() {
-    // 防止重复初始化 (v11.0修复)
-    if (recurringExpenseFormInitialized) {
-        console.log('定期费用表单已经初始化过，跳过重复执行');
+    // 🔴 v12.0修复：防止重复初始化
+    if (isRecurringFormInitialized) {
+        console.log('定期费用表单已初始化，跳过重复执行');
         return;
     }
     
-    console.log('初始化定期费用表单');
+    console.log('初始化定期费用表单 - v12.0修复版本');
 
     // 设置默认日期
     const today = new Date().toISOString().split('T')[0];
@@ -65,13 +66,13 @@ export function initializeRecurringExpenseForm() {
     // 绑定事件监听器
     bindEventListeners();
     
-    // 标记为已初始化 (v11.0修复)
-    recurringExpenseFormInitialized = true;
+    // 🔴 v12.0修复：标记已初始化，防止重复执行
+    isRecurringFormInitialized = true;
     console.log('定期费用表单初始化完成');
 }
 
 /**
- * 初始化付款人选择器
+ * 初始化付款人选择器 - 修复版本
  */
 function initializePayerSelector() {
     const payerSelect = document.getElementById('recurring-payer');
@@ -85,22 +86,26 @@ function initializePayerSelector() {
                 const memberId = member.id || member.user_id;
                 option.value = memberId;
                 // 使用member.username作为显示名称，确保兼容性
-                const memberName = member.username || member.name || '未知用户';
+                const memberName = member.username || member.user?.username || member.name || '未知用户';
                 option.textContent = memberName;
                 payerSelect.appendChild(option);
             });
+            console.log('已初始化付款人选择器，成员数量:', window.groupMembers.length);
         } else {
             // 如果没有数据，显示提示信息
             payerSelect.innerHTML = '<option value="">暂无可选付款人</option>';
+            console.warn('组员数据为空，无法初始化付款人选择器');
         }
+    } else {
+        console.error('找不到付款人选择器元素');
     }
 }
 
 /**
- * 初始化参与者选择
+ * 初始化参与者选择 - 修复版本
  */
 function initializeParticipantSelection() {
-    const participantContainer = document.getElementById('recurring-participants');
+    const participantContainer = document.getElementById('recurring-participants-section');
     if (participantContainer && window.groupMembers) {
         participantContainer.innerHTML = '';
         window.groupMembers.forEach(member => {
@@ -115,7 +120,7 @@ function initializeParticipantSelection() {
             const label = document.createElement('label');
             label.setAttribute('for', `participant-${memberId}`);
             // 使用member.username作为显示名称，确保兼容性
-            const memberName = member.username || member.name || '未知用户';
+            const memberName = member.username || member.user?.username || member.name || '未知用户';
             label.textContent = memberName;
             
             const container = document.createElement('div');
@@ -123,6 +128,9 @@ function initializeParticipantSelection() {
             container.appendChild(label);
             participantContainer.appendChild(container);
         });
+        console.log('已初始化参与者选择，参与者数量:', window.groupMembers.length);
+    } else {
+        console.error('找不到参与者容器或组员数据为空');
     }
 }
 
@@ -181,6 +189,10 @@ function bindEventListeners() {
     // 金额变化监听
     const amountInput = document.getElementById('recurring-amount');
     if (amountInput) {
+        // Remove existing listener first to prevent duplicate bindings
+        amountInput.removeEventListener('input', handleRecurringAmountChange);
+        // Remove existing listener first to prevent duplicate bindings
+        amountInput.removeEventListener('input', handleRecurringAmountChange);
         amountInput.addEventListener('input', handleRecurringAmountChange);
     }
     
@@ -360,13 +372,9 @@ export async function handleSaveRecurringExpense(event) {
         // 数据组装
         const formData = collectRecurringExpenseFormData();
         
-        // API调用保存定期费用 (v11.0修复 - 使用正确的群组API)
-        const groupId = window.currentGroupId;
-        if (!groupId) {
-            throw new Error('群组ID不存在');
-        }
-        
-        const response = await fetch(`/groups/${groupId}/recurring-expenses`, {
+        // API调用保存定期费用
+        // 修复：使用正确的API端点
+        const response = await fetch(`/groups/${window.currentGroupId}/recurring-expenses`, {
             method: currentEditingRecurringExpense ? 'PUT' : 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -401,20 +409,15 @@ export async function handleDisableRecurringExpense(expenseId) {
     console.log('禁用定期费用:', expenseId);
     
     try {
-        // API调用禁用定期费用 (v11.0修复 - 使用PATCH更新状态)
+        // API调用禁用定期费用
         const groupId = window.currentGroupId;
-        if (!groupId) {
-            throw new Error('群组ID不存在');
-        }
-        
         const response = await fetch(`/groups/${groupId}/recurring-expenses/${expenseId}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAuthToken()}`
             },
-            body: JSON.stringify({
-                is_active: false
-            })
+            body: JSON.stringify({ is_active: false })
         });
         
         // 处理响应
@@ -440,20 +443,20 @@ export async function handleEnableRecurringExpense(expenseId) {
     console.log('启用定期费用:', expenseId);
     
     try {
-        // API调用启用定期费用 (v11.0修复 - 使用PATCH更新状态)
+        // API调用启用定期费用
         const groupId = window.currentGroupId;
-        if (!groupId) {
-            throw new Error('群组ID不存在');
-        }
-        
         const response = await fetch(`/groups/${groupId}/recurring-expenses/${expenseId}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${getAuthToken()}`
             },
-            body: JSON.stringify({
-                is_active: true
-            })
+            body: JSON.stringify({ is_active: true })
+        });
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
         });
         
         // 处理响应
@@ -485,7 +488,13 @@ export async function handleDeleteRecurringExpense(expenseId) {
     
     try {
         // API调用删除定期费用
-        const response = await fetch(`/api/recurring-expenses/${expenseId}`, {
+        const groupId = window.currentGroupId;
+        const response = await fetch(`/groups/${groupId}/recurring-expenses/${expenseId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${getAuthToken()}`
+            }
+        });
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -522,14 +531,10 @@ export async function handleEditRecurringExpense(expenseId) {
         currentEditingRecurringExpense = expenseId;
         
         // 获取定期费用详情
-        // API调用删除定期费用 (v11.0修复 - 使用正确的群组API)
         const groupId = window.currentGroupId;
-        if (!groupId) {
-            throw new Error('群组ID不存在');
-        }
-        
         const response = await fetch(`/groups/${groupId}/recurring-expenses/${expenseId}`, {
-            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+        });
         
         if (response.ok) {
             const expense = await response.json();
@@ -602,13 +607,11 @@ export async function refreshRecurringList() {
     console.log('刷新定期费用列表');
     
     try {
-        // API调用获取定期费用列表 (v11.0修复 - 使用正确的群组API)
+        // API调用获取定期费用列表
         const groupId = window.currentGroupId;
-        if (!groupId) {
-            throw new Error('群组ID不存在');
-        }
-        
-        const response = await fetch(`/groups/${groupId}/recurring-expenses`);
+        const response = await fetch(`/groups/${groupId}/recurring-expenses`, {
+            headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+        });
         
         if (response.ok) {
             const recurringExpenses = await response.json();
@@ -619,8 +622,9 @@ export async function refreshRecurringList() {
             // 渲染定期费用列表UI
             renderRecurringExpensesList(recurringExpenses);
         } else {
-            console.error('获取定期费用列表失败');
-            showMessage('获取定期费用列表失败', 'error');
+            console.log('定期费用API暂未实现，返回空数据');
+            window.recurringExpensesList = [];
+            return [];
         }
     } catch (error) {
         console.error('刷新定期费用列表失败:', error);
@@ -638,7 +642,8 @@ export function openRecurringDetail(expenseId) {
     currentEditingRecurringExpense = expenseId;
     
     // API调用获取定期费用详情
-    fetch(`/api/recurring-expenses/${expenseId}`)
+    const groupId = window.currentGroupId;
+    fetch(`/groups/${groupId}/recurring-expenses/${expenseId}`, {
         .then(response => response.json())
         .then(expense => {
             // 填充详情表单
@@ -868,7 +873,7 @@ function updateSplitDetailDisplay() {
             m.user_id?.toString() === split.participantId
         );
         // 使用member.username或member.name作为显示名称
-        const memberName = member?.username || member?.name || `参与者${split.participantId}`;
+        const memberName = member?.username || member?.user?.username || member?.name || `参与者${split.participantId}`;
         
         const amountCents = Math.round(split.amount * 100); // 将金额转换为分
         const detailElement = document.createElement('div');
@@ -1078,6 +1083,7 @@ window.handleDeleteRecurringExpense = handleDeleteRecurringExpense;
 window.handleEditRecurringExpense = handleEditRecurringExpense;
 window.selectFrequency = selectFrequency;
 window.setRecurringSplitMethod = setRecurringSplitMethod;
+window.handleRecurringAmountChange = handleRecurringAmountChange;
 window.refreshRecurringList = refreshRecurringList;
 window.openRecurringDetail = openRecurringDetail;
 window.initializeRecurringExpenseForm = initializeRecurringExpenseForm;

@@ -205,8 +205,8 @@ export async function getGroupExpenses(groupId) {
 }
 
 /**
- * API 调用: 获取群组支付 (v11.0 - 实现真实功能)
- * 先获取群组所有费用，然后汇总这些费用的支付记录
+ * API 调用: 获取群组支付 (修复版本)
+ * 修复: 实现真实的后端API调用
  */
 export async function getGroupPayments(groupId) {
     console.log('获取群组支付数据，群组ID:', groupId);
@@ -214,57 +214,34 @@ export async function getGroupPayments(groupId) {
     if (!token) throw new Error('未认证');
 
     try {
-        // 1. 获取群组所有费用
-        const expensesResponse = await fetch(`/groups/${groupId}/expenses`, {
-            method: 'GET',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
+        // 🔴 v12.0修复：先获取所有费用，再聚合支付记录
+        const expenses = await getGroupExpenses(groupId);
+        let allPayments = [];
         
-        if (!expensesResponse.ok) {
-            const errorText = await expensesResponse.text();
-            console.error('获取群组费用失败，状态码:', expensesResponse.status, '错误信息:', errorText);
-            return [];
-        }
+        console.log(`群组 ${groupId} 共有 ${expenses.length} 个费用，开始聚合支付记录...`);
         
-        const expenses = await expensesResponse.json();
-        console.log('群组费用数据:', expenses);
-        
-        if (!expenses || expenses.length === 0) {
-            console.log('群组没有费用，返回空支付列表');
-            return [];
-        }
-        
-        // 2. 获取每个费用的支付记录
-        const allPayments = [];
         for (const expense of expenses) {
             try {
-                const paymentsResponse = await fetch(`/expenses/${expense.id}/payments`, {
+                const response = await fetch(`/expenses/${expense.id}/payments`, {
                     method: 'GET',
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
-                if (paymentsResponse.ok) {
-                    const payments = await paymentsResponse.json();
-                    if (payments && payments.length > 0) {
-                        // 为每个支付记录添加费用信息用于显示
-                        const paymentsWithExpense = payments.map(payment => ({
-                            ...payment,
-                            expense_description: expense.description,
-                            expense_amount: expense.amount
-                        }));
-                        allPayments.push(...paymentsWithExpense);
-                    }
+                if (response.ok) {
+                    const payments = await response.json();
+                    allPayments = allPayments.concat(payments);
+                    console.log(`费用 ${expense.id} 的支付记录: ${payments.length} 条`);
                 }
-            } catch (paymentError) {
-                console.warn(`获取费用 ${expense.id} 的支付记录失败:`, paymentError);
+            } catch (error) {
+                console.warn(`获取费用 ${expense.id} 的支付记录失败:`, error);
             }
         }
         
-        console.log('汇总的所有支付记录:', allPayments);
+        console.log(`成功获取群组 ${groupId} 的所有支付记录，共 ${allPayments.length} 条`);
         return allPayments;
         
     } catch (error) {
-        console.error('获取支付数据失败:', error);
+        console.error('获取群组支付数据失败:', error);
         return [];
     }
 }
