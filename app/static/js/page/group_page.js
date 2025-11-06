@@ -697,12 +697,8 @@ window.handleAddNewRecurringExpense = function () {
 
 window.handleSettleUp = function () {
     console.log('Settle all debts');
-    // 修复：使用实际的结算功能
-    if (window.handleSettleUp) {
-        window.handleSettleUp();
-    } else {
-        showCustomAlert('Settle Up Feature', 'Settle all debts feature is under development');
-    }
+    // 结算功能：显示功能开发中的提示
+    showCustomAlert('Settle Up Feature', 'Settle all debts feature is under development. This will allow users to calculate and settle all outstanding debts within the group.');
 };
 // Add functions to close modals
 window.handleRecurringCancel = function () {
