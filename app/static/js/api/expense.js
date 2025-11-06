@@ -1,9 +1,10 @@
-// app/static/js/api/expense.js
+// expense.js - 费用相关的CRUD操作、分摊计算、表单处理
 // 防止缓存版本: 2025.11.06
 const JS_CACHE_VERSION = '2025.11.06.001';
 
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
 import { getTodayDate, requireAdmin, getAuthToken, showCustomAlert } from '../ui/utils.js';
+import { centsToAmountString } from './amount_utils.js';
 
 // --- 全局状态 ---
 let selectedParticipants = new Set();
@@ -92,7 +93,7 @@ export function initializeExpenseForm() {
 
     console.log('Expense form initialized with members. Default participants:', selectedParticipants);
     
-    // 初始化分摊详情和摘要显示
+    // 初始化分摊详情和摘要显示 - 修复选择器问题
     renderSplitDetails();
     updateSplitSummary();
     
@@ -287,7 +288,7 @@ export function refreshExpensesList() {
 		const payerMember = window.groupMembers.find(m => m.user_id === expense.payer_id);
         const payerName = payerMember ? (payerMember.user.username || payerMember.nickname) : 'Unknown User';
 		// ---- END
-        const isOwnExpense = expense.payer === window.CURRENT_USER_ID;
+        const isOwnExpense = expense.payer_id === window.CURRENT_USER_ID;
         //const payerName = window.groupMembers.find(m => m.id === expense.payer)?.name || expense.payer;
 		const amountDisplay = window.centsToAmountString ? window.centsToAmountString(expense.amount) : (expense.amount / 100).toFixed(2);
 		return `
@@ -741,7 +742,8 @@ export function validateSplitAmounts() {
 }
 
 export function renderSplitDetails() {
-    const container = document.getElementById('split-details-container');
+    // 修复选择器：使用正确的容器ID
+    const container = document.getElementById('split-list') || document.getElementById('split-details-container');
     if (!container) {
         console.warn('分摊详情容器未找到');
         return;
@@ -786,7 +788,8 @@ export function renderSplitDetails() {
 }
 
 export function updateSplitSummary() {
-    const summaryContainer = document.getElementById('split-summary-container');
+    // 修复选择器：使用正确的容器ID
+    const summaryContainer = document.getElementById('split-summary') || document.getElementById('split-summary-container');
     if (!summaryContainer) {
         console.warn('分摊摘要容器未找到');
         return;
@@ -1106,7 +1109,6 @@ export function populateExpenseDetailForm(expense) {
 
 
 
-
 export function updateFileNameDisplay(input) {
     // TODO: 实现文件名显示更新逻辑
     console.log('更新文件名显示', input.files[0]?.name);
@@ -1135,7 +1137,7 @@ export function closeDeleteConfirm() {
     const modal = document.getElementById('delete-confirm-modal');
     if (modal) {
         modal.classList.add('hidden');
-    }
+    });
 }
 
 

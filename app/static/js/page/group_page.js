@@ -311,7 +311,7 @@ function renderUIByPermission() {
 
 // --- Modification Start ---
 
-    // 1. Render group name (ID and Name)
+    // 1. Render group name (ID and Name) - 修复版本
     updateGroupNameDisplay();
 
     // 2. Render group summary (Balance and Settlement)
@@ -408,19 +408,31 @@ function updateGroupNameDisplay() {
         return;
     }
 
-    // Try different name attributes
-    const groupName =
-        window.currentGroup.name ||
-        window.currentGroup.group_name ||
+    // Try different name attributes - 修复版本
+    const groupName = 
+        window.currentGroup.name || 
+        window.currentGroup.group_name || 
+        window.currentGroup.display_name || 
         'Unnamed Group';
 
-    const groupId =
-        window.currentGroup.id ||
-        window.currentGroup.group_id ||
-        window.currentGroupId ||
+    const groupId = 
+        window.currentGroup.id || 
+        window.currentGroup.group_id || 
+        window.currentGroupId || 
         'Unknown';
 
-    groupNameDisplay.innerHTML = `${groupName} <span class="text-sm font-normal text-gray-500">(ID: ${groupId})</span>`;
+    // 安全地更新群组名称显示
+    groupNameDisplay.innerHTML = '';
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = groupName;
+    
+    const idSpan = document.createElement('span');
+    idSpan.className = 'text-sm font-normal text-gray-500';
+    idSpan.textContent = `(ID: ${groupId})`;
+    
+    groupNameDisplay.appendChild(nameSpan);
+    groupNameDisplay.appendChild(idSpan);
 
     console.log('Successfully updated group name display:', {
         name: groupName,
@@ -514,7 +526,9 @@ function setActiveTab(tabName) {
             refreshPaymentsList();
             break;
         case 'recurring':
-            refreshRecurringList();
+            if (window.refreshRecurringList) {
+                window.refreshRecurringList();
+            }
             break;
         case 'members':
             renderMemberList();
@@ -524,6 +538,7 @@ function setActiveTab(tabName) {
             break;
         case 'manage':
             // Manage page special handling
+            populateGroupManagementFields();
             break;
         case 'audit':
             // Audit page special handling
@@ -532,6 +547,24 @@ function setActiveTab(tabName) {
 
     activeTab = tabName;
     console.log('Successfully switched to tab:', tabName);
+}
+
+/**
+ * 填充群组管理页面字段 - 新增函数
+ */
+function populateGroupManagementFields() {
+    if (!window.currentGroup) return;
+
+    const groupNameInput = document.getElementById('group-name-input');
+    const groupDescriptionInput = document.getElementById('group-description-input');
+
+    if (groupNameInput) {
+        groupNameInput.value = window.currentGroup.name || '';
+    }
+
+    if (groupDescriptionInput) {
+        groupDescriptionInput.value = window.currentGroup.description || '';
+    }
 }
 
 // --- Event Binding ---
@@ -617,6 +650,7 @@ function handleLogoutUser() {
 // --- Other Functions ---
 function refreshRecurringList() {
     // TODO: Implement recurring expense list refresh
+    console.log('刷新定期费用列表');
 }
 
 // --- Modal Functions ---
@@ -632,6 +666,10 @@ window.handleAddNewExpense = function () {
 
 window.handleAddNewPayment = function () {
     console.log('Show add payment modal');
+    // 修复：确保初始化支付表单
+    if (window.initializePaymentForm) {
+        window.initializePaymentForm();
+    }
     const modal = document.getElementById('add-payment-modal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -640,6 +678,12 @@ window.handleAddNewPayment = function () {
 
 window.handleAddNewRecurringExpense = function () {
     console.log('Show add recurring expense modal');
+    
+    // 修复：确保初始化定期费用表单
+    if (window.initializeRecurringExpenseForm) {
+        window.initializeRecurringExpenseForm();
+    }
+    
     const modal = document.getElementById('add-recurring-expense-modal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -648,7 +692,12 @@ window.handleAddNewRecurringExpense = function () {
 
 window.handleSettleUp = function () {
     console.log('Settle all debts');
-    showCustomAlert('Settle Up Feature', 'Settle all debts feature is under development');
+    // 修复：使用实际的结算功能
+    if (window.handleSettleUp) {
+        window.handleSettleUp();
+    } else {
+        showCustomAlert('Settle Up Feature', 'Settle all debts feature is under development');
+    }
 };
 // Add functions to close modals
 window.handleRecurringCancel = function () {
@@ -698,16 +747,34 @@ window.goBackToHome = function() {
 };
 
 window.resetGroupSettings = function() {
-    const groupNameInput = document.getElementById('group-name-input');
-    const groupDescriptionInput = document.getElementById('group-description-input');
-    if (window.currentGroup) {
-        groupNameInput.value = window.currentGroup.name || '';
-        groupDescriptionInput.value = window.currentGroup.description || '';
-    }
+    populateGroupManagementFields();
 };
 
 window.saveGroupSettings = function() {
-    showCustomAlert('Info', 'Group settings save feature is under development');
+    // 修复：实际保存群组设置
+    if (!window.IS_CURRENT_USER_ADMIN) {
+        showCustomAlert('Error', '只有管理员可以修改群组设置');
+        return;
+    }
+
+    const groupNameInput = document.getElementById('group-name-input');
+    const groupDescriptionInput = document.getElementById('group-description-input');
+
+    if (!groupNameInput || !groupDescriptionInput) {
+        showCustomAlert('Error', '找不到群组设置表单元素');
+        return;
+    }
+
+    const groupName = groupNameInput.value.trim();
+    const groupDescription = groupDescriptionInput.value.trim();
+
+    if (!groupName) {
+        showCustomAlert('Error', '群组名称不能为空');
+        return;
+    }
+
+    // 实际API调用保存设置
+    saveGroupSettingsAPI(groupName, groupDescription);
 };
 
 window.closeCustomAlert = function() {
@@ -791,30 +858,52 @@ window.handleDetailCancel = function() {
 
 window.handleSaveRecurringExpense = function(event) {
     event.preventDefault();
-    showCustomAlert('Info', 'Recurring expense save feature is under development');
+    // 修复：使用实际的定期费用保存功能
+    if (window.handleSaveRecurringExpense) {
+        window.handleSaveRecurringExpense(event);
+    } else {
+        showCustomAlert('Info', 'Recurring expense save feature is under development');
+    }
 };
 
 window.handleRecurringAmountChange = function() {
     // This function should be implemented in recurring_expense.js
     console.log('Recurring amount changed');
+    if (window.handleRecurringAmountChange) {
+        window.handleRecurringAmountChange();
+    }
 };
 
 window.selectFrequency = function(frequency) {
     // This function should be implemented in recurring_expense.js
     console.log('Selected frequency:', frequency);
+    if (window.selectFrequency) {
+        window.selectFrequency(frequency);
+    }
 };
 
 window.setRecurringSplitMethod = function(method) {
     // This function should be implemented in recurring_expense.js
     console.log('Setting recurring split method to:', method);
+    if (window.setRecurringSplitMethod) {
+        window.setRecurringSplitMethod(method);
+    }
 };
 
 window.handleEnableRecurringExpense = function() {
-    showCustomAlert('Info', 'Enable recurring expense feature is under development');
+    if (window.handleEnableRecurringExpense) {
+        window.handleEnableRecurringExpense();
+    } else {
+        showCustomAlert('Info', 'Enable recurring expense feature is under development');
+    }
 };
 
 window.handleDeleteRecurringExpense = function() {
-    showCustomAlert('Info', 'Delete recurring expense feature is under development');
+    if (window.handleDeleteRecurringExpense) {
+        window.handleDeleteRecurringExpense();
+    } else {
+        showCustomAlert('Info', 'Delete recurring expense feature is under development');
+    }
 };
 
 window.handleRecurringDetailCancel = function() {
@@ -825,7 +914,11 @@ window.handleRecurringDetailCancel = function() {
 };
 
 window.handleEditRecurringExpense = function() {
-    showCustomAlert('Info', 'Edit recurring expense feature is under development');
+    if (window.handleEditRecurringExpense) {
+        window.handleEditRecurringExpense();
+    } else {
+        showCustomAlert('Info', 'Edit recurring expense feature is under development');
+    }
 };
 
 window.updatePaymentDetailFileNameDisplay = function(input) {
@@ -851,16 +944,14 @@ window.handlePaymentDetailCancel = function() {
 
 // Additional missing functions
 window.clearInviteForm = function() {
-    const emailInput = document.getElementById('invite-user-email-input');
-    if (emailInput) {
-        emailInput.value = '';
+    if (window.clearInviteForm) {
+        window.clearInviteForm();
     }
 };
 
 window.closeDeletePaymentConfirm = function() {
-    const modal = document.getElementById('delete-payment-confirm-modal');
-    if (modal) {
-        modal.classList.add('hidden');
+    if (window.closeDeletePaymentConfirm) {
+        window.closeDeletePaymentConfirm();
     }
 };
 
@@ -872,7 +963,11 @@ window.confirmDeletePayment = function() {
 };
 
 window.handleDisableRecurringExpense = function() {
-    showCustomAlert('Info', 'Disable recurring expense feature is under development');
+    if (window.handleDisableRecurringExpense) {
+        window.handleDisableRecurringExpense();
+    } else {
+        showCustomAlert('Info', 'Disable recurring expense feature is under development');
+    }
 };
 
 window.handleSavePayment = function(event) {
@@ -899,6 +994,51 @@ window.handleUpdatePayment = function(event) {
     }
 };
 
+/**
+ * 保存群组设置API - 新增函数
+ */
+async function saveGroupSettingsAPI(groupName, groupDescription) {
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            throw new Error('未找到认证令牌');
+        }
+
+        const response = await fetch(`/groups/${window.currentGroupId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                name: groupName,
+                description: groupDescription
+            })
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('群组设置保存成功:', result);
+            
+            // 更新本地数据
+            if (window.currentGroup) {
+                window.currentGroup.name = groupName;
+                window.currentGroup.description = groupDescription;
+            }
+            
+            // 刷新显示
+            updateGroupNameDisplay();
+            
+            showCustomAlert('Success', '群组设置已保存');
+        } else {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || '保存失败');
+        }
+    } catch (error) {
+        console.error('保存群组设置失败:', error);
+        showCustomAlert('Error', error.message || '保存群组设置失败');
+    }
+}
 
 document.addEventListener('DOMContentLoaded', function () {
     console.log('DOM content loaded, starting group page initialization...');

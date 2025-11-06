@@ -2,7 +2,7 @@
 // 防止缓存版本: 2025.11.06
 const JS_CACHE_VERSION = '2025.11.06.001';
 
-// 导入金额转换函数
+// 导入金额转换函数 - 修复导入路径
 import { centsToAmountString } from './amount_utils.js';
 
 // --- 全局状态 ---
@@ -58,7 +58,7 @@ export function initializeRecurringExpenseForm() {
 }
 
 /**
- * 初始化付款人选择器
+ * 初始化付款人选择器 - 修复版本
  */
 function initializePayerSelector() {
     const payerSelect = document.getElementById('recurring-payer');
@@ -72,19 +72,23 @@ function initializePayerSelector() {
                 const memberId = member.id || member.user_id;
                 option.value = memberId;
                 // 使用member.username作为显示名称，确保兼容性
-                const memberName = member.username || member.name || '未知用户';
+                const memberName = member.username || member.user?.username || member.name || '未知用户';
                 option.textContent = memberName;
                 payerSelect.appendChild(option);
             });
+            console.log('已初始化付款人选择器，成员数量:', window.groupMembers.length);
         } else {
             // 如果没有数据，显示提示信息
             payerSelect.innerHTML = '<option value="">暂无可选付款人</option>';
+            console.warn('组员数据为空，无法初始化付款人选择器');
         }
+    } else {
+        console.error('找不到付款人选择器元素');
     }
 }
 
 /**
- * 初始化参与者选择
+ * 初始化参与者选择 - 修复版本
  */
 function initializeParticipantSelection() {
     const participantContainer = document.getElementById('recurring-participants');
@@ -102,7 +106,7 @@ function initializeParticipantSelection() {
             const label = document.createElement('label');
             label.setAttribute('for', `participant-${memberId}`);
             // 使用member.username作为显示名称，确保兼容性
-            const memberName = member.username || member.name || '未知用户';
+            const memberName = member.username || member.user?.username || member.name || '未知用户';
             label.textContent = memberName;
             
             const container = document.createElement('div');
@@ -110,6 +114,9 @@ function initializeParticipantSelection() {
             container.appendChild(label);
             participantContainer.appendChild(container);
         });
+        console.log('已初始化参与者选择，参与者数量:', window.groupMembers.length);
+    } else {
+        console.error('找不到参与者容器或组员数据为空');
     }
 }
 
@@ -822,7 +829,7 @@ function updateSplitDetailDisplay() {
             m.user_id?.toString() === split.participantId
         );
         // 使用member.username或member.name作为显示名称
-        const memberName = member?.username || member?.name || `参与者${split.participantId}`;
+        const memberName = member?.username || member?.user?.username || member?.name || `参与者${split.participantId}`;
         
         const amountCents = Math.round(split.amount * 100); // 将金额转换为分
         const detailElement = document.createElement('div');
