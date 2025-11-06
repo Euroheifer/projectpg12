@@ -332,8 +332,12 @@ export function openExpenseDetail(expenseId) {
         return;
     }
     
-    // 存储正在编辑的ID
+    // 存储正在编辑的ID (局部变量用于更新功能)
     currentEditingExpenseId = expenseId;
+    
+    // 设置全局费用ID用于支付功能 🔥 v11.0修复
+    window.currentExpenseId = expenseId;
+    console.log('设置当前费用ID:', expenseId);
 
     const modal = document.getElementById('expense-detail-modal');
     const title = document.getElementById('expense-detail-title');

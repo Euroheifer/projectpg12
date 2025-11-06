@@ -20,7 +20,16 @@ let currentEditingRecurringExpense = null;
 /**
  * 初始化定期费用表单
  */
+// 防止重复初始化的标志
+let recurringExpenseFormInitialized = false;
+
 export function initializeRecurringExpenseForm() {
+    // 防止重复初始化 (v11.0修复)
+    if (recurringExpenseFormInitialized) {
+        console.log('定期费用表单已经初始化过，跳过重复执行');
+        return;
+    }
+    
     console.log('初始化定期费用表单');
 
     // 设置默认日期
@@ -55,6 +64,10 @@ export function initializeRecurringExpenseForm() {
 
     // 绑定事件监听器
     bindEventListeners();
+    
+    // 标记为已初始化 (v11.0修复)
+    recurringExpenseFormInitialized = true;
+    console.log('定期费用表单初始化完成');
 }
 
 /**
@@ -347,8 +360,13 @@ export async function handleSaveRecurringExpense(event) {
         // 数据组装
         const formData = collectRecurringExpenseFormData();
         
-        // API调用保存定期费用
-        const response = await fetch('/api/recurring-expenses', {
+        // API调用保存定期费用 (v11.0修复 - 使用正确的群组API)
+        const groupId = window.currentGroupId;
+        if (!groupId) {
+            throw new Error('群组ID不存在');
+        }
+        
+        const response = await fetch(`/groups/${groupId}/recurring-expenses`, {
             method: currentEditingRecurringExpense ? 'PUT' : 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -383,12 +401,20 @@ export async function handleDisableRecurringExpense(expenseId) {
     console.log('禁用定期费用:', expenseId);
     
     try {
-        // API调用禁用定期费用
-        const response = await fetch(`/api/recurring-expenses/${expenseId}/disable`, {
-            method: 'POST',
+        // API调用禁用定期费用 (v11.0修复 - 使用PATCH更新状态)
+        const groupId = window.currentGroupId;
+        if (!groupId) {
+            throw new Error('群组ID不存在');
+        }
+        
+        const response = await fetch(`/groups/${groupId}/recurring-expenses/${expenseId}`, {
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({
+                is_active: false
+            })
         });
         
         // 处理响应
@@ -414,12 +440,20 @@ export async function handleEnableRecurringExpense(expenseId) {
     console.log('启用定期费用:', expenseId);
     
     try {
-        // API调用启用定期费用
-        const response = await fetch(`/api/recurring-expenses/${expenseId}/enable`, {
-            method: 'POST',
+        // API调用启用定期费用 (v11.0修复 - 使用PATCH更新状态)
+        const groupId = window.currentGroupId;
+        if (!groupId) {
+            throw new Error('群组ID不存在');
+        }
+        
+        const response = await fetch(`/groups/${groupId}/recurring-expenses/${expenseId}`, {
+            method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            body: JSON.stringify({
+                is_active: true
+            })
         });
         
         // 处理响应
@@ -488,7 +522,14 @@ export async function handleEditRecurringExpense(expenseId) {
         currentEditingRecurringExpense = expenseId;
         
         // 获取定期费用详情
-        const response = await fetch(`/api/recurring-expenses/${expenseId}`);
+        // API调用删除定期费用 (v11.0修复 - 使用正确的群组API)
+        const groupId = window.currentGroupId;
+        if (!groupId) {
+            throw new Error('群组ID不存在');
+        }
+        
+        const response = await fetch(`/groups/${groupId}/recurring-expenses/${expenseId}`, {
+            method: 'DELETE',
         
         if (response.ok) {
             const expense = await response.json();
@@ -561,8 +602,13 @@ export async function refreshRecurringList() {
     console.log('刷新定期费用列表');
     
     try {
-        // API调用获取定期费用列表
-        const response = await fetch('/api/recurring-expenses');
+        // API调用获取定期费用列表 (v11.0修复 - 使用正确的群组API)
+        const groupId = window.currentGroupId;
+        if (!groupId) {
+            throw new Error('群组ID不存在');
+        }
+        
+        const response = await fetch(`/groups/${groupId}/recurring-expenses`);
         
         if (response.ok) {
             const recurringExpenses = await response.json();

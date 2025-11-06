@@ -205,23 +205,66 @@ export async function getGroupExpenses(groupId) {
 }
 
 /**
- * API 调用: 获取群组支付 (真实版本)
- * 注意: 你的后端没有 /groups/{id}/payments 路由。
- * 我们暂时返回空数组，这个功能需要后端支持。
+ * API 调用: 获取群组支付 (v11.0 - 实现真实功能)
+ * 先获取群组所有费用，然后汇总这些费用的支付记录
  */
 export async function getGroupPayments(groupId) {
-    console.log('获取群组支付数据 - 注意：后端API暂未实现');
+    console.log('获取群组支付数据，群组ID:', groupId);
     const token = getAuthToken();
     if (!token) throw new Error('未认证');
 
     try {
-        // 临时返回空数组，避免前端崩溃
-        console.warn('支付API暂未实现，返回空数组');
-        return [];
+        // 1. 获取群组所有费用
+        const expensesResponse = await fetch(`/groups/${groupId}/expenses`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!expensesResponse.ok) {
+            const errorText = await expensesResponse.text();
+            console.error('获取群组费用失败，状态码:', expensesResponse.status, '错误信息:', errorText);
+            return [];
+        }
+        
+        const expenses = await expensesResponse.json();
+        console.log('群组费用数据:', expenses);
+        
+        if (!expenses || expenses.length === 0) {
+            console.log('群组没有费用，返回空支付列表');
+            return [];
+        }
+        
+        // 2. 获取每个费用的支付记录
+        const allPayments = [];
+        for (const expense of expenses) {
+            try {
+                const paymentsResponse = await fetch(`/expenses/${expense.id}/payments`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (paymentsResponse.ok) {
+                    const payments = await paymentsResponse.json();
+                    if (payments && payments.length > 0) {
+                        // 为每个支付记录添加费用信息用于显示
+                        const paymentsWithExpense = payments.map(payment => ({
+                            ...payment,
+                            expense_description: expense.description,
+                            expense_amount: expense.amount
+                        }));
+                        allPayments.push(...paymentsWithExpense);
+                    }
+                }
+            } catch (paymentError) {
+                console.warn(`获取费用 ${expense.id} 的支付记录失败:`, paymentError);
+            }
+        }
+        
+        console.log('汇总的所有支付记录:', allPayments);
+        return allPayments;
         
     } catch (error) {
         console.error('获取支付数据失败:', error);
-        // 返回空数组避免前端崩溃
         return [];
     }
 }
