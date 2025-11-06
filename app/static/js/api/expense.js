@@ -335,6 +335,11 @@ export function openExpenseDetail(expenseId) {
     
     // 存储正在编辑的ID
     currentEditingExpenseId = expenseId;
+    
+    // 设置全局费用ID，供支付功能使用
+    window.selectedExpenseId = expenseId;
+    window.currentExpenseId = expenseId;
+    console.log('设置当前费用ID:', expenseId);
 
     const modal = document.getElementById('expense-detail-modal');
     const title = document.getElementById('expense-detail-title');

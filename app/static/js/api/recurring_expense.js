@@ -92,7 +92,7 @@ function initializePayerSelector() {
  * 初始化参与者选择 - 修复版本
  */
 function initializeParticipantSelection() {
-    const participantContainer = document.getElementById('recurring-participants');
+    const participantContainer = document.getElementById('recurring-participants-section');
     if (participantContainer && window.groupMembers) {
         participantContainer.innerHTML = '';
         window.groupMembers.forEach(member => {

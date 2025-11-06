@@ -205,19 +205,34 @@ export async function getGroupExpenses(groupId) {
 }
 
 /**
- * API 调用: 获取群组支付 (真实版本)
- * 注意: 你的后端没有 /groups/{id}/payments 路由。
- * 我们暂时返回空数组，这个功能需要后端支持。
+ * API 调用: 获取群组支付 (修复版本)
+ * 修复: 实现真实的后端API调用
  */
 export async function getGroupPayments(groupId) {
-    console.log('获取群组支付数据 - 注意：后端API暂未实现');
+    console.log('获取群组支付数据，群组ID:', groupId);
     const token = getAuthToken();
     if (!token) throw new Error('未认证');
 
     try {
-        // 临时返回空数组，避免前端崩溃
-        console.warn('支付API暂未实现，返回空数组');
-        return [];
+        const response = await fetch(`/groups/${groupId}/payments`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('支付数据获取成功:', data);
+            return data;
+        } else if (response.status === 404) {
+            console.warn('支付API暂未实现，返回空数组');
+            return [];
+        } else {
+            const errorText = await response.text();
+            console.error('获取支付数据失败，状态码:', response.status, '错误信息:', errorText);
+            return [];
+        }
         
     } catch (error) {
         console.error('获取支付数据失败:', error);
