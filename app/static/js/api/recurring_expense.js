@@ -44,11 +44,20 @@ export function initializeRecurringExpenseForm() {
     // 检查组员数据是否已加载
     if (!window.groupMembers || window.groupMembers.length === 0) {
         console.warn('组员数据尚未加载，定期费用表单可能无法正常初始化');
-        // 可以选择延迟初始化，或者显示提示信息
-        setTimeout(() => {
-            initializePayerSelector();
-            initializeParticipantSelection();
-        }, 1000);
+        // 延迟初始化，等待组员数据加载
+        const checkGroupMembers = () => {
+            if (window.groupMembers && window.groupMembers.length > 0) {
+                console.log('检测到组员数据已加载，初始化付款人选择器和参与者选择');
+                initializePayerSelector();
+                initializeParticipantSelection();
+            } else {
+                console.log('组员数据仍未加载，500ms后重试...');
+                setTimeout(checkGroupMembers, 500);
+            }
+        };
+        
+        // 开始检查
+        setTimeout(checkGroupMembers, 500);
     } else {
         // 初始化付款人选择器
         initializePayerSelector();
@@ -77,20 +86,20 @@ export function initializeRecurringExpenseForm() {
 function initializePayerSelector() {
     const payerSelect = document.getElementById('recurring-payer');
     if (payerSelect) {
-        // 从全局组员列表中加载选项，使用 groupMembers 而不是 participants
+        // 从全局组员列表中加载选项
         if (window.groupMembers && window.groupMembers.length > 0) {
             payerSelect.innerHTML = '<option value="">请选择付款人</option>';
             window.groupMembers.forEach(member => {
                 const option = document.createElement('option');
-                // 使用member.id或member.user_id作为值，确保兼容性
-                const memberId = member.id || member.user_id;
+                // 修复：使用正确的 member.user_id 作为值
+                const memberId = member.user_id;
                 option.value = memberId;
-                // 使用member.username作为显示名称，确保兼容性
-                const memberName = member.username || member.user?.username || member.name || '未知用户';
+                // 修复：使用正确的成员名称获取逻辑
+                const memberName = member.user?.username || member.nickname || `用户${memberId}`;
                 option.textContent = memberName;
                 payerSelect.appendChild(option);
             });
-            console.log('已初始化付款人选择器，成员数量:', window.groupMembers.length);
+            console.log('已初始化付款人选择器，成员数量:', window.groupMembers.length, '成员数据示例:', window.groupMembers[0]);
         } else {
             // 如果没有数据，显示提示信息
             payerSelect.innerHTML = '<option value="">暂无可选付款人</option>';
@@ -111,16 +120,16 @@ function initializeParticipantSelection() {
         window.groupMembers.forEach(member => {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            // 使用member.id或member.user_id作为值，确保兼容性
-            const memberId = member.id || member.user_id;
+            // 修复：使用正确的 member.user_id 作为值
+            const memberId = member.user_id;
             checkbox.id = `participant-${memberId}`;
             checkbox.value = memberId;
             checkbox.addEventListener('change', handleParticipantToggle);
             
             const label = document.createElement('label');
             label.setAttribute('for', `participant-${memberId}`);
-            // 使用member.username作为显示名称，确保兼容性
-            const memberName = member.username || member.user?.username || member.name || '未知用户';
+            // 修复：使用正确的成员名称获取逻辑
+            const memberName = member.user?.username || member.nickname || `用户${memberId}`;
             label.textContent = memberName;
             
             const container = document.createElement('div');
@@ -128,7 +137,7 @@ function initializeParticipantSelection() {
             container.appendChild(label);
             participantContainer.appendChild(container);
         });
-        console.log('已初始化参与者选择，参与者数量:', window.groupMembers.length);
+        console.log('已初始化参与者选择，参与者数量:', window.groupMembers.length, '成员数据示例:', window.groupMembers[0]);
     } else {
         console.error('找不到参与者容器或组员数据为空');
     }
@@ -171,6 +180,10 @@ function initializeFrequencySelection() {
  */
 export function updateRecurringFormMembers() {
     console.log('更新定期费用表单中的成员列表');
+    console.log('当前组员数量:', window.groupMembers?.length || 0);
+    if (window.groupMembers && window.groupMembers.length > 0) {
+        console.log('组员数据结构示例:', window.groupMembers[0]);
+    }
     
     // 重新初始化付款人选择器
     initializePayerSelector();
@@ -857,13 +870,12 @@ function updateSplitDetailDisplay() {
     detailContainer.innerHTML = '';
     
     recurringMemberSplits.forEach(split => {
-        // 从 groupMembers 中查找参与者，确保兼容性
+        // 修复：使用正确的 member.user_id 查找参与者
         const member = window.groupMembers?.find(m => 
-            m.id?.toString() === split.participantId || 
             m.user_id?.toString() === split.participantId
         );
-        // 使用member.username或member.name作为显示名称
-        const memberName = member?.username || member?.user?.username || member?.name || `参与者${split.participantId}`;
+        // 修复：使用正确的成员名称获取逻辑
+        const memberName = member?.user?.username || member?.nickname || `用户${split.participantId}`;
         
         const amountCents = Math.round(split.amount * 100); // 将金额转换为分
         const detailElement = document.createElement('div');

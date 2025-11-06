@@ -14,6 +14,7 @@ export async function getPendingInvitations() {
             throw new Error('用户未登录');
         }
 
+        console.log('正在获取邀请列表...');
         const response = await fetch('/invitations/me', {
             method: 'GET',
             headers: {
@@ -22,11 +23,19 @@ export async function getPendingInvitations() {
             }
         });
 
+        console.log('邀请API响应状态:', response.status);
+        
         if (!response.ok) {
-            throw new Error('获取邀请列表失败');
+            const errorText = await response.text();
+            console.error('获取邀请列表失败:', response.status, errorText);
+            throw new Error(`获取邀请列表失败: ${response.status} - ${errorText}`);
         }
 
-        return await response.json();
+        const data = await response.json();
+        console.log('获取到的邀请数据:', data);
+        console.log('邀请数量:', Array.isArray(data) ? data.length : '数据不是数组');
+        
+        return data;
     } catch (error) {
         console.error('获取邀请列表错误:', error);
         throw error;
@@ -121,22 +130,33 @@ export async function sendInvitation(groupId, inviteeEmail) {
             throw new Error('用户未登录');
         }
 
+        console.log('发送邀请:', { groupId, inviteeEmail });
+        
+        const requestBody = {
+            invitee_email: inviteeEmail  // 确保字段名与后端期望一致
+        };
+        
+        console.log('请求体:', requestBody);
+
         const response = await fetch(`/groups/${groupId}/invite`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                invitee_email: inviteeEmail  // 注意字段名是 invitee_email
-            })
+            body: JSON.stringify(requestBody)
         });
 
+        console.log('邀请API响应状态:', response.status);
+        
         if (response.ok) {
+            const result = await response.json();
+            console.log('邀请发送成功:', result);
             showCustomAlert('邀请发送成功！');
-            return await response.json();
+            return result;
         } else {
             const errorData = await response.json();
+            console.error('邀请发送失败:', response.status, errorData);
             throw new Error(errorData.detail || '发送邀请失败');
         }
     } catch (error) {

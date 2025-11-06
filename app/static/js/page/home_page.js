@@ -55,23 +55,45 @@ async function getCurrentUserInfo() {
 // 获取并渲染数据
 async function loadAndRenderData() {
     try {
+        console.log('开始加载数据...');
+        
         // 并行获取群组和邀请数据
         const [groups, invitations] = await Promise.all([
-            getUserGroups(),
-            getPendingInvitations()
+            getUserGroups().catch(error => {
+                console.error('获取群组数据失败:', error);
+                return [];
+            }),
+            getPendingInvitations().catch(error => {
+                console.error('获取邀请数据失败:', error);
+                return [];
+            })
         ]);
 
         console.log('获取到的数据:', { groups, invitations });
         console.log('当前用户信息:', currentUser);
+        
+        // 确保数据是数组
+        const groupsArray = Array.isArray(groups) ? groups : [];
+        const invitationsArray = Array.isArray(invitations) ? invitations : [];
+        
+        console.log('处理后的数据:', { 
+            groupsCount: groupsArray.length, 
+            invitationsCount: invitationsArray.length 
+        });
 
         // 检查群组数据结构
-        if (groups && groups.length > 0) {
-            console.log('第一个群组的完整数据结构:', groups[0]);
+        if (groupsArray.length > 0) {
+            console.log('第一个群组的完整数据结构:', groupsArray[0]);
+        }
+        
+        // 检查邀请数据结构
+        if (invitationsArray.length > 0) {
+            console.log('第一个邀请的完整数据结构:', invitationsArray[0]);
         }
 
         // 渲染数据到页面
-        renderGroups(groups);
-        renderInvitations(invitations);
+        renderGroups(groupsArray);
+        renderInvitations(invitationsArray);
 
     } catch (error) {
         console.error('加载数据失败:', error);
@@ -174,11 +196,18 @@ function renderGroups(groups) {
 // 渲染邀请列表 - 修复版本
 function renderInvitations(invitations) {
     const container = document.getElementById('invitation-list-container');
-    if (!container) return;
+    if (!container) {
+        console.error('找不到邀请列表容器元素: invitation-list-container');
+        return;
+    }
 
-    console.log('渲染邀请数据:', invitations);
+    console.log('开始渲染邀请数据:', invitations);
+    console.log('数据类型:', typeof invitations);
+    console.log('是否为数组:', Array.isArray(invitations));
+    console.log('邀请数量:', invitations ? invitations.length : '邀请数据为空');
 
     if (!invitations || invitations.length === 0) {
+        console.log('没有邀请数据，显示空状态');
         container.innerHTML = `
             <div class="text-center p-6 text-gray-500">
                 <i class="fa-solid fa-inbox text-5xl text-gray-300 mb-3"></i>
@@ -188,49 +217,75 @@ function renderInvitations(invitations) {
         return;
     }
 
-    container.innerHTML = invitations.map(invitation => {
-        console.log('处理邀请:', invitation);
-        
-        // 安全获取邀请数据
-        const invitationId = invitation.id || invitation.invitation_id;
-        const groupName = invitation.group?.name || invitation.group_name || invitation.group?.group_name || '未知群组';
-        const inviterName = invitation.inviter?.username || invitation.inviter_name || invitation.inviter?.name || '未知用户';
-        const groupId = invitation.group?.id || invitation.group_id;
-        
-        if (!invitationId) {
-            console.warn('邀请数据缺少ID，跳过:', invitation);
-            return '';
-        }
+    console.log('开始渲染', invitations.length, '个邀请');
+    
+    try {
+        container.innerHTML = invitations.map((invitation, index) => {
+            console.log(`处理第 ${index + 1} 个邀请:`, invitation);
+            
+            // 安全获取邀请数据
+            const invitationId = invitation.id || invitation.invitation_id;
+            const groupName = invitation.group?.name || invitation.group_name || invitation.group?.group_name || '未知群组';
+            const inviterName = invitation.inviter?.username || invitation.inviter_name || invitation.inviter?.name || '未知用户';
+            const groupId = invitation.group?.id || invitation.group_id;
+            
+            if (!invitationId) {
+                console.warn('邀请数据缺少ID，跳过:', invitation);
+                return `
+                    <div class="bg-red-50 border border-red-200 p-4 mb-3 rounded-lg">
+                        <p class="text-red-600">邀请数据格式错误，缺少ID</p>
+                        <pre class="text-xs text-red-500 mt-2">${JSON.stringify(invitation, null, 2)}</pre>
+                    </div>
+                `;
+            }
 
-        return `
-        <div class="invitation-card bg-white rounded-lg border border-gray-200 p-4 mb-3 shadow-sm hover:shadow-md transition duration-200"
-            data-invitation-id="${invitationId}">
-            <div class="flex justify-between items-start mb-2">
-                <h4 class="font-medium text-gray-800 text-lg">
-                    ${groupName}
-                </h4>
+            console.log(`邀请 ${invitationId} 解析结果:`, { groupName, inviterName, groupId });
+
+            return `
+            <div class="invitation-card bg-white rounded-lg border border-gray-200 p-4 mb-3 shadow-sm hover:shadow-md transition duration-200"
+                data-invitation-id="${invitationId}">
+                <div class="flex justify-between items-start mb-2">
+                    <h4 class="font-medium text-gray-800 text-lg">
+                        ${groupName}
+                    </h4>
+                </div>
+                <p class="text-sm text-gray-600 mb-3">
+                    <i class="fa-solid fa-user-tag mr-1"></i>
+                    邀请人: 
+                    ${inviterName}
+                </p>
+                <div class="flex space-x-2">
+                    <button class="accept-invitation-btn flex-1 py-2 px-3 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition duration-150 flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-check w-3 h-3"></i>
+                        <span>接受邀请</span>
+                    </button>
+                    <button class="decline-invitation-btn flex-1 py-2 px-3 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400 transition duration-150 flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-times w-3 h-3"></i>
+                        <span>拒绝</span>
+                    </button>
+                </div>
             </div>
-            <p class="text-sm text-gray-600 mb-3">
-                <i class="fa-solid fa-user-tag mr-1"></i>
-                邀请人: 
-                ${inviterName}
-            </p>
-            <div class="flex space-x-2">
-                <button class="accept-invitation-btn flex-1 py-2 px-3 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition duration-150 flex items-center justify-center space-x-1">
-                    <i class="fa-solid fa-check w-3 h-3"></i>
-                    <span>接受邀请</span>
-                </button>
-                <button class="decline-invitation-btn flex-1 py-2 px-3 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400 transition duration-150 flex items-center justify-center space-x-1">
-                    <i class="fa-solid fa-times w-3 h-3"></i>
-                    <span>拒绝</span>
+            `;
+        }).join('');
+
+        console.log('邀请渲染完成，绑定事件处理...');
+        
+        // 绑定接受/拒绝邀请的事件处理
+        bindInvitationEvents();
+        
+    } catch (error) {
+        console.error('渲染邀请时发生错误:', error);
+        container.innerHTML = `
+            <div class="text-center p-6 text-red-500">
+                <i class="fa-solid fa-exclamation-triangle text-3xl mb-3"></i>
+                <p>渲染邀请列表时发生错误</p>
+                <p class="text-sm text-red-400 mt-1">${error.message}</p>
+                <button onclick="loadAndRenderData()" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+                    重新加载
                 </button>
             </div>
-        </div>
         `;
-    }).join('');
-
-    // 绑定接受/拒绝邀请的事件处理
-    bindInvitationEvents();
+    }
 }
 
 /**
