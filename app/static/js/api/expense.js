@@ -1147,6 +1147,7 @@ window.handleAddNewExpense = handleAddNewExpense;
 window.handleSaveExpense = handleSaveExpense;
 window.handleCancel = handleCancel;
 window.handleDeleteExpense = handleDeleteExpense;
+// Export handleUpdateExpense for global access
 window.handleUpdateExpense = handleUpdateExpense;
 window.confirmDeleteExpense = confirmDeleteExpense;
 window.handleDetailCancel = handleDetailCancel;

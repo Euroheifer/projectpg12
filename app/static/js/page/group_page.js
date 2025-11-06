@@ -869,24 +869,16 @@ window.handleSaveRecurringExpense = function(event) {
     }
 };
 
-window.handleRecurringAmountChange = function() {
-    // This function should be implemented in recurring_expense.js
-    console.log('Recurring amount changed');
-    if (window.handleRecurringAmountChange) {
-        window.handleRecurringAmountChange();
-    }
-};
+// Placeholder for handleRecurringAmountChange - actual implementation is in recurring_expense.js
+// This prevents errors if called before the module loads
 
-window.selectFrequency = function(frequency) {
-    // This function should be implemented in recurring_expense.js
-    console.log('Selected frequency:', frequency);
-    if (window.selectFrequency) {
-        window.selectFrequency(frequency);
-    }
-};
+// Placeholder for selectFrequency - actual implementation is in recurring_expense.js  
+// This prevents errors if called before the module loads
+
+// Placeholder functions - actual implementations are in recurring_expense.js
+// These prevent errors if called before the module loads
 
 window.setRecurringSplitMethod = function(method) {
-    // This function should be implemented in recurring_expense.js
     console.log('Setting recurring split method to:', method);
     if (window.setRecurringSplitMethod) {
         window.setRecurringSplitMethod(method);
@@ -984,16 +976,16 @@ window.handleSavePayment = function(event) {
 window.handleUpdateExpense = function(event) {
     event.preventDefault();
     // This function should be implemented in expense.js
-    if (window.updateExpense) {
-        window.updateExpense(event);
+    if (window.handleUpdateExpense) {
+        window.handleUpdateExpense(event);
     }
 };
 
 window.handleUpdatePayment = function(event) {
     event.preventDefault();
     // This function should be implemented in payment.js
-    if (window.updatePayment) {
-        window.updatePayment(event);
+    if (window.handleUpdatePayment) {
+        window.handleUpdatePayment(event);
     }
 };
 
@@ -1008,7 +1000,7 @@ async function saveGroupSettingsAPI(groupName, groupDescription) {
         }
 
         const response = await fetch(`/groups/${window.currentGroupId}`, {
-            method: 'PUT',
+            method: 'PATCH', // 修复：使用PATCH而不是PUT
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
@@ -1035,7 +1027,7 @@ async function saveGroupSettingsAPI(groupName, groupDescription) {
             showCustomAlert('Success', '群组设置已保存');
         } else {
             const errorData = await response.json();
-            throw new Error(errorData.detail || '保存失败');
+        throw new Error(errorData.detail ? (typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail)) : `HTTP ${response.status}: ${response.statusText}`);
         }
     } catch (error) {
         console.error('保存群组设置失败:', error);

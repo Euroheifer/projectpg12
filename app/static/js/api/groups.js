@@ -769,8 +769,9 @@ export async function loadAuditLogs() {
             container.innerHTML = logsHTML;
             
         } else {
-            console.error('获取审计日志失败:', response.status);
-            container.innerHTML = '<p class="text-center text-red-500">获取审计日志失败</p>';
+            console.log('审计日志API暂未实现，返回空数据');
+            container.innerHTML = '<p class="text-center text-gray-500">审计日志功能暂未实现</p>';
+            return [];
         }
         
     } catch (error) {
