@@ -1,0 +1,95 @@
+
+services:
+  # ----------------------------------------------------------------------
+  # 1. STAGING ENVIRONMENT
+  # ----------------------------------------------------------------------
+  staging_db:
+    image: postgres:16
+    container_name: staging_db
+    restart: always
+    environment:
+      POSTGRES_USER: stag_user
+      POSTGRES_PASSWORD: stag_password
+      POSTGRES_DB: project_pg12
+
+    volumes:
+      - staging_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U stag_user -d project_pg12" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  staging_backend:
+    build: .
+    container_name: staging_backend
+    restart: always
+
+    depends_on:
+      staging_db:
+        condition: service_healthy
+    environment:
+
+      DATABASE_URL: postgresql+psycopg2://stag_user:stag_password@staging_db:5432/project_pg12
+      PYTHONUNBUFFERED: 1
+    # <<<<<<<<<<<<<<< 8080 HTTP Only >>>>>>>>>>>>>>>
+    volumes:
+      - staging_uploads_data:/app/app/static/uploads  # add 04 Nov by load img 
+    ports:
+      - "8081:8080"
+    command: >
+      sh -c "export PYTHONPATH=/app &&
+             python /app/app/create_tables.py &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8080"
+
+
+  # ----------------------------------------------------------------------
+  # 2. PRODUCTION ENVIRONMENT
+  # ----------------------------------------------------------------------
+  production_db:
+    image: postgres:16
+    container_name: production_db
+    restart: always
+    environment:
+      POSTGRES_USER: prod_user
+      POSTGRES_PASSWORD: prod_password
+      POSTGRES_DB: prod_project_db
+    volumes:
+      - production_postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U prod_user -d prod_project_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  production_backend:
+    build: .
+    container_name: production_backend
+    restart: always
+    depends_on:
+      production_db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://prod_user:prod_password@production_db:5432/prod_project_db
+      PYTHONUNBUFFERED: 1
+    # <<<<<<<<<<<<<<< 443 HTTPS Only >>>>>>>>>>>>>>>
+    volumes:
+      - production_uploads_data:/app/app/static/uploads # add 04 Nov by load img 
+      
+    ports:
+      - "8443:443"
+    command: >
+      sh -c "export PYTHONPATH=/app &&
+             python /app/app/create_tables.py &&
+             uvicorn app.main:app --host 0.0.0.0 --port 443 --ssl-keyfile /app/prod.key --ssl-certfile /app/prod.pem"
+
+
+volumes:
+  staging_postgres_data:
+  staging_uploads_data: # add for load img 04 Nov sz
+  production_postgres_data:
+  production_uploads_data: # add for load img 04 Nov

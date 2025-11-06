@@ -1,0 +1,692 @@
+// /static/js/page/groups.js
+
+import {
+//   getCurrentUser, // changed by sunzhe
+    getGroupData,
+    getGroupMembers,
+    getGroupExpenses,
+    getGroupPayments,
+    getGroupRecurringExpenses
+} from '../api/auth.js';
+
+import {
+    setupModalCloseHandlers,
+    showCustomAlert,
+    requireAdmin,
+    getAuthToken //changed by sunzhe
+} from '../ui/utils.js';
+
+import {
+    initializeExpenseForm,
+    handleSaveExpense,
+    refreshExpensesList,
+    openExpenseDetail
+} from '../api/expense.js';
+
+import {
+    initializePaymentForm,
+    handleSavePayment,
+    refreshPaymentsList,
+    openPaymentDetail
+} from '../api/payment.js';
+
+import {
+    renderMemberList,
+    handleUpdateRole,
+    handleRemoveMember,
+    confirmUpdateRole,
+    confirmRemoveMember,
+    cancelUpdateRole,
+    cancelRemoveMember,
+    clearInviteForm,
+    inviteNewMember
+} from '../api/members.js';
+
+// --- Added: Function to get user info, adapted from home_page.js edit by sunzhe ---
+async function fetchCurrentUser() {
+    try {
+        const token = getAuthToken(); // Ensure getAuthToken is imported from utils
+        if (!token) {
+            console.warn('Authentication token not found, cannot fetch user');
+            return null;
+        }
+
+        console.log('Fetching user info from API (/me)...');
+        const response = await fetch('/me', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const user = await response.json();
+            console.log('User info from API (/me):', user);
+            return user;
+        } else {
+            console.error('Failed to fetch user info, status code:', response.status);
+            const errorText = await response.text();
+            console.error('Error message:', errorText);
+            return null;
+        }
+    } catch (error) {
+        console.error('Failed to fetch user info:', error);
+        return null;
+    }
+}
+
+// --- Global State and Data ---
+window.CURRENT_USER_ID = '';
+window.CURRENT_USER_NAME = '';
+window.IS_CURRENT_USER_ADMIN = false;
+window.currentGroupId = null;
+window.currentGroup = null;
+
+// Data Lists
+window.groupMembers = [];
+window.expensesList = [];
+window.paymentsList = [];
+window.recurringExpensesList = [];
+
+// Page State
+let activeTab = 'expenses';
+
+
+
+//--- Page Initialization ---
+async function initializePage() {
+    console.log('Starting group page initialization...');
+
+    try {
+        // 1. Verify user identity
+        const user = await fetchCurrentUser(); //edit by sunzhe
+        if (!user) {
+            window.location.href = '/login';
+            return;
+        }
+
+        window.CURRENT_USER_ID = user.id;
+        window.CURRENT_USER_NAME = user.username;
+       // document.getElementById('user-display').textContent = window.CURRENT_USER_NAME; // edit by sunzhe
+
+        // 2. Get Group ID from URL path
+        const pathParts = window.location.pathname.split('/');
+        window.currentGroupId = pathParts[pathParts.length - 1];
+
+        console.log('Group ID from URL:', window.currentGroupId);
+
+        if (!window.currentGroupId || window.currentGroupId === 'groups') {
+            showCustomAlert('Error', 'Group ID not found');
+            setTimeout(() => window.location.href = '/home', 1500);
+            return;
+        }
+
+        // 3. Load group data and permissions
+        await loadGroupData();
+
+        // --- Added: Immediately update group name display ---
+        updateGroupNameDisplay();
+
+        // 4. Render UI based on permissions
+        renderUIByPermission();
+
+        // 5. Bind events and initialize
+        setupModalCloseHandlers();
+        bindEvents();
+
+        // 6. Load data lists
+        await loadDataLists();
+
+        console.log(`Group page initialization complete - Group: ${window.currentGroupId}, User: ${window.CURRENT_USER_NAME}, Permission: ${window.IS_CURRENT_USER_ADMIN ? 'Admin' : 'Member'}`);
+
+    } catch (error) {
+        console.error('Page initialization failed:', error);
+        showCustomAlert('Error', 'Page initialization failed');
+    }
+}
+
+
+async function loadGroupData() {
+    try {
+        console.log('Starting to load group data, Group ID:', window.currentGroupId);
+
+        window.currentGroup = await getGroupData(window.currentGroupId);
+        console.log('Fetched group data:', window.currentGroup);
+
+        // Set admin permission (we can now rely on real data returned from auth.js)
+        window.IS_CURRENT_USER_ADMIN =
+            window.currentGroup.admin_id === window.CURRENT_USER_ID;
+
+        console.log('Permission check result - User:', window.CURRENT_USER_ID, 'is admin:', window.IS_CURRENT_USER_ADMIN);
+
+    } catch (error) {
+        console.error('Failed to load group data:', error);
+
+        // --- Fix: No longer call getMockGroupData ---
+        // Use a safe fallback object that doesn't depend on other functions
+        window.currentGroup = {
+            id: window.currentGroupId,
+            name: 'Loading Failed',
+            description: error.message, // Show error in description
+            admin_id: null
+        };
+        window.IS_CURRENT_USER_ADMIN = false;
+
+        // Notify user of loading failure
+        showCustomAlert('Failed to load group', error.message);
+        // --- End Fix ---
+    }
+}
+
+async function loadDataLists() {
+    try {
+        await Promise.all([
+            loadExpensesList(),
+            loadPaymentsList(),
+            loadMembersList(),
+            loadRecurringExpensesList()
+        ]);
+        // --- Added ---
+        // 2. After all lists are loaded, update the counts on the tabs
+        updateTabCounts();
+        // --- End ---
+    } catch (error) {
+        console.error('Failed to load data lists:', error);
+        showCustomAlert('Error', 'Failed to load data');
+    }
+}
+
+async function loadExpensesList() {
+    window.expensesList = await getGroupExpenses(window.currentGroupId);
+    refreshExpensesList();
+}
+
+async function loadPaymentsList() {
+    window.paymentsList = await getGroupPayments(window.currentGroupId);
+    refreshPaymentsList();
+}
+
+async function loadMembersList() {
+    window.groupMembers = await getGroupMembers(window.currentGroupId);
+    // --- Fix Start ---
+    // Add try...catch to capture rendering errors from renderMemberList
+    try {
+        renderMemberList();
+    } catch (error) {
+        console.error('Failed to render member list (from members.js):', error);
+        // Don't let the whole page crash even if rendering fails
+        const container = document.getElementById('member-list-container');
+        if (container) {
+            container.innerHTML = '<p class="text-red-500 text-center">Error loading member list.</p>';
+        }
+    }
+    // --- Fix End ---
+}
+
+async function loadRecurringExpensesList() {
+    window.recurringExpensesList = await getGroupRecurringExpenses(window.currentGroupId);
+    refreshRecurringList();
+}
+
+// --- UI Rendering Functions ---
+
+/**
+ * Added function: Render group summary info at the top (balance, settlement, etc.)
+ * It depends on data in window.currentGroup
+ */
+function renderGroupSummary() {
+    if (!window.currentGroup) {
+        console.warn('renderGroupSummary: window.currentGroup is null, skipping render');
+        return;
+    }
+
+    console.log('Rendering group summary info...', window.currentGroup);
+
+
+    // --- 1. Get all HTML elements ---
+    const owedAmountEl = document.getElementById('balance-owed');
+    const owedContextEl = document.getElementById('balance-owed-context');
+
+    const owingAmountEl = document.getElementById('balance-owing-me');
+    const owingContextEl = document.getElementById('balance-owing-me-context');
+
+    const settlementSummaryEl = document.getElementById('settlement-summary-text');
+
+    // --- 2. Render "You Owe" card ---
+    // Default value is 0.00
+    const balanceOwed = window.currentGroup.user_balance_owed || 0;
+    // Default context is an empty string
+    const owedContext = window.currentGroup.user_balance_owed_context || '';
+
+    if (owedAmountEl) {
+        owedAmountEl.textContent = `¥${Number(balanceOwed).toFixed(2)}`;
+    }
+    if (owedContextEl) {
+        owedContextEl.textContent = owedContext;
+    }
+
+    // --- 3. Render "You are Owed" card ---
+    // Default value is 0.00
+    const balanceOwing = window.currentGroup.user_balance_owing || 0;
+    // Default context is an empty string
+    const owingContext = window.currentGroup.user_balance_owing_context || '';
+
+    if (owingAmountEl) {
+        owingAmountEl.textContent = `¥${Number(balanceOwing).toFixed(2)}`;
+    }
+    if (owingContextEl) {
+        owingContextEl.textContent = owingContext;
+    }
+
+    // --- 4. Render "Settlement Suggestion" card ---
+    // Default value is "Nothing to settle"
+    const summary = window.currentGroup.settlement_summary || 'Nothing to settle';
+
+    if (settlementSummaryEl) {
+        settlementSummaryEl.textContent = summary;
+    }
+}
+
+
+// ----------------- until here sunzhe -----------------------//
+
+function renderUIByPermission() {
+    console.log('Rendering UI - User Permission:', window.IS_CURRENT_USER_ADMIN ? 'Admin' : 'Member');
+
+// --- Modification Start ---
+
+    // 1. Render group name (ID and Name)
+    updateGroupNameDisplay();
+
+    // 2. Render group summary (Balance and Settlement)
+    renderGroupSummary();
+
+    // 3. Set up admin badge (It will be appended to the group-name-display element)
+    setupAdminBadge();
+
+    // --- Modification End ---
+
+    toggleAdminElements();
+    // updateTabCounts();
+    setupFeatureRestrictions();
+
+    // Ensure the correct tab is displayed initially
+    const initialTab = window.IS_CURRENT_USER_ADMIN ? 'expenses' : 'expenses';
+    setActiveTab(initialTab);
+}
+// Set up admin badge - only call once when admin status is known
+function setupAdminBadge() {
+    if (window.IS_CURRENT_USER_ADMIN) {
+        const groupNameDisplay = document.getElementById('group-name-display');
+        if (groupNameDisplay) {
+            // First, clear any existing badge
+            const existingBadge = groupNameDisplay.querySelector('.admin-badge');
+            if (existingBadge) {
+                existingBadge.remove();
+            }
+
+            // Add new badge
+            const adminBadge = document.createElement('span');
+            adminBadge.className = 'admin-badge ml-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800';
+            adminBadge.textContent = 'Admin';
+            groupNameDisplay.appendChild(adminBadge);
+            console.log('Admin badge added');
+        }
+    } else {
+        // If not admin, ensure badge is removed
+        const adminBadge = document.querySelector('.admin-badge');
+        if (adminBadge) {
+            adminBadge.remove();
+        }
+    }
+}
+function toggleAdminElements() {
+    const adminTabs = ['manage', 'audit'];
+
+    console.log('toggleAdminElements - Current permission:', window.IS_CURRENT_USER_ADMIN);
+
+    if (window.IS_CURRENT_USER_ADMIN) {
+        // Add admin class to body
+        document.body.classList.add('is-admin');
+
+        // Show admin tabs
+        adminTabs.forEach(tab => {
+            const tabElement = document.getElementById(`tab-${tab}`);
+            if (tabElement) {
+                tabElement.classList.remove('hidden');
+                console.log(`Showing admin tab: ${tab}`);
+            }
+        });
+
+    } else {
+        // Remove admin class
+        document.body.classList.remove('is-admin');
+
+        // Hide admin tabs
+        adminTabs.forEach(tab => {
+            const tabElement = document.getElementById(`tab-${tab}`);
+            const contentElement = document.getElementById(`tab-content-${tab}`);
+
+            if (tabElement) {
+                tabElement.classList.add('hidden');
+                console.log(`Hiding admin tab: ${tab}`);
+            }
+            if (contentElement) {
+                contentElement.classList.add('hidden');
+            }
+        });
+    }
+}
+
+
+function updateGroupNameDisplay() {
+    const groupNameDisplay = document.getElementById('group-name-display');
+    if (!groupNameDisplay) {
+        console.error('Could not find group name display element');
+        return;
+    }
+
+    if (!window.currentGroup) {
+        console.warn('window.currentGroup is null, cannot update group name');
+        groupNameDisplay.innerHTML = 'Loading group data...';
+        return;
+    }
+
+    // Try different name attributes
+    const groupName =
+        window.currentGroup.name ||
+        window.currentGroup.group_name ||
+        'Unnamed Group';
+
+    const groupId =
+        window.currentGroup.id ||
+        window.currentGroup.group_id ||
+        window.currentGroupId ||
+        'Unknown';
+
+    groupNameDisplay.innerHTML = `${groupName} <span class="text-sm font-normal text-gray-500">(ID: ${groupId})</span>`;
+
+    console.log('Successfully updated group name display:', {
+        name: groupName,
+        id: groupId,
+        fullGroupData: window.currentGroup
+    });
+}
+
+function updateTabCounts() {
+    const expenseCount = document.getElementById('expense-count');
+    const recurringCount = document.getElementById('recurring-count');
+    const paymentCount = document.getElementById('payment-count');
+    const memberCount = document.getElementById('member-count');
+    const activeMemberCount = document.getElementById('active-member-count');
+
+    if (expenseCount) expenseCount.textContent = window.expensesList.length;
+    if (recurringCount) recurringCount.textContent = window.recurringExpensesList.length;
+    if (paymentCount) paymentCount.textContent = window.paymentsList.length;
+    if (memberCount) memberCount.textContent = window.groupMembers.length;
+    if (activeMemberCount) activeMemberCount.textContent = window.groupMembers.length;
+}
+
+function setupFeatureRestrictions() {
+    if (!window.IS_CURRENT_USER_ADMIN) {
+        console.log('Restricting member features - current user is not admin');
+
+        const detailInputs = document.querySelectorAll('#expense-detail-modal input, #expense-detail-modal select');
+        detailInputs.forEach(input => {
+            if (input.type !== 'submit') {
+                input.classList.add('readonly-field');
+                input.readOnly = true;
+                input.disabled = true;
+            }
+        });
+
+        const paymentInputs = document.querySelectorAll('#payment-detail-modal input, #payment-detail-modal select');
+        paymentInputs.forEach(input => {
+            if (input.type !== 'submit') {
+                input.classList.add('readonly-field');
+                input.readOnly = true;
+                input.disabled = true;
+            }
+        });
+    }
+}
+
+// --- Tab Switching Logic ---
+function setActiveTab(tabName) {
+    console.log('Switching to tab:', tabName, 'Permission:', window.IS_CURRENT_USER_ADMIN ? 'Admin' : 'Member');
+
+    // Permission check - only restrict tabs that truly require admin permission
+    const adminOnlyTabs = ['manage', 'audit'];
+    if (adminOnlyTabs.includes(tabName) && !window.IS_CURRENT_USER_ADMIN) {
+        showCustomAlert('Permission Denied', 'You do not have permission to access this page');
+        return;
+    }
+
+    // If already on the current tab, do nothing
+    if (activeTab === tabName) return;
+
+    // Remove active state from all tabs
+    const allTabs = document.querySelectorAll('[id^="tab-"]');
+    allTabs.forEach(tab => {
+        tab.classList.remove('active');
+    });
+
+    // Hide all content
+    const allContents = document.querySelectorAll('[id^="tab-content-"]');
+    allContents.forEach(content => {
+        content.classList.add('hidden');
+    });
+
+    // Show current content and set active state
+    const currentTab = document.getElementById(`tab-${tabName}`);
+    const currentContent = document.getElementById(`tab-content-${tabName}`);
+
+    if (currentTab) {
+        currentTab.classList.add('active');
+    }
+
+    if (currentContent) {
+        currentContent.classList.remove('hidden');
+    }
+
+    // Refresh data when switching to the corresponding tab
+    switch (tabName) {
+        case 'expenses':
+            refreshExpensesList();
+            break;
+        case 'payments':
+            refreshPaymentsList();
+            break;
+        case 'recurring':
+            refreshRecurringList();
+            break;
+        case 'members':
+            renderMemberList();
+            break;
+        case 'invite':
+            // Invite page needs no special handling
+            break;
+        case 'manage':
+            // Manage page special handling
+            break;
+        case 'audit':
+            // Audit page special handling
+            break;
+    }
+
+    activeTab = tabName;
+    console.log('Successfully switched to tab:', tabName);
+}
+
+// --- Event Binding ---
+function bindEvents() {
+    const userDisplayButton = document.getElementById('user-display-button');
+    if (userDisplayButton) {
+        userDisplayButton.addEventListener('click', toggleUserMenu);
+    }
+	
+	// --- add by sunzhe 03 Nov ---
+    /* // Find the form within the "add expense" modal
+    const addExpenseForm = document.getElementById('expense-form'); 
+    if (addExpenseForm) {
+        // Note: handleSaveExpense is imported from expense.js
+        addExpenseForm.addEventListener('submit', handleSaveExpense); 
+        console.log('Bound submit event to expense-form');
+    } else {
+        console.error('Could not find expense-form to bind event');
+    } */
+    // --- END OF ADDED SECTION ---
+	
+		// --- 修复重复绑定：在绑定之前先移除 ---
+    const addExpenseForm = document.getElementById('expense-form'); 
+    if (addExpenseForm) {
+        // 1. 在绑定新事件之前，先移除可能存在的旧事件
+        addExpenseForm.removeEventListener('submit', handleSaveExpense); 
+        
+        // 2. 绑定新的事件
+        addExpenseForm.addEventListener('submit', handleSaveExpense); 
+        console.log('Bound submit event to expense-form');
+    } else {
+        console.error('Could not find expense-form to bind event');
+    }
+	
+
+    // Bind member menu close event
+    document.addEventListener('click', function () {
+        const allMenus = document.querySelectorAll('[id^="member-menu-"]');
+        allMenus.forEach(menu => {
+            menu.classList.add('hidden');
+        });
+    });
+
+    console.log('Event binding complete');
+}
+
+// --- User Menu Logic ---
+function toggleUserMenu() {
+    const dropdown = document.getElementById('logout-dropdown');
+    const caret = document.getElementById('caret-icon');
+
+    if (!dropdown || !caret) return;
+
+    if (dropdown.classList.contains('hidden')) {
+        dropdown.classList.remove('hidden');
+        caret.classList.add('rotate-180');
+    } else {
+        dropdown.classList.add('hidden');
+        caret.classList.remove('rotate-180');
+    }
+}
+
+// --- Page Navigation Logic ---
+function handleBackToPreviousPage() {
+    window.history.back();
+}
+
+function handleBackToDashboard() {
+    window.location.href = '/home';
+}
+
+function handleMyProfile() {
+    console.log('Navigate to My Profile');
+    // TODO: Implement navigation logic to My Profile page
+}
+
+function handleLogoutUser() {
+    console.log('Logging out');
+    window.handleLogout();
+    window.location.href = '/login';
+}
+
+// --- Other Functions ---
+function refreshRecurringList() {
+    // TODO: Implement recurring expense list refresh
+}
+
+// --- Modal Functions ---
+function handleSettleUp() {
+    showCustomAlert('Settle Up Feature', 'Settle all debts feature is under development');
+}
+window.handleAddNewExpense = function () {
+    console.log('Show add expense modal');
+	
+	initializeExpenseForm(); // add by sunzhe 03 Nov
+    const modal = document.getElementById('add-expense-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+};
+
+window.handleAddNewPayment = function () {
+    console.log('Show add payment modal');
+    const modal = document.getElementById('add-payment-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+};
+
+window.handleAddNewRecurringExpense = function () {
+    console.log('Show add recurring expense modal');
+    const modal = document.getElementById('add-recurring-expense-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+};
+
+window.handleSettleUp = function () {
+    console.log('Settle all debts');
+    showCustomAlert('Settle Up Feature', 'Settle all debts feature is under development');
+};
+// Add functions to close modals
+window.handleRecurringCancel = function () {
+    console.log('Close recurring expense modal');
+    const modal = document.getElementById('add-recurring-expense-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+window.handleCancel = function () {
+    console.log('Close expense modal');
+    const modal = document.getElementById('add-expense-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+window.handlePaymentCancel = function () {
+    console.log('Close payment modal');
+    const modal = document.getElementById('add-payment-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
+
+
+// --- Global Exports ---
+window.initializePage = initializePage;
+window.setActiveTab = setActiveTab;
+window.toggleUserMenu = toggleUserMenu;
+window.handleBackToPreviousPage = handleBackToPreviousPage;
+window.handleBackToDashboard = handleBackToDashboard;
+window.handleMyProfile = handleMyProfile;
+window.handleLogoutUser = handleLogoutUser;
+window.handleSettleUp = handleSettleUp;
+window.handleAddNewExpense = handleAddNewExpense;
+window.handleAddNewPayment = handleAddNewPayment;
+window.handleAddNewRecurringExpense = handleAddNewRecurringExpense;
+window.handleRecurringCancel = handleRecurringCancel;
+window.handleCancel = handleCancel;
+window.handlePaymentCancel = handlePaymentCancel;
+window.loadExpensesList = loadExpensesList;
+
+// Export data loading functions
+window.loadMembersList = loadMembersList;
+
+// Export other necessary functions
+window.showCustomAlert = showCustomAlert;
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('DOM content loaded, starting group page initialization...');
+    initializePage();
+});
