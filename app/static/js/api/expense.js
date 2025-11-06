@@ -1,4 +1,7 @@
 // app/static/js/api/expense.js
+// 防止缓存版本: 2025.11.06
+const JS_CACHE_VERSION = '2025.11.06.001';
+
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
 import { getTodayDate, requireAdmin, getAuthToken, showCustomAlert } from '../ui/utils.js';
 

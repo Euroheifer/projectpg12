@@ -1,4 +1,6 @@
 // settlement.js - 结算功能
+// 防止缓存版本: 2025.11.06
+const JS_CACHE_VERSION = '2025.11.06.001';
 
 import { getAuthToken, centsToAmountString, showCustomAlert, closeCustomAlert } from '../ui/utils.js';
 

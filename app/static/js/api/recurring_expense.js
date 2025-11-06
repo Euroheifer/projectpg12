@@ -1,4 +1,6 @@
 // recurring_expense.js - 定期费用相关的CRUD操作、频率设置
+// 防止缓存版本: 2025.11.06
+const JS_CACHE_VERSION = '2025.11.06.001';
 
 // 导入金额转换函数
 import { centsToAmountString } from './amount_utils.js';

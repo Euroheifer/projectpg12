@@ -1,4 +1,7 @@
 // file: app/static/js/api/groups.js
+// 防止缓存版本: 2025.11.06
+const JS_CACHE_VERSION = '2025.11.06.001';
+
 import { showCustomAlert } from '../ui/utils.js';
 import { getAuthToken } from '../ui/utils.js';
 

@@ -1,4 +1,7 @@
 // member_management.js - 成员管理、邀请、角色设置
+// 防止缓存版本: 2025.11.06
+const JS_CACHE_VERSION = '2025.11.06.001';
+
 import { requireAdmin, isValidEmail, getAuthToken } from '../ui/utils.js';
 
 // --- 全局状态 ---
