@@ -1046,6 +1046,7 @@ window.handleDeleteRecurringExpense = handleDeleteRecurringExpense;
 window.handleEditRecurringExpense = handleEditRecurringExpense;
 window.selectFrequency = selectFrequency;
 window.setRecurringSplitMethod = setRecurringSplitMethod;
+window.handleRecurringAmountChange = handleRecurringAmountChange;
 window.refreshRecurringList = refreshRecurringList;
 window.openRecurringDetail = openRecurringDetail;
 window.initializeRecurringExpenseForm = initializeRecurringExpenseForm;

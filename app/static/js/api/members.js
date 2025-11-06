@@ -626,7 +626,7 @@ export async function inviteNewMember() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ invitee_email: email })
         });
 
         if (response.ok) {

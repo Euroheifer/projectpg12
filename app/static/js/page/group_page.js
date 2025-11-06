@@ -861,9 +861,9 @@ window.handleDetailCancel = function() {
 
 window.handleSaveRecurringExpense = function(event) {
     event.preventDefault();
-    // 修复：使用实际的定期费用保存功能
-    if (window.handleSaveRecurringExpense) {
-        window.handleSaveRecurringExpense(event);
+    // 直接调用实际的实现函数
+    if (typeof handleSaveRecurringExpense === 'function') {
+        handleSaveRecurringExpense(event);
     } else {
         showCustomAlert('Info', 'Recurring expense save feature is under development');
     }
@@ -880,8 +880,11 @@ window.handleSaveRecurringExpense = function(event) {
 
 window.setRecurringSplitMethod = function(method) {
     console.log('Setting recurring split method to:', method);
-    if (window.setRecurringSplitMethod) {
-        window.setRecurringSplitMethod(method);
+    // 直接调用实际的实现函数
+    if (typeof setRecurringSplitMethod === 'function') {
+        setRecurringSplitMethod(method);
+    } else {
+        console.warn('setRecurringSplitMethod function not found');
     }
 };
 
@@ -975,9 +978,11 @@ window.handleSavePayment = function(event) {
 
 window.handleUpdateExpense = function(event) {
     event.preventDefault();
-    // This function should be implemented in expense.js
-    if (window.handleUpdateExpense) {
-        window.handleUpdateExpense(event);
+    // 直接调用实际的实现函数
+    if (typeof handleUpdateExpense === 'function') {
+        handleUpdateExpense(event);
+    } else {
+        showCustomAlert('Error', '费用更新功能暂未就绪');
     }
 };
 
