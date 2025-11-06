@@ -933,7 +933,7 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span class="text-gray-500 sm:text-sm"> $ </span>
                         </div>
-                        <input mber" id="recurring-amount" name="recurring-amount" required step="0.01"
+                        <input type="number" id="recurring-amount" name="recurring-amount" required step="0.01"
                             min="0.01"
                             class="block w-full pl-8 pr-12 border border-gray-300 rounded-md py-2 focus:outline-none focus:ring-warning focus:border-warning sm:text-sm"
                             placeholder="0.00" oninput="handleRecurringAmountChange()">
@@ -972,14 +972,15 @@
                                         <div class="text-xs opacity-75">每周同一天</div>
                                     </div>
                                 </div>
-                                <div class="frequency-optielectFrequency('monthly')">
+                                <div class="frequency-option" onclick="selectFrequency('monthly')">
                                     <div class="text-center">
                                         <div class="text-lg font-semibold">每月</div>
                                         <div class="text-xs opacity-75">每月同一天</div>
                                     </div>
                                 </div>
                                 <div class="frequency-option" onclick="selectFrequency('yearly')">
-                                    <div class="text-center                             <div class="text-lg font-semibold">每年</div>
+                                    <div class="text-center">
+                                        <div class="text-lg font-semibold">每年</div>
                                         <div class="text-xs opacity-75">每年同一天</div>
                                     </div>
                                 </div>
@@ -999,7 +1000,8 @@
                                     <label for="repeat-end" class="block text-sm font-medium text-gray-700">结束日期
                                         (可选)</label>
                                     <input type="date" id="repeat-end" name="repeat-end"
-                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-warning focus:border-warning sm:                              </div>
+                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-warning focus:border-warning sm:text-sm">
+                                </div>
                             </div>
                         </div>
 
@@ -1015,7 +1017,7 @@
                                     <div class="text-xs text-gray-500 mt-1" id="preview-initial-amount">金额: $0.00</div>
                                 </div>
                             </div>
-                        ="text-xs text-gray-500 mt-2" id="preview-summary">共 1 笔费用</p>
+                            <p class="text-xs text-gray-500 mt-2" id="preview-summary">共 1 笔费用</p>
                         </div>
                     </div>
                 </div>
@@ -1023,7 +1025,7 @@
                 <div id="recurring-participants-section">
                     <label class="block text-sm font-medium text-gray-700 mb-3">参与者 (需要分摊费用的成员)</label>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        <!-- 参与者复选框将é-->
+                        <!-- 参与者复选框将通过JavaScript动态生成 -->
                     </div>
                     <p class="text-xs text-gray-500 mt-2">请选择需要分摊此费用的成员</p>
                 </div>
@@ -1123,7 +1125,7 @@
             </div>
 
             <div id="recurring-detail-participants-section">
-             l class="block text-sm font-medium text-gray-700 mb-3">参与者 (需要分摊费用的成员)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-3">参与者 (需要分摊费用的成员)</label>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-gray-50 rounded-lg border border-gray-200"
                     id="recurring-detail-participants-container">
                     <!-- 参与者列表将通过JavaScript动态生成 -->
@@ -1131,7 +1133,8 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">分摊方式</               <p class="text-gray-900" id="recurring-detail-split-method">Equally Split</p>
+                <label class="block text-sm font-medium text-gray-700 mb-2">分摊方式</label>
+                <p class="text-gray-900" id="recurring-detail-split-method">Equally Split</p>
             </div>
 
             <div id="recurring-detail-split-details-section" class="mt-6 p-4 bg-gray-50 rounded-lg border">
@@ -1150,8 +1153,7 @@
                     class="py-3 px-6 bg-gray-600 text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-gray-700 transition duration-200">
                     禁用
                 </button>
-                <button onclick="handleEnableRecurringExpense()" id="enable-recurring-btn" class="hidden"
-                    class="py-3 px-6 bg-succtext-white text-lg font-semibold rounded-xl shadow-lg hover:bg-emerald-600 transition duration-200">
+                <button onclick="handleEnableRecurringExpense()" id="enable-recurring-btn" class="hidden py-3 px-6 bg-success text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-emerald-600 transition duration-200">
                     启用
                 </button>
                 <button onclick="handleDeleteRecurringExpense()"
@@ -1191,7 +1193,8 @@
                     <label for="payment-detail-description" class="block text-sm font-medium text-gray-700">支付描述</label>
                     <input type="text" id="payment-detail-description" name="payment-detail-description" required
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-success focus:border-success sm:text-sm"
-                        placeholder="例如ï                </div>
+                        placeholder="例如：还款给小明、结算交通费">
+                </div>
 
                 <div>
                     <label for="payment-detail-amount" class="block text-sm font-medium text-gray-700">支付金额 ($)</label>
@@ -1199,7 +1202,7 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <span class="text-gray-500 sm:text-sm"> $ </span>
                         </div>
-                        <input type="number" id="payail-amount" name="payment-detail-amount" required
+                        <input type="number" id="payment-detail-amount" name="payment-detail-amount" required
                             step="0.01" min="0.01"
                             class="block w-full pl-8 pr-12 border border-gray-300 rounded-md py-2 focus:outline-none focus:ring-success focus:border-success sm:text-sm"
                             placeholder="0.00">
@@ -1216,38 +1219,41 @@
                 </div>
 
                 <div>
-                    <label for="payment-deta"
+                    <label for="payment-detail-for-expense"
                         class="block text-sm font-medium text-gray-700">为哪个费用支付?</label>
                     <select id="payment-detail-for-expense" name="payment-detail-for-expense" required
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-success focus:border-success sm:text-sm">
                         <option value="">请选择费用</option>
-                        <!-- 选项将通过JavaScript动态生                  </select>
+                        <!-- 选项将通过JavaScript动态生成 -->
+                    </select>
                 </div>
 
                 <div>
                     <label for="payment-detail-payer" class="block text-sm font-medium text-gray-700">谁支付了?</label>
                     <select id="payment-detail-payer" name="payment-detail-payer" required
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-success focus:border-success sm:text-sm">
-                        <option value="">请选æ                       <!-- 选项将通过JavaScript动态生成 -->
+                        <option value="">请选择付款人</option>
+                        <!-- 选项将通过JavaScript动态生成 -->
                     </select>
                 </div>
 
                 <div>
                     <label for="payment-detail-date" class="block text-sm font-medium text-gray-700">支付日期</label>
                     <input type="date" id="payment-detail-date" name="payment-detail-date" required
-                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-success fr-success sm:text-sm">
+                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-success focus:border-success sm:text-sm">
                 </div>
 
                 <div id="payment-detail-receipt-upload-section">
                     <label class="block text-sm font-medium text-gray-700 mb-2">支付凭证 (可选)</label>
                     <label for="payment-detail-receipt-file"
                         class="flex items-center justify-center p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-success hover:bg-success/5 transition duration-150">
-                        <svg c6 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        <svg class="w-6 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                             xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                         </svg>
-                        <span id="payment-detail-file-name-display" class="text-gray-700">点击上传支付凭证图片 (最大 1MB)</s                 </label>
+                        <span id="payment-detail-file-name-display" class="text-gray-700">点击上传支付凭证图片 (最大 1MB)</span>
+                    </label>
                     <input type="file" id="payment-detail-receipt-file" name="payment-detail-receipt-file"
                         accept="image/*" onchange="updatePaymentDetailFileNameDisplay(this)">
                     <p class="text-xs text-gray-500 mt-1">仅支持图片格式 (JPEG, PNG)。</p>

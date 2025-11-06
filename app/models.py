@@ -12,7 +12,6 @@ from sqlalchemy import (
     Text,
     func,
     UniqueConstraint,
-    Numeric,
 )
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -42,8 +41,6 @@ class User(Base):
     payments_received = relationship("Payment", foreign_keys="Payment.to_user_id", back_populates="to_user")
     sent_invitations = relationship("GroupInvitation", foreign_keys="GroupInvitation.inviter_id", back_populates="inviter")
     received_invitations = relationship("GroupInvitation", foreign_keys="GroupInvitation.invitee_id", back_populates="invitee")
-    settlements_made = relationship("Settlement", foreign_keys="Settlement.from_user_id", back_populates="from_user")
-    settlements_received = relationship("Settlement", foreign_keys="Settlement.to_user_id", back_populates="to_user")
 
 
 class Group(Base):
@@ -58,7 +55,6 @@ class Group(Base):
     admin = relationship("User", back_populates="groups_created")
     members = relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")
     invitations = relationship("GroupInvitation", back_populates="group", cascade="all, delete-orphan")
-    settlements = relationship("Settlement", back_populates="group", cascade="all, delete-orphan")
 
    
 
@@ -205,19 +201,3 @@ class AuditLog(Base):
 
     user = relationship("User")
     group = relationship("Group")
-
-
-class Settlement(Base):
-    __tablename__ = "settlements"
-
-    id = Column(Integer, primary_key=True, index=True)
-    group_id = Column(Integer, ForeignKey("groups.id"), nullable=False)
-    from_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    to_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    amount = Column(Numeric(10, 2), nullable=False)  # Store in Yuan, not cents
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    notes = Column(String, nullable=True)
-
-    group = relationship("Group", back_populates="settlements")
-    from_user = relationship("User", foreign_keys=[from_user_id], back_populates="settlements_made")
-    to_user = relationship("User", foreign_keys=[to_user_id], back_populates="settlements_received")

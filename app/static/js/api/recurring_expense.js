@@ -1,5 +1,8 @@
 // recurring_expense.js - 定期费用相关的CRUD操作、频率设置
 
+// 导入金额转换函数
+import { centsToAmountString } from './amount_utils.js';
+
 // --- 全局状态 ---
 let recurringExpenseState = {
     isRecurring: false,
@@ -128,10 +131,10 @@ function initializeSplitMethod() {
  * 初始化频率选择
  */
 function initializeFrequencySelection() {
-    const frequencyButtons = document.querySelectorAll('.frequency-btn');
+    const frequencyButtons = document.querySelectorAll('.frequency-option');
     frequencyButtons.forEach(btn => {
         btn.addEventListener('click', () => {
-            const frequency = btn.getAttribute('data-frequency');
+            const frequency = btn.getAttribute('data-frequency') || btn.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
             selectFrequency(frequency);
         });
     });
@@ -194,11 +197,11 @@ export function selectFrequency(frequency) {
     recurringExpenseState.frequency = frequency;
     
     // 更新UI选中状态
-    const frequencyButtons = document.querySelectorAll('.frequency-btn');
+    const frequencyButtons = document.querySelectorAll('.frequency-option');
     frequencyButtons.forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('data-frequency') === frequency) {
-            btn.classList.add('active');
+        btn.classList.remove('selected');
+        if (btn.getAttribute('data-frequency') === frequency || btn.getAttribute('onclick')?.includes(`'${frequency}'`)) {
+            btn.classList.add('selected');
         }
     });
     
@@ -218,9 +221,9 @@ export function setRecurringSplitMethod(method) {
     // 更新按钮状态
     const methodButtons = document.querySelectorAll('.split-method-btn');
     methodButtons.forEach(btn => {
-        btn.classList.remove('active');
+        btn.classList.remove('selected');
         if (btn.getAttribute('data-method') === method) {
-            btn.classList.add('active');
+            btn.classList.add('selected');
         }
     });
     
@@ -745,9 +748,10 @@ function updatePreviewList(previewData) {
     previewData.slice(0, 10).forEach(item => { // 只显示前10个实例
         const itemElement = document.createElement('div');
         itemElement.className = `preview-item ${item.isActive ? 'active' : 'inactive'}`;
+        const amountCents = Math.round(item.amount * 100); // 将金额转换为分
         itemElement.innerHTML = `
             <span class="date">${item.date}</span>
-            <span class="amount">¥${item.amount.toFixed(2)}</span>
+            <span class="amount">${centsToAmountString(amountCents)}</span>
         `;
         previewContainer.appendChild(itemElement);
     });
@@ -771,6 +775,8 @@ function updatePreviewSummary(previewData) {
     const totalAmount = previewData.reduce((sum, item) => sum + item.amount, 0);
     const activeInstances = previewData.filter(item => item.isActive).length;
     
+    const totalAmountCents = Math.round(totalAmount * 100); // 将总金额转换为分
+    
     summaryContainer.innerHTML = `
         <div class="summary-item">
             <span>总实例数:</span>
@@ -778,7 +784,7 @@ function updatePreviewSummary(previewData) {
         </div>
         <div class="summary-item">
             <span>总金额:</span>
-            <span>¥${totalAmount.toFixed(2)}</span>
+            <span>${centsToAmountString(totalAmountCents)}</span>
         </div>
         <div class="summary-item">
             <span>有效实例:</span>
@@ -816,11 +822,12 @@ function updateSplitDetailDisplay() {
         // 使用member.username或member.name作为显示名称
         const memberName = member?.username || member?.name || `参与者${split.participantId}`;
         
+        const amountCents = Math.round(split.amount * 100); // 将金额转换为分
         const detailElement = document.createElement('div');
         detailElement.className = 'split-detail-item';
         detailElement.innerHTML = `
             <span class="participant">${memberName}</span>
-            <span class="amount">¥${split.amount.toFixed(2)}</span>
+            <span class="amount">${centsToAmountString(amountCents)}</span>
             <span class="percentage">${split.percentage}%</span>
         `;
         detailContainer.appendChild(detailElement);
@@ -837,11 +844,13 @@ function updateRecurringSummary() {
     
     const summaryElement = document.getElementById('recurring-summary');
     if (summaryElement) {
+        const totalAmountCents = Math.round(totalAmount * 100);
+        const perPersonAmountCents = Math.round(perPersonAmount * 100);
         summaryElement.innerHTML = `
             <div class="summary-info">
-                <span>总金额: ¥${totalAmount.toFixed(2)}</span>
+                <span>总金额: ${centsToAmountString(totalAmountCents)}</span>
                 <span>参与人数: ${participantsCount}</span>
-                <span>每人平均: ¥${perPersonAmount}</span>
+                <span>每人平均: ${centsToAmountString(perPersonAmountCents)}</span>
             </div>
         `;
     }
@@ -983,7 +992,7 @@ function createRecurringExpenseElement(expense) {
             </span>
         </div>
         <div class="expense-details">
-            <span class="amount">¥${expense.amount.toFixed(2)}</span>
+            <span class="amount">${centsToAmountString(Math.round(expense.amount * 100))}</span>
             <span class="frequency">${getFrequencyLabel(expense.frequency)}</span>
             <span class="payer">付款人: ${expense.payer_name || '未知'}</span>
         </div>
