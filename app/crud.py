@@ -1178,6 +1178,9 @@ def calculate_group_settlement_balance(db: Session, group_id: int) -> Dict[int, 
         balance_info = member_balances[member_id]
         final_balance = balance_info['total_payments_made'] - balance_info['total_payments_received']
         balance_info['final_balance'] = final_balance
+        
+    # 调试信息：确保final_balance字段存在
+    logging.debug(f"DEBUG: Calculated final balances: {member_balances}")
     
     return member_balances, member_data
 
@@ -1191,6 +1194,13 @@ def get_group_settlement_summary(db: Session, group_id: int) -> Dict:
     
     # 计算结算余额
     member_balances, member_data = calculate_group_settlement_balance(db, group_id)
+    
+    # 调试信息：检查member_balances的结构
+    logging.debug(f"DEBUG: member_balances keys: {list(member_balances.keys())}")
+    if member_balances:
+        first_key = list(member_balances.keys())[0]
+        logging.debug(f"DEBUG: first member balance keys: {list(member_balances[first_key].keys())}")
+        logging.debug(f"DEBUG: first member balance data: {member_balances[first_key]}")
     
     # 获取群组信息
     group = get_group_by_id(db, group_id)

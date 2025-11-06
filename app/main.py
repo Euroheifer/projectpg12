@@ -1115,6 +1115,7 @@ def get_user_expense_balance(
 
 # *********** end of Payment & Balance *********** #
 
+@app.get("/groups/{group_id}/audit-logs", response_model=List[schemas.AuditLog])
 @app.get("/groups/{group_id}/audit-trail", response_model=List[schemas.AuditLog])
 def read_audit_trail(
     group_id: int,
