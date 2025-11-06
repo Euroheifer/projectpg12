@@ -368,6 +368,14 @@ export function updateRecurringPreview() {
 }
 
 /**
+ * 处理定期费用金额变化
+ */
+export function handleRecurringAmountChange() {
+    console.log('定期费用金额变化');
+    updatePreviewSummary();
+}
+
+/**
  * 保存定期费用
  */
 export async function handleSaveRecurringExpense(event) {
@@ -647,6 +655,12 @@ export function openRecurringDetail(expenseId) {
     // API调用获取定期费用详情
     const groupId = window.currentGroupId;
     fetch(`/groups/${groupId}/recurring-expenses/${expenseId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${window.authToken}`
+        }
+    })
         .then(response => response.json())
         .then(expense => {
             // 填充详情表单
@@ -1079,6 +1093,7 @@ function getFrequencyLabel(frequency) {
 
 // 将函数绑定到window对象，使其可以在HTML中直接调用
 window.handleSaveRecurringExpense = handleSaveRecurringExpense;
+window.handleRecurringAmountChange = handleRecurringAmountChange;
 window.handleDisableRecurringExpense = handleDisableRecurringExpense;
 window.handleEnableRecurringExpense = handleEnableRecurringExpense;
 window.handleDeleteRecurringExpense = handleDeleteRecurringExpense;
