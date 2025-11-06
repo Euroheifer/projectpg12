@@ -453,11 +453,6 @@ export async function handleEnableRecurringExpense(expenseId) {
             },
             body: JSON.stringify({ is_active: true })
         });
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
         
         // 处理响应
         if (response.ok) {

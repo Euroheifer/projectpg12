@@ -64,9 +64,6 @@ export async function getSettlementInfo(groupId) {
             group_id: groupId,
             message: '结算功能暂未实现'
         };
-            error: '结算API暂不可用',
-            message: '结算功能正在开发中，请稍后再试'
-        };
         
     } catch (error) {
         console.error('获取结算信息失败:', error);
