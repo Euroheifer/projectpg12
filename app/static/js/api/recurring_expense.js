@@ -116,28 +116,40 @@ function initializePayerSelector() {
 function initializeParticipantSelection() {
     const participantContainer = document.getElementById('recurring-participants-section');
     if (participantContainer && window.groupMembers) {
-        participantContainer.innerHTML = '';
-        window.groupMembers.forEach(member => {
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            // 修复：使用正确的 member.user_id 作为值
-            const memberId = member.user_id;
-            checkbox.id = `participant-${memberId}`;
-            checkbox.value = memberId;
-            checkbox.addEventListener('change', handleParticipantToggle);
-            
-            const label = document.createElement('label');
-            label.setAttribute('for', `participant-${memberId}`);
-            // 修复：使用正确的成员名称获取逻辑
-            const memberName = member.user?.username || member.nickname || `用户${memberId}`;
-            label.textContent = memberName;
-            
-            const container = document.createElement('div');
-            container.appendChild(checkbox);
-            container.appendChild(label);
-            participantContainer.appendChild(container);
-        });
-        console.log('已初始化参与者选择，参与者数量:', window.groupMembers.length, '成员数据示例:', window.groupMembers[0]);
+        // 找到包含参与者复选框的grid容器
+        const gridContainer = participantContainer.querySelector('.grid');
+        if (gridContainer) {
+            gridContainer.innerHTML = '';
+            window.groupMembers.forEach(member => {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'mr-2';
+                // 修复：使用正确的 member.user_id 作为值
+                const memberId = member.user_id;
+                checkbox.id = `participant-${memberId}`;
+                checkbox.value = memberId;
+                checkbox.addEventListener('change', handleParticipantToggle);
+                
+                const label = document.createElement('label');
+                label.setAttribute('for', `participant-${memberId}`);
+                label.className = 'flex items-center cursor-pointer';
+                // 修复：使用正确的成员名称获取逻辑
+                const memberName = member.user?.username || member.nickname || `用户${memberId}`;
+                
+                label.innerHTML = `
+                    <span class="ml-2">${memberName}</span>
+                `;
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex items-center p-2 hover:bg-gray-100 rounded';
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(label);
+                gridContainer.appendChild(wrapper);
+            });
+            console.log('已初始化参与者选择，参与者数量:', window.groupMembers.length, '成员数据示例:', window.groupMembers[0]);
+        } else {
+            console.error('找不到参与者grid容器');
+        }
     } else {
         console.error('找不到参与者容器或组员数据为空');
     }
@@ -210,8 +222,8 @@ function bindEventListeners() {
     }
     
     // 日期变化监听
-    const startDateInput = document.getElementById('recurring-start-date');
-    const endDateInput = document.getElementById('recurring-end-date');
+    const startDateInput = document.getElementById('repeat-start');
+    const endDateInput = document.getElementById('repeat-end');
     
     if (startDateInput) {
         startDateInput.addEventListener('change', handleDateChange);
@@ -343,8 +355,8 @@ export function handleRecurringAmountChange() {
 export function updateRecurringPreview() {
     console.log('更新定期费用预览');
     
-    const startDate = document.getElementById('recurring-start-date')?.value;
-    const endDate = document.getElementById('recurring-end-date')?.value;
+    const startDate = document.getElementById('repeat-start')?.value;
+    const endDate = document.getElementById('repeat-end')?.value;
     const totalAmount = parseFloat(document.getElementById('recurring-amount')?.value) || 0;
     
     if (!startDate || totalAmount <= 0) {
@@ -365,14 +377,6 @@ export function updateRecurringPreview() {
     
     // 更新预览摘要
     updatePreviewSummary(previewData);
-}
-
-/**
- * 处理定期费用金额变化
- */
-export function handleRecurringAmountChange() {
-    console.log('定期费用金额变化');
-    updatePreviewSummary();
 }
 
 /**
@@ -667,7 +671,7 @@ export function openRecurringDetail(expenseId) {
             populateRecurringDetailForm(expense);
             
             // 打开详情弹窗
-            openRecurringExpenseModal();
+            openRecurringDetailModal();
         })
         .catch(error => {
             console.error('获取定期费用详情失败:', error);
@@ -758,8 +762,8 @@ function handleParticipantToggle(event) {
  * 处理日期变化
  */
 function handleDateChange(event) {
-    const startDate = document.getElementById('recurring-start-date')?.value;
-    const endDate = document.getElementById('recurring-end-date')?.value;
+    const startDate = document.getElementById('repeat-start')?.value;
+    const endDate = document.getElementById('repeat-end')?.value;
     
     recurringExpenseState.startDate = startDate;
     recurringExpenseState.endDate = endDate;
@@ -984,9 +988,9 @@ function showMessage(message, type = 'info') {
  * 关闭定期费用模态框
  */
 function closeRecurringExpenseModal() {
-    const modal = document.getElementById('recurring-expense-modal');
+    const modal = document.getElementById('add-recurring-expense-modal');
     if (modal) {
-        modal.style.display = 'none';
+        modal.classList.add('hidden');
     }
     
     // 重置状态
@@ -994,13 +998,68 @@ function closeRecurringExpenseModal() {
 }
 
 /**
+ * 处理定期费用表单取消
+ */
+export function handleRecurringCancel() {
+    console.log('取消定期费用操作');
+    
+    // 关闭模态框
+    closeRecurringExpenseModal();
+    
+    // 重置表单内容
+    const form = document.getElementById('recurring-expense-form');
+    if (form) {
+        form.reset();
+    }
+    
+    // 清除预览
+    clearPreviewDisplay();
+}
+
+/**
+ * 保存定期费用处理器 (HTML中引用的函数)
+ */
+export function saveRecurringExpenseHandler(event) {
+    return handleSaveRecurringExpense(event);
+}
+
+/**
  * 打开定期费用模态框
  */
 function openRecurringExpenseModal() {
-    const modal = document.getElementById('recurring-expense-modal');
+    const modal = document.getElementById('add-recurring-expense-modal');
     if (modal) {
-        modal.style.display = 'block';
+        modal.classList.remove('hidden');
     }
+}
+
+/**
+ * 打开定期费用详情模态框
+ */
+function openRecurringDetailModal() {
+    const modal = document.getElementById('recurring-detail-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+/**
+ * 关闭定期费用详情模态框
+ */
+function closeRecurringDetailModal() {
+    const modal = document.getElementById('recurring-detail-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    currentEditingRecurringExpense = null;
+}
+
+/**
+ * 处理定期费用详情取消
+ */
+export function handleRecurringDetailCancel() {
+    console.log('取消定期费用详情操作');
+    closeRecurringDetailModal();
 }
 
 /**
@@ -1100,8 +1159,11 @@ window.handleDeleteRecurringExpense = handleDeleteRecurringExpense;
 window.handleEditRecurringExpense = handleEditRecurringExpense;
 window.selectFrequency = selectFrequency;
 window.setRecurringSplitMethod = setRecurringSplitMethod;
-window.handleRecurringAmountChange = handleRecurringAmountChange;
 window.refreshRecurringList = refreshRecurringList;
 window.openRecurringDetail = openRecurringDetail;
 window.initializeRecurringExpenseForm = initializeRecurringExpenseForm;
 window.updateRecurringFormMembers = updateRecurringFormMembers;
+window.showMessage = showMessage;
+window.handleRecurringCancel = handleRecurringCancel;
+window.saveRecurringExpenseHandler = saveRecurringExpenseHandler;
+window.handleRecurringDetailCancel = handleRecurringDetailCancel;
