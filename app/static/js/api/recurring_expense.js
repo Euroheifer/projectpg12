@@ -490,11 +490,6 @@ export async function handleDeleteRecurringExpense(expenseId) {
                 'Authorization': `Bearer ${getAuthToken()}`
             }
         });
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
         
         // 处理响应
         if (response.ok) {
