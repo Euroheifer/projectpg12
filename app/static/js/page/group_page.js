@@ -142,10 +142,12 @@ async function initializePage() {
         // 6. Load data lists
         await loadDataLists();
 
-        // 7. Initialize settlement module
+        // 7. Initialize settlement module - 暂时禁用避免API错误
+        // 注释原因：后端结算API暂未实现，自动初始化会导致大量404错误
+        // 未来实现后可以重新启用此功能
         if (window.currentGroupId) {
             window.CURRENT_GROUP_ID = window.currentGroupId; // 统一变量名为大写
-            initializeSettlementModule();
+            // initializeSettlementModule(); // 暂时禁用
         }
 
         console.log(`Group page initialization complete - Group: ${window.currentGroupId}, User: ${window.CURRENT_USER_NAME}, Permission: ${window.IS_CURRENT_USER_ADMIN ? 'Admin' : 'Member'}`);
