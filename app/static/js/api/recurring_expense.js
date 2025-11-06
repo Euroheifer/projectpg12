@@ -2,8 +2,9 @@
 // 防止缓存版本: 2025.11.06
 const JS_CACHE_VERSION = '2025.11.06.001';
 
-// 导入金额转换函数 - 修复导入路径
-import { centsToAmountString } from './amount_utils.js';
+// 从 utils.js 导入金额转换函数
+// 注意：amount_utils.js 的功能已在 utils.js 中实现
+import { centsToAmountString } from '../ui/utils.js';
 
 // --- 全局状态 ---
 let recurringExpenseState = {

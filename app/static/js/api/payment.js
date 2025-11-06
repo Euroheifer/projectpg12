@@ -591,6 +591,15 @@ export async function refreshPaymentsList() {
                     expenseId = expenseIdElement.value;
                 }
             }
+            
+            // 如果仍然没有费用ID，尝试从活动标签页或费用列表中获取
+            if (!expenseId && window.expensesList && window.expensesList.length > 0) {
+                // 如果当前在费用页面，默认获取第一笔费用的ID
+                if (window.activeTab === 'expenses' || !window.activeTab) {
+                    const firstExpense = window.expensesList[0];
+                    expenseId = firstExpense.id;
+                }
+            }
         }
         
         if (!expenseId) {

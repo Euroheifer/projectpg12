@@ -541,7 +541,10 @@ function setActiveTab(tabName) {
             populateGroupManagementFields();
             break;
         case 'audit':
-            // Audit page special handling
+            // Audit page special handling - Load audit logs
+            if (window.loadAuditLogs) {
+                window.loadAuditLogs();
+            }
             break;
     }
 

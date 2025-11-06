@@ -1,6 +1,6 @@
-// amount_utils.js - 金额转换工具函数
+// amount_utils.js - 金额转换工具函数（向后兼容）
 // 防止缓存版本: 2025.11.06
-const JS_CACHE_VERSION = '2025.11.06.001';
+const JS_CACHE_VERSION = '2025.11.06.002';
 
 /**
  * 将金额字符串转换为分（cents）
@@ -50,4 +50,4 @@ window.centsToAmountString = centsToAmountString;
 window.formatCurrency = formatCurrency;
 window.isValidAmount = isValidAmount;
 
-console.log('amount_utils.js 已加载，金额转换函数已暴露到全局');
+console.log('amount_utils.js 已加载，金额转换函数已暴露到全局 (v2025.11.06.002)');
