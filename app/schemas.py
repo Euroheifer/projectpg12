@@ -147,7 +147,7 @@ class ExpenseCreate(BaseModel):
     payer_id: int
     image_url: Optional[str] = None
     #date: Optional[date] = None  # 明确声明为可选
-    date: Optional[date] = None # 🔴 修复：从 str 改回 date 来修复 Scheduler 错误
+    date: Optional[date] = None # 🔴 修复：从 str 改回 date
     
 # class ExpenseUpdate(BaseModel):
     # description: Optional[str] = None
@@ -262,8 +262,8 @@ class ExpenseCreateWithSplits(ExpenseCreate):
     splits: List[ExpenseSplitCreate]
     split_type: str = "equal"
     #date: Optional[date] = None #03 Nov
-    # 🔴 修复：删除下面这行多余的定义
-    # date: Optional[date] = None 
+    # 🔴 修复：删除下面这行多余的定义，这导致了 422 错误
+    # date: Optional[date] = None
     
 class ExpenseWithSplits(Expense):
     splits: List[ExpenseSplit] = []
