@@ -1,6 +1,6 @@
 // /static/js/page/groups.js
-// 防止缓存版本: 2025.11.10.004 - 修复支付保存按钮
-const JS_CACHE_VERSION = '2025.11.10.004';
+// 防止缓存版本: 2025.11.10.005 - 修复审计日志 (Audit Log)
+const JS_CACHE_VERSION = '2025.11.10.005';
 
 import {
 //   getCurrentUser, // changed by sunzhe
@@ -543,6 +543,7 @@ function setActiveTab(tabName) {
         case 'audit':
             // Audit page special handling - Load audit logs
             if (window.loadAuditLogs) {
+                // 🔴 修复：调用 loadAuditLogs
                 window.loadAuditLogs();
             }
             break;
@@ -1127,3 +1128,140 @@ setTimeout(ensureGlobalFunctions, 1000);
         console.error('暴露全局函数时发生错误:', error);
     }
 })();
+
+// ----------------------------------------------------
+// 🔴 [START] 审计日志 (AUDIT LOG) 修复
+// ----------------------------------------------------
+
+/**
+ * (已修复) 加载审计日志
+ */
+window.loadAuditLogs = async function() {
+    const container = document.getElementById('audit-log-content');
+    if (!container) {
+        console.error('Audit log container not found');
+        return;
+    }
+    
+    try {
+        const token = getAuthToken();
+        if (!token) {
+            container.innerHTML = '<p class="text-center text-gray-500">用户未登录</p>';
+            return;
+        }
+        
+        const groupId = window.currentGroupId;
+        if (!groupId) {
+            container.innerHTML = '<p class="text-center text-gray-500">无法确定当前群组</p>';
+            return;
+        }
+        
+        // 显示加载状态
+        container.innerHTML = '<div class="text-center text-gray-500">正在加载审计日志...</div>';
+        
+        // 🔴 修复：使用正确的 API 路由 (来自 main.py)
+        const response = await fetch(`/groups/${groupId}/audit-trail`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const logs = await response.json();
+            
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500">暂无审计日志</p>';
+                return;
+            }
+            
+            // 渲染审计日志
+            renderAuditLogs(logs); // 🔴 修复：调用新的渲染函数
+            
+        } else {
+            const errorData = await response.json();
+            const errorMsg = errorData.detail || `HTTP ${response.status} 错误`;
+            console.error('加载审计日志失败:', errorMsg);
+            container.innerHTML = `<p class="text-center text-red-500">加载审计日志失败: ${errorMsg}</p>`;
+        }
+        
+    } catch (error) {
+        console.error('加载审计日志时发生错误:', error);
+        container.innerHTML = '<p class="text-center text-red-500">加载审计日志时发生网络错误</p>';
+    }
+}
+
+/**
+ * (已修复) 渲染审计日志
+ * @param {Array} logs - 从 API 获取的日志数组
+ */
+function renderAuditLogs(logs) {
+    const container = document.getElementById('audit-log-content');
+    if (!container) return;
+
+    const logsHTML = logs.map(log => {
+        // 🔴 修复 1: 使用 log.timestamp (来自 schemas.py)
+        const timestamp = new Date(log.timestamp).toLocaleString('zh-CN', {
+            year: 'numeric', month: '2-digit', day: '2-digit', 
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        // 🔴 修复 2: 使用 log.user.username (来自 schemas.py)
+        const username = log.user?.username || `用户ID: ${log.user_id}` || "未知用户";
+        
+        const action = log.action || '未知操作';
+        
+        // 🔴 修复 3: 安全地格式化 log.details
+        let detailsText = '';
+        if (log.details) {
+            try {
+                // 使用 JSON.stringify 优雅地格式化 [object Object]
+                detailsText = JSON.stringify(log.details, null, 2);
+            } catch (e) {
+                detailsText = '无法解析的详情';
+            }
+        }
+        
+        return `
+            <div class="p-3 bg-white rounded border border-gray-200 shadow-sm hover:shadow-md transition duration-150">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-500">${timestamp}</p>
+                        <p class="text-base font-medium text-gray-900 mt-1 truncate">
+                            用户 <span class="font-bold text-primary">${username}</span> 执行了 <span class="font-bold text-amber-600">${action}</span>
+                        </p>
+                        ${detailsText ? `
+                            <details class="mt-2 text-xs text-gray-600">
+                                <summary class="cursor-pointer hover:text-primary">查看详情</summary>
+                                <pre class="mt-1 p-2 bg-gray-100 rounded overflow-auto">${escapeHtml(detailsText)}</pre>
+                            </details>
+                        ` : ''}
+                    </div>
+                    <div class="text-right flex-shrink-0 ml-2">
+                        <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+                            审计日志
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    container.innerHTML = logsHTML;
+}
+
+/**
+ * 辅助函数：转义 HTML 
+ */
+function escapeHtml(text) {
+    if (typeof text !== 'string') return text;
+    return text
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+
+// ----------------------------------------------------
+// 🔴 [END] 审计日志 (AUDIT LOG) 修复
+// ----------------------------------------------------
