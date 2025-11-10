@@ -5,7 +5,7 @@ from fastapi.exceptions import RequestValidationError # 03 Nov
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import Annotated, List, Dict
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime # 🔴 修复：导入 datetime
 import logging, json
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.database import SessionLocal
@@ -1125,7 +1125,7 @@ def read_audit_trail(
     """Get the audit trail for a group (admins only)."""
     return crud.get_audit_logs(db=db, group_id=group_id)
 
-# ----------- Settlement Routes -----------
+# ----------- Settlement Routes (🔴 修复版本) -----------
 @app.get("/groups/{group_id}/settlement", response_model=schemas.SettlementSummary)
 def get_group_settlement(
     group_id: int,
@@ -1139,7 +1139,7 @@ def get_group_settlement(
     - 返回每个成员的余额、交易推荐等信息
     """
     try:
-        # 获取成员数据
+        # 1. 获取成员数据 (🔴 修复：这是缺失的步骤)
         members = crud.get_group_members(db, group_id)
         member_data = {member.user_id: {
             'user': member.user,
@@ -1150,12 +1150,11 @@ def get_group_settlement(
         # 记录成员数量用于调试
         logging.info(f"DEBUG: Group {group_id} has {len(members)} members")
         
-        # 获取结算信息 - 这里可能会有500错误
+        # 2. 获取结算信息 - 这里可能会有500错误
         settlement_summary = crud.get_group_settlement_summary(db, group_id)
         
-        # 添加推荐的支付路径
-        member_balances = {balance['user_id']: balance for balance in settlement_summary['balances']}
-        transactions = crud.generate_settlement_transactions(member_balances, member_data)
+        # 3. 添加推荐的支付路径 (🔴 修复：传递 'balances' 列表)
+        transactions = crud.generate_settlement_transactions(settlement_summary['balances'], member_data)
         settlement_summary['transactions'] = transactions
         
         return settlement_summary
@@ -1272,4 +1271,4 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=422,
         content={"detail": jsonable_encoder(exc.errors())},
-    ) 
+    )
