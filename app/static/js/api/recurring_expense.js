@@ -1024,6 +1024,10 @@ function openAddRecurringModal() {
         modal.classList.remove('hidden');
     }
     
+    // 🔴 v6.2修复：确保在显示模态框时初始化表单数据
+    console.log('🔧 打开定期费用模态框，初始化表单数据...');
+    updateRecurringFormMembers();
+    
     // 重置编辑状态
     currentEditingRecurringExpense = null;
 }
@@ -1107,6 +1111,22 @@ function initializeEventListeners() {
     } else {
         console.error('❌ 找不到金额输入框 recurring-amount');
     }
+    
+    // 🔴 v6.2修复：绑定重复频率按钮事件
+    const frequencyButtons = document.querySelectorAll('.frequency-option');
+    frequencyButtons.forEach(button => {
+        // 移除可能存在的内联onclick处理器
+        button.removeAttribute('onclick');
+        // 添加事件监听器
+        button.addEventListener('click', function() {
+            const frequency = this.getAttribute('data-frequency');
+            if (frequency) {
+                console.log('✅ 选择频率:', frequency);
+                selectFrequency(frequency);
+            }
+        });
+    });
+    console.log(`✅ ${frequencyButtons.length} 个重复频率按钮事件监听器已绑定`);
     
     // 绑定其他可能的表单事件
     const payerSelect = document.getElementById('recurring-payer');
