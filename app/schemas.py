@@ -262,7 +262,8 @@ class ExpenseCreateWithSplits(ExpenseCreate):
     splits: List[ExpenseSplitCreate]
     split_type: str = "equal"
     #date: Optional[date] = None #03 Nov
-    date: Optional[date] = None # 🔴 修复：从 str 改回 date
+    # 🔴 修复：删除下面这行多余的定义
+    # date: Optional[date] = None 
     
 class ExpenseWithSplits(Expense):
     splits: List[ExpenseSplit] = []
