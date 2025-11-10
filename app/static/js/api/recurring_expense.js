@@ -1,6 +1,6 @@
 // recurring_expense.js - 定期费用相关的CRUD操作、频率设置
-// 防止缓存版本: 2025.11.07.003 - 修复版本
-const JS_CACHE_VERSION = '2025.11.07.003';
+// 防止缓存版本: 2025.11.07.004 - 修复无限递归
+const JS_CACHE_VERSION = '2025.11.07.004';
 
 // 🔴 修复：import 必须在顶层
 import { centsToAmountString as importedCentsToAmountString } from '../ui/utils.js';
@@ -79,7 +79,7 @@ export function initializeRecurringExpenseForm() {
             if (window.groupMembers && window.groupMembers.length > 0) {
                 console.log('检测到组员数据已加载，初始化付款人选择器和参与者选择');
                 // 🔴 v6.3修复：确保在延迟初始化时也调用updateRecurringFormMembers
-                updateRecurringFormMembers();
+                // 🔴 修复：此处不应调用 updateRecurringFormMembers()，而是直接调用初始化函数
                 initializePayerSelector();
                 initializeParticipantSelection();
                 setupEventListeners();
@@ -95,7 +95,7 @@ export function initializeRecurringExpenseForm() {
     }
 
     // 🔴 v6.3修复：确保在初始化时调用updateRecurringFormMembers
-    updateRecurringFormMembers();
+    // updateRecurringFormMembers(); // 🔴 修复：移除此行，它会导致无限递归
     
     // 初始化付款人选择器和参与者选择
     initializePayerSelector();
