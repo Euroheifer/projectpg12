@@ -73,6 +73,8 @@ export function initializeRecurringExpenseForm() {
         const checkGroupMembers = () => {
             if (window.groupMembers && window.groupMembers.length > 0) {
                 console.log('检测到组员数据已加载，初始化付款人选择器和参与者选择');
+                // 🔴 v6.3修复：确保在延迟初始化时也调用updateRecurringFormMembers
+                updateRecurringFormMembers();
                 initializePayerSelector();
                 initializeParticipantSelection();
                 setupEventListeners();
@@ -87,6 +89,9 @@ export function initializeRecurringExpenseForm() {
         return;
     }
 
+    // 🔴 v6.3修复：确保在初始化时调用updateRecurringFormMembers
+    updateRecurringFormMembers();
+    
     // 初始化付款人选择器和参与者选择
     initializePayerSelector();
     initializeParticipantSelection();
@@ -1173,6 +1178,9 @@ function showMessage(message, type = 'info') {
         console.log(`[${type.toUpperCase()}] ${message}`);
     }
 }
+
+// 🔴 v6.3修复：确保事件监听器被正确初始化
+initializeEventListeners();
 
 // 再次确保函数被正确暴露
 setTimeout(() => {
