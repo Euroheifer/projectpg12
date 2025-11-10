@@ -1147,6 +1147,10 @@ def get_group_settlement(
             'is_admin': member.is_admin
         } for member in members}
         
+        # 记录成员数量用于调试
+        logging.info(f"DEBUG: Group {group_id} has {len(members)} members")
+        
+        # 获取结算信息 - 这里可能会有500错误
         settlement_summary = crud.get_group_settlement_summary(db, group_id)
         
         # 添加推荐的支付路径
@@ -1157,9 +1161,11 @@ def get_group_settlement(
         return settlement_summary
     
     except ValueError as e:
+        logging.error(f"ValueError in get_group_settlement for group {group_id}: {e}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logging.error(f"获取群组结算信息失败: {e}")
+        logging.error(f"获取群组结算信息失败 for group {group_id}: {e}")
+        logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail="获取结算信息时发生错误")
 
 
