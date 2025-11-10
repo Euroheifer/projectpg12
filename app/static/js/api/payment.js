@@ -5,11 +5,10 @@ const JS_CACHE_VERSION = '2025.11.06.001';
 import { 
     getTodayDate, 
     getAuthToken, 
-    amountToCents, 
-    centsToAmountString, 
     showCustomAlert,
     requireAdmin 
 } from '../ui/utils.js';
+import { centsToAmountString, amountToCents } from './amount_utils.js';
 
 // --- 全局状态 ---
 let currentEditingPayment = null;
@@ -104,17 +103,17 @@ function validatePaymentForm(formData) {
     const errors = [];
 
     // 验证付款人
-    if (!formData.get('payer_id')) {
+    if (!formData.get('from_user_id')) {
         errors.push('请选择付款人');
     }
 
     // 验证收款人
-    if (!formData.get('payee_id')) {
+    if (!formData.get('to_user_id')) {
         errors.push('请选择收款人');
     }
 
     // 验证付款人和收款人不能相同
-    if (formData.get('payer_id') === formData.get('payee_id')) {
+    if (formData.get('from_user_id') === formData.get('to_user_id')) {
         errors.push('付款人和收款人不能是同一个人');
     }
 
@@ -157,9 +156,14 @@ export async function handleSavePayment(event) {
             return;
         }
 
-        // 转换金额为分
-        const amountInCents = amountToCents(formData.get('amount'));
-        formData.set('amount', amountInCents);
+        // 构建支付数据对象（使用后端schema字段名）
+        const paymentData = {
+            from_user_id: parseInt(formData.get('payment-payer') || formData.get('payer_id')),
+            to_user_id: parseInt(formData.get('payment-payee') || formData.get('payee_id')),
+            amount: amountToCents(formData.get('amount')),
+            date: formData.get('date'),
+            description: formData.get('description') || null
+        };
 
         // 获取认证令牌
         const token = getAuthToken();
@@ -199,13 +203,14 @@ export async function handleSavePayment(event) {
 
         console.log('保存支付记录，费用ID:', expenseId);
 
-        // API调用
+        // API调用 - 使用JSON格式
         const response = await fetch(`/expenses/${expenseId}/payments`, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             },
-            body: formData
+            body: JSON.stringify(paymentData)
         });
 
         if (!response.ok) {
@@ -274,9 +279,14 @@ export async function handleUpdatePayment(event) {
             return;
         }
 
-        // 转换金额为分
-        const amountInCents = amountToCents(formData.get('amount'));
-        formData.set('amount', amountInCents);
+        // 构建支付数据对象（使用后端schema字段名）
+        const paymentData = {
+            from_user_id: parseInt(formData.get('payment-detail-payer') || formData.get('from_user_id')),
+            to_user_id: parseInt(formData.get('payment-detail-payee') || formData.get('to_user_id')),
+            amount: amountToCents(formData.get('amount')),
+            date: formData.get('date'),
+            description: formData.get('description') || null
+        };
 
         // 获取认证令牌
         const token = getAuthToken();
@@ -314,13 +324,14 @@ export async function handleUpdatePayment(event) {
         const paymentId = currentEditingPayment.id;
         console.log('更新支付记录:', { expenseId, paymentId });
 
-        // API调用
+        // API调用 - 使用PATCH方法和JSON格式
         const response = await fetch(`/expenses/${expenseId}/payments/${paymentId}`, {
-            method: 'PUT',
+            method: 'PATCH',
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
             },
-            body: formData
+            body: JSON.stringify(paymentData)
         });
 
         if (!response.ok) {
@@ -502,21 +513,21 @@ export function populatePaymentDetailForm(payment) {
         descriptionField.value = payment.description || '';
     }
 
-    // 设置付款人和收款人
+    // 设置付款人和收款人（使用后端schema字段名）
     const payerSelect = document.getElementById('payment-detail-payer');
     const payeeSelect = document.getElementById('payment-detail-payee');
 
     if (payerSelect) {
-        payerSelect.value = payment.payer_id;
+        payerSelect.value = payment.from_user_id || payment.payer_id;
     }
 
     if (payeeSelect) {
-        payeeSelect.value = payment.payee_id;
+        payeeSelect.value = payment.to_user_id || payment.payee_id;
     }
 
     // 设置表单可编辑状态（基于权限）
     const isAdmin = window.IS_CURRENT_USER_ADMIN;
-    const isOwner = payment.payer_id === window.CURRENT_USER_ID;
+    const isOwner = (payment.from_user_id || payment.payer_id) === window.CURRENT_USER_ID;
 
     // 只有管理员或支付人自己可以编辑
     const canEdit = isAdmin || isOwner;
@@ -669,9 +680,9 @@ function createPaymentCard(payment) {
     // 转换金额显示
     const amountDisplay = centsToAmountString(payment.amount);
     
-    // 获取成员信息（修复版本）
-    const payerName = getMemberNameById(payment.payer_id);
-    const payeeName = getMemberNameById(payment.payee_id);
+    // 获取成员信息（使用后端schema字段名）
+    const payerName = getMemberNameById(payment.from_user_id || payment.payer_id);
+    const payeeName = getMemberNameById(payment.to_user_id || payment.payee_id);
 
     card.innerHTML = `
         <div class="flex justify-between items-start">
@@ -697,7 +708,7 @@ function createPaymentCard(payment) {
                 >
                     查看
                 </button>
-                ${(window.IS_CURRENT_USER_ADMIN || payment.payer_id === window.CURRENT_USER_ID) ? `
+                ${(window.IS_CURRENT_USER_ADMIN || (payment.from_user_id || payment.payer_id) === window.CURRENT_USER_ID) ? `
                     <button 
                         class="text-red-600 hover:text-red-800 text-sm"
                         onclick="handleDeletePayment(${payment.id})"
