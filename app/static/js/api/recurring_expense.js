@@ -1086,6 +1086,39 @@ window.showMessage = showMessage;
 
 console.log('定期费用模块已加载，所有函数已暴露到全局 - v2025.11.07.002');
 
+// 🔴 v12.1修复：立即绑定事件监听器（替代内联事件处理器）
+initializeEventListeners();
+
+/**
+ * 🔴 v12.1修复：初始化事件监听器
+ * 替代HTML中的内联事件处理器，避免时序问题
+ */
+function initializeEventListeners() {
+    console.log('初始化定期费用事件监听器...');
+    
+    // 绑定金额输入框事件
+    const amountInput = document.getElementById('recurring-amount');
+    if (amountInput) {
+        // 移除可能存在的内联事件处理器
+        amountInput.removeAttribute('oninput');
+        // 添加事件监听器
+        amountInput.addEventListener('input', handleRecurringAmountChange);
+        console.log('✅ 金额输入框事件监听器已绑定');
+    } else {
+        console.error('❌ 找不到金额输入框 recurring-amount');
+    }
+    
+    // 绑定其他可能的表单事件
+    const payerSelect = document.getElementById('recurring-payer');
+    if (payerSelect) {
+        payerSelect.addEventListener('change', () => {
+            console.log('支付人选择已更改');
+        });
+    }
+    
+    console.log('定期费用事件监听器初始化完成');
+}
+
 // ==================== 模态框控制函数 ====================
 
 /**

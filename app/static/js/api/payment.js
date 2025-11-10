@@ -918,3 +918,24 @@ window.refreshPaymentsList = refreshPaymentsList;
 window.closeDeletePaymentConfirm = closeDeletePaymentConfirm;
 
 console.log('支付模块已加载，所有函数已暴露到全局');
+
+// 🔴 v6.1修复：立即绑定事件监听器（替代内联事件处理器）
+initializePaymentEventListeners();
+
+/**
+ * 🔴 v6.1修复：初始化支付事件监听器
+ * 替代HTML中的内联事件处理器，避免时序问题
+ */
+function initializePaymentEventListeners() {
+    console.log('初始化支付事件监听器...');
+    
+    // 绑定主要支付表单事件
+    bindPaymentFormEvents();
+    
+    // 绑定支付详情表单事件
+    bindPaymentDetailFormEvents();
+    
+    console.log('支付事件监听器初始化完成');
+}
+
+console.log('支付模块已加载，所有函数已暴露到全局');

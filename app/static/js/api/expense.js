@@ -1191,6 +1191,43 @@ if (typeof window.closeCustomAlert !== 'function') {
 
 console.log('费用模块已加载，所有函数已暴露到全局');
 
+// 🔴 v6.1修复：立即绑定事件监听器（替代内联事件处理器）
+initializeExpenseEventListeners();
+
+/**
+ * 🔴 v6.1修复：初始化费用事件监听器
+ * 替代HTML中的内联事件处理器，避免时序问题
+ */
+function initializeExpenseEventListeners() {
+    console.log('初始化费用事件监听器...');
+    
+    // 绑定主要费用表单的金额输入框事件
+    const amountInput = document.getElementById('amount');
+    if (amountInput) {
+        // 移除可能存在的内联事件处理器
+        amountInput.removeAttribute('oninput');
+        // 添加事件监听器
+        amountInput.addEventListener('input', handleAmountChange);
+        console.log('✅ 主要费用金额输入框事件监听器已绑定');
+    } else {
+        console.error('❌ 找不到主要费用金额输入框 amount');
+    }
+    
+    // 绑定费用详情表单的金额输入框事件
+    const detailAmountInput = document.getElementById('detail-amount');
+    if (detailAmountInput) {
+        // 移除可能存在的内联事件处理器
+        detailAmountInput.removeAttribute('oninput');
+        // 添加事件监听器
+        detailAmountInput.addEventListener('input', handleDetailAmountChange);
+        console.log('✅ 费用详情金额输入框事件监听器已绑定');
+    } else {
+        console.error('❌ 找不到费用详情金额输入框 detail-amount');
+    }
+    
+    console.log('费用事件监听器初始化完成');
+}
+
 // === 分摊计算功能总结 ===
 
 /*
