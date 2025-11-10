@@ -1238,12 +1238,9 @@ def get_group_settlement_summary(db: Session, group_id: int) -> Dict:
                 balance_obj = {
                     'user_id': member_id,
                     'username': user_info['user'].username,
-                    'balance': final_balance_cents, # 保持分为单位
+                    'final_balance': final_balance_cents, # 🔴 修复：使用正确的键名
+                    'balance': final_balance_cents, # 🔴 修复：也保留 'balance' 键以防万一
                     'status': status,
-                    # 🔴 移除旧的、错误的字段
-                    # 'total_expenses': 0.0,
-                    # 'total_payments_made': 0.0,
-                    # 'total_payments_received': 0.0,
                 }
                 balances.append(balance_obj)
             except Exception as e:
@@ -1277,22 +1274,24 @@ def get_group_settlement_summary(db: Session, group_id: int) -> Dict:
         raise
 
 
-def generate_settlement_transactions(member_balances: Dict, member_data: Dict = None) -> List[Dict]:
+def generate_settlement_transactions(balances_list: List[Dict], member_data: Dict = None) -> List[Dict]:
     """
     (🔴 修复) 生成推荐的结算交易路径
     使用贪心算法最小化交易次数
-    - 传入的 member_balances 是 {member_id: {'final_balance': <cents>}}
+    - 传入的 balances_list 是 [{'user_id': ..., 'final_balance': <cents>, ...}]
     """
     # 分离债权人和债务人
     creditors = []  # 应收钱的人
     debtors = []    # 应付钱的人
     
-    for member_id, balance_info in member_balances.items():
+    for balance_info in balances_list:
         final_balance_cents = balance_info['final_balance']
+        member_id = balance_info['user_id']
+
         # 获取用户名
-        username = f"User{member_id}"
-        if member_data and member_id in member_data:
-            username = member_data[member_id]['user'].username
+        username = balance_info.get('username', f"User{member_id}")
+        if member_data and member_id in member_data and 'user' in member_data[member_id]:
+             username = member_data[member_id]['user'].username or username
         
         if final_balance_cents > 1:  # 应收
             creditors.append({
@@ -1351,7 +1350,7 @@ def execute_settlement(db: Session, group_id: int, creator_id: int, description:
     # 1. 获取结算汇总 (使用 🔴 修复后 的函数)
     settlement_summary = get_group_settlement_summary(db, group_id)
     
-    # 2. 准备 member_balances 和 member_data
+    # 2. 准备 member_data (用于获取用户名)
     members = get_group_members(db, group_id)
     member_data = {member.user_id: {
         'user': member.user,
@@ -1359,20 +1358,13 @@ def execute_settlement(db: Session, group_id: int, creator_id: int, description:
         'is_admin': member.is_admin
     } for member in members}
     
-    member_balances_dict = {
-        balance['user_id']: {'final_balance': balance['balance']} 
-        for balance in settlement_summary['balances']
-    }
-    
-    # 3. 生成推荐交易 (以分为单位)
-    transactions = generate_settlement_transactions(member_balances_dict, member_data)
+    # 3. 生成推荐交易 (以分为单位) (🔴 修复：传递 'balances' 列表)
+    transactions = generate_settlement_transactions(settlement_summary['balances'], member_data)
     
     if not transactions:
         raise ValueError("没有需要结算的款项")
 
     # 4. 获取群组的 *第一个* 费用ID，用于关联支付
-    # 这是一个简化处理，理想情况下结算支付不应与单一费用关联
-    # 但根据当前模型 Payment.expense_id 是必填项
     first_expense = db.query(models.Expense).filter(models.Expense.group_id == group_id).first()
     if not first_expense:
         raise ValueError("群组中没有任何费用，无法创建结算支付")
@@ -1403,7 +1395,6 @@ def execute_settlement(db: Session, group_id: int, creator_id: int, description:
             continue # 继续尝试下一笔
     
     # 6. 创建结算审计日志
-    # (注意：create_payment 内部已经创建了 CREATE_PAYMENT 日志)
     create_audit_log(
         db=db,
         group_id=group_id,
