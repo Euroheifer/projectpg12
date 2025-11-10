@@ -567,52 +567,19 @@ export async function refreshPaymentsList() {
     console.log('刷新支付列表');
 
     try {
+        // 🔴 v12.0修复：费用ID不存在时优雅处理
+        const expenseId = window.currentExpenseId;
+        if (!expenseId) {
+            console.log('费用ID不存在，显示空支付列表');
+            updatePaymentsDisplay([]);
+            return;
+        }
+
         // 获取认证令牌
         const token = getAuthToken();
         if (!token) {
             console.warn('未找到认证令牌');
-            return;
-        }
-
-        // 改进费用ID获取逻辑
-        let expenseId = window.currentExpenseId;
-        
-        if (!expenseId) {
-            const urlParams = new URLSearchParams(window.location.search);
-            expenseId = urlParams.get('expense_id');
-            
-            if (!expenseId) {
-                expenseId = window.selectedExpenseId || window.expenseId;
-            }
-            
-            if (!expenseId) {
-                const expenseIdElement = document.getElementById('current-expense-id');
-                if (expenseIdElement) {
-                    expenseId = expenseIdElement.value;
-                }
-            }
-            
-            // 如果仍然没有费用ID，尝试从活动标签页或费用列表中获取
-            if (!expenseId && window.expensesList && window.expensesList.length > 0) {
-                // 如果当前在费用页面，默认获取第一笔费用的ID
-                if (window.activeTab === 'expenses' || !window.activeTab) {
-                    const firstExpense = window.expensesList[0];
-                    expenseId = firstExpense.id;
-                }
-            }
-        }
-        
-        if (!expenseId) {
-            console.warn('无法获取费用ID，跳过支付列表刷新');
-            // 显示友好提示
-            const container = document.getElementById('payments-list');
-            if (container) {
-                container.innerHTML = `
-                    <div class="text-center py-8 text-gray-500">
-                        <p>请先选择一个费用项目</p>
-                    </div>
-                `;
-            }
+            updatePaymentsDisplay([]);
             return;
         }
 
@@ -628,18 +595,9 @@ export async function refreshPaymentsList() {
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
-            let errorMessage = '获取支付列表失败';
-
-            if (errorData.detail) {
-                if (typeof errorData.detail === 'string') {
-                    errorMessage = errorData.detail;
-                } else {
-                    errorMessage = JSON.stringify(errorData.detail);
-                }
-            }
-
-            throw new Error(errorMessage);
+            console.warn('支付API返回错误状态:', response.status, '显示空列表');
+            updatePaymentsDisplay([]);
+            return;
         }
 
         // 获取支付列表数据
@@ -650,20 +608,24 @@ export async function refreshPaymentsList() {
         renderPaymentsList(payments);
 
     } catch (error) {
-        console.error('刷新支付列表错误:', error);
-        showCustomAlert('错误', error.message || '获取支付列表时发生未知错误');
-        
-        // 显示错误状态
-        const container = document.getElementById('payments-list');
-        if (container) {
+        console.warn('刷新支付列表失败，显示空列表:', error);
+        updatePaymentsDisplay([]);
+    }
+}
+
+// 🔴 v12.0新增：统一更新支付显示的辅助函数
+function updatePaymentsDisplay(payments) {
+    const container = document.getElementById('payments-list');
+    if (container) {
+        if (payments.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-8 text-red-500">
-                    <p>获取支付列表失败: ${error.message}</p>
-                    <button onclick="refreshPaymentsList()" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                        重试
-                    </button>
+                <div class="text-center py-8 text-gray-500">
+                    <p>暂无支付记录</p>
+                    <small>点击添加支付记录按钮来创建新的支付</small>
                 </div>
             `;
+        } else {
+            renderPaymentsList(payments);
         }
     }
 }

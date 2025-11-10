@@ -214,29 +214,34 @@ export async function getGroupPayments(groupId) {
     if (!token) throw new Error('未认证');
 
     try {
-        const response = await fetch(`/groups/${groupId}/payments`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
+        // 🔴 v12.0修复：先获取所有费用，再聚合支付记录
+        const expenses = await getGroupExpenses(groupId);
+        let allPayments = [];
+        
+        console.log(`群组 ${groupId} 共有 ${expenses.length} 个费用，开始聚合支付记录...`);
+        
+        for (const expense of expenses) {
+            try {
+                const response = await fetch(`/expenses/${expense.id}/payments`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const payments = await response.json();
+                    allPayments = allPayments.concat(payments);
+                    console.log(`费用 ${expense.id} 的支付记录: ${payments.length} 条`);
+                }
+            } catch (error) {
+                console.warn(`获取费用 ${expense.id} 的支付记录失败:`, error);
             }
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            console.log('支付数据获取成功:', data);
-            return data;
-        } else if (response.status === 404) {
-            console.warn('支付API暂未实现，返回空数组');
-            return [];
-        } else {
-            const errorText = await response.text();
-            console.error('获取支付数据失败，状态码:', response.status, '错误信息:', errorText);
-            return [];
         }
         
+        console.log(`成功获取群组 ${groupId} 的所有支付记录，共 ${allPayments.length} 条`);
+        return allPayments;
+        
     } catch (error) {
-        console.error('获取支付数据失败:', error);
-        // 返回空数组避免前端崩溃
+        console.error('获取群组支付数据失败:', error);
         return [];
     }
 }

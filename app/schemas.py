@@ -314,6 +314,53 @@ class BalanceSummary(BaseModel):
 
 
 # ************************************************************************ #
+# ----------- Settlement Schemas -----------
+class SettlementBalance(BaseModel):
+    """单个群组成员的结算余额信息"""
+    user_id: int
+    username: str
+    total_expenses: float  # 总支出
+    total_payments_made: float  # 总支付金额
+    total_payments_received: float  # 总收款金额
+    balance: float  # 最终余额，正数表示应收，负数表示应付
+    status: str  # 状态：' creditor'（债权方）、'debtor'（债务方）、'settled'（已结清）
+
+class SettlementMember(BaseModel):
+    """群组结算成员信息"""
+    user_id: int
+    username: str
+    nickname: Optional[str] = None
+    is_admin: bool
+
+class SettlementTransaction(BaseModel):
+    """推荐支付路径"""
+    from_user_id: int
+    to_user_id: int
+    amount: float
+    description: str
+
+class SettlementSummary(BaseModel):
+    """群组结算汇总信息"""
+    group_id: int
+    group_name: str
+    total_amount: float  # 群组总支出
+    member_count: int
+    balances: List[SettlementBalance]
+    transactions: List[SettlementTransaction]  # 推荐的支付路径
+    last_updated: datetime
+
+class SettlementCreate(BaseModel):
+    """创建结算的请求模型"""
+    description: Optional[str] = None
+    force_settlement: bool = False  # 是否强制结算（即使有未结清的余额）
+
+class SettlementResponse(BaseModel):
+    """结算操作响应模型"""
+    success: bool
+    message: str
+    settlement_summary: Optional[SettlementSummary] = None
+    created_at: datetime
+
 # ----------- Audit Log Schemas -----------
 class AuditLog(BaseModel):
     id: int

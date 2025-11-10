@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结算功能测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto px-4">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">结算功能测试</h1>
+        
+        <!-- 测试结果区域 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">测试结果</h2>
+            <div id="test-results" class="space-y-4">
+                <div class="text-gray-600">正在运行测试...</div>
+            </div>
+        </div>
+
+        <!-- 测试控制区域 -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">手动测试</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">群组ID</label>
+                    <input type="number" id="test-group-id" value="1" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div class="space-x-4">
+                    <button onclick="testGetSettlementInfo()" 
+                            class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+                        测试获取结算信息
+                    </button>
+                    
+                    <button onclick="testExecuteSettlement()" 
+                            class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600">
+                        测试执行结算
+                    </button>
+                    
+                    <button onclick="testGetSettlementHistory()" 
+                            class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
+                        测试获取历史记录
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟必要的全局函数
+        function getAuthToken() {
+            return 'mock-token'; // 在实际应用中这里会返回真实的token
+        }
+
+        function showCustomAlert(title, message) {
+            alert(`${title}\n\n${message}`);
+        }
+
+        function centsToAmountString(cents) {
+            return (cents / 100).toFixed(2);
+        }
+
+        // 添加测试结果
+        function addTestResult(testName, result, error = null) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'p-4 rounded-md';
+            
+            if (error) {
+                resultDiv.className += ' bg-red-50 border border-red-200';
+                resultDiv.innerHTML = `
+                    <h3 class="font-medium text-red-800">❌ ${testName}</h3>
+                    <p class="text-red-600 text-sm mt-1">错误: ${error}</p>
+                `;
+            } else {
+                resultDiv.className += ' bg-green-50 border border-green-200';
+                resultDiv.innerHTML = `
+                    <h3 class="font-medium text-green-800">✅ ${testName}</h3>
+                    <p class="text-green-600 text-sm mt-1">结果: ${JSON.stringify(result, null, 2)}</p>
+                `;
+            }
+            
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        // 模拟API调用
+        async function mockGetSettlementInfo(groupId) {
+            try {
+                console.log('模拟获取结算信息:', groupId);
+                
+                // 模拟网络延迟
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // 模拟不同响应
+                if (groupId === '999') {
+                    return { error: '模拟API错误' };
+                } else if (groupId === '0') {
+                    return { balances: [], message: '该群组暂无结算数据' };
+                } else {
+                    return {
+                        balances: [
+                            { member_id: 2, member_name: '用户B', amount: -1500 }, // 我欠用户B 15元
+                            { member_id: 3, member_name: '用户C', amount: 800 }     // 用户C欠我 8元
+                        ],
+                        group_id: parseInt(groupId)
+                    };
+                }
+            } catch (error) {
+                return { error: error.message };
+            }
+        }
+
+        async function mockExecuteSettlement(groupId) {
+            try {
+                console.log('模拟执行结算:', groupId);
+                
+                // 模拟网络延迟
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // 模拟不同响应
+                if (groupId === '999') {
+                    throw new Error('模拟API错误');
+                } else if (groupId === '0') {
+                    throw new Error('没有可结算的项目');
+                } else {
+                    return { success: true, message: '结算成功' };
+                }
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        async function mockGetSettlementHistory(groupId) {
+            try {
+                console.log('模拟获取结算历史:', groupId);
+                
+                // 模拟网络延迟
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                return {
+                    records: [
+                        {
+                            id: 1,
+                            created_at: '2025-11-06T10:00:00Z',
+                            group_name: '测试群组',
+                            amount: 1500,
+                            status: 'completed'
+                        }
+                    ],
+                    total: 1,
+                    page: 1,
+                    limit: 10
+                };
+            } catch (error) {
+                return { error: error.message };
+            }
+        }
+
+        // 测试函数
+        async function testGetSettlementInfo() {
+            const groupId = document.getElementById('test-group-id').value;
+            
+            try {
+                const result = await mockGetSettlementInfo(groupId);
+                addTestResult(`获取结算信息 (群组ID: ${groupId})`, result, result.error);
+            } catch (error) {
+                addTestResult(`获取结算信息 (群组ID: ${groupId})`, null, error.message);
+            }
+        }
+
+        async function testExecuteSettlement() {
+            const groupId = document.getElementById('test-group-id').value;
+            
+            try {
+                const result = await mockExecuteSettlement(groupId);
+                addTestResult(`执行结算 (群组ID: ${groupId})`, result, null);
+            } catch (error) {
+                addTestResult(`执行结算 (群组ID: ${groupId})`, null, error.message);
+            }
+        }
+
+        async function testGetSettlementHistory() {
+            const groupId = document.getElementById('test-group-id').value;
+            
+            try {
+                const result = await mockGetSettlementHistory(groupId);
+                addTestResult(`获取结算历史 (群组ID: ${groupId})`, result, result.error);
+            } catch (error) {
+                addTestResult(`获取结算历史 (群组ID: ${groupId})`, null, error.message);
+            }
+        }
+
+        // 自动运行测试
+        async function runAutoTests() {
+            console.log('开始自动测试...');
+            
+            // 测试正常情况
+            await testGetSettlementInfo();
+            await testExecuteSettlement();
+            await testGetSettlementHistory();
+            
+            // 测试错误情况
+            document.getElementById('test-group-id').value = '999';
+            await testGetSettlementInfo();
+            await testExecuteSettlement();
+            
+            // 测试空数据情况
+            document.getElementById('test-group-id').value = '0';
+            await testGetSettlementInfo();
+            
+            console.log('自动测试完成');
+        }
+
+        // 页面加载完成后运行自动测试
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，开始测试...');
+            setTimeout(runAutoTests, 1000);
+        });
+    </script>
+</body>
+</html>

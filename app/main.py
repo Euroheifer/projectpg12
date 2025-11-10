@@ -1115,6 +1115,7 @@ def get_user_expense_balance(
 
 # *********** end of Payment & Balance *********** #
 
+@app.get("/groups/{group_id}/audit-logs", response_model=List[schemas.AuditLog])
 @app.get("/groups/{group_id}/audit-trail", response_model=List[schemas.AuditLog])
 def read_audit_trail(
     group_id: int,
@@ -1123,6 +1124,124 @@ def read_audit_trail(
 ):
     """Get the audit trail for a group (admins only)."""
     return crud.get_audit_logs(db=db, group_id=group_id)
+
+# ----------- Settlement Routes -----------
+@app.get("/groups/{group_id}/settlement", response_model=schemas.SettlementSummary)
+def get_group_settlement(
+    group_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    group: models.Group = Depends(get_group_with_access_check),
+):
+    """
+    获取群组结算汇总信息
+    - 任何群组成员都可以查看结算信息
+    - 返回每个成员的余额、交易推荐等信息
+    """
+    try:
+        # 获取成员数据
+        members = crud.get_group_members(db, group_id)
+        member_data = {member.user_id: {
+            'user': member.user,
+            'nickname': member.nickname,
+            'is_admin': member.is_admin
+        } for member in members}
+        
+        settlement_summary = crud.get_group_settlement_summary(db, group_id)
+        
+        # 添加推荐的支付路径
+        member_balances = {balance['user_id']: balance for balance in settlement_summary['balances']}
+        transactions = crud.generate_settlement_transactions(member_balances, member_data)
+        settlement_summary['transactions'] = transactions
+        
+        return settlement_summary
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logging.error(f"获取群组结算信息失败: {e}")
+        raise HTTPException(status_code=500, detail="获取结算信息时发生错误")
+
+
+@app.post("/groups/{group_id}/settlement", response_model=schemas.SettlementResponse)
+def execute_group_settlement(
+    group_id: int,
+    settlement_data: schemas.SettlementCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    group: models.Group = Depends(get_group_with_access_check),
+):
+    """
+    执行群组结算操作
+    - 任何群组成员都可以执行结算
+    - 创建推荐支付路径的支付记录
+    - 返回结算结果
+    """
+    try:
+        # 执行结算
+        result = crud.execute_settlement(
+            db=db,
+            group_id=group_id,
+            creator_id=current_user.id,
+            description=settlement_data.description
+        )
+        
+        return schemas.SettlementResponse(
+            success=result['success'],
+            message=result['message'],
+            settlement_summary=result.get('settlement_summary'),
+            created_at=datetime.now()
+        )
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logging.error(f"执行群组结算失败: {e}")
+        raise HTTPException(status_code=500, detail="执行结算时发生错误")
+
+
+@app.get("/groups/{group_id}/settlement/member/{user_id}", response_model=schemas.SettlementBalance)
+def get_member_settlement_balance(
+    group_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    group: models.Group = Depends(get_group_with_access_check),
+):
+    """
+    获取指定群组成员的结算余额详情
+    - 只能查看自己或其他群组成员的余额
+    """
+    # 验证目标用户是群组成员
+    member = crud.get_group_member(db, group_id=group_id, user_id=user_id)
+    if not member:
+        raise HTTPException(
+            status_code=404,
+            detail="用户不是该群组成员"
+        )
+    
+    try:
+        # 获取群组结算信息
+        settlement_summary = crud.get_group_settlement_summary(db, group_id)
+        
+        # 查找指定用户的余额信息
+        user_balance = None
+        for balance in settlement_summary['balances']:
+            if balance['user_id'] == user_id:
+                user_balance = balance
+                break
+        
+        if not user_balance:
+            raise HTTPException(status_code=404, detail="未找到该用户的余额信息")
+        
+        return schemas.SettlementBalance(**user_balance)
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logging.error(f"获取用户结算余额失败: {e}")
+        raise HTTPException(status_code=500, detail="获取用户余额时发生错误")
+
 
 app.include_router(pages_router)
 
