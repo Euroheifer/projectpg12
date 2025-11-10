@@ -902,13 +902,21 @@ def get_recurring_expense(
 
 # *********** add payment to calculate the balance *********** #
 # ----------- Payment Routes -----------
+
+# 🔴 [START] 修复
 @app.post("/expenses/{expense_id}/payments", response_model=schemas.Payment, status_code=status.HTTP_201_CREATED)
 def create_payment_for_expense(
     expense_id: int,
-    payment: schemas.PaymentCreate,
+    # 修复：将 Pydantic Body 更改为 Form 字段
+    description: str = Form(...),
+    amount: int = Form(...),
+    to_user_id: int = Form(...),
+    from_user_id: int = Form(...),
+    image_file: UploadFile = File(None),
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+# 🔴 [END] 修复
     db_expense = crud.get_expense_by_id(db, expense_id)
     if not db_expense:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expense not found")
@@ -924,12 +932,25 @@ def create_payment_for_expense(
     - Only group members can create payments.
     - Payments update the expense's balance.
     """
+    
+    # 🔴 [START] 修复
+    # 修复：从 Form 字段创建 Pydantic 模型
+    payment_data = schemas.PaymentCreate(
+        description=description,
+        amount=amount,
+        to_user_id=to_user_id,
+        from_user_id=from_user_id
+        # image_url 将在 crud.py 中处理
+    )
+    # 🔴 [END] 修复
+    
     try:
         db_payment = crud.create_payment(
             db=db,
             expense_id=expense_id,
             creator_id=current_user.id,
-            payment=payment
+            payment=payment_data, # 🔴 修复：传递 Pydantic 模型
+            image_file=image_file # 🔴 修复：传递 image_file
         )
         return db_payment
 
