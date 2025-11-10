@@ -1,6 +1,6 @@
 // /static/js/page/groups.js
-// 防止缓存版本: 2025.11.07
-const JS_CACHE_VERSION = '2025.11.07.002';
+// 防止缓存版本: 2025.11.10.003 - 修复支付弹窗
+const JS_CACHE_VERSION = '2025.11.10.003';
 
 import {
 //   getCurrentUser, // changed by sunzhe
@@ -654,6 +654,10 @@ function handleLogoutUser() {
 function refreshRecurringList() {
     // TODO: Implement recurring expense list refresh
     console.log('刷新定期费用列表');
+    // 🔴 修复：调用 window 上的函数
+    if (window.refreshRecurringList) {
+        window.refreshRecurringList();
+    }
 }
 
 // --- Modal Functions ---
@@ -667,17 +671,25 @@ window.handleAddNewExpense = function () {
     }
 };
 
+// 🔴 [START] 修复
 window.handleAddNewPayment = function () {
     console.log('Show add payment modal');
-    // 修复：确保初始化支付表单
+    
+    // 🔴 修复 Bug 1: 调用初始化函数
+    // 此函数在 payment.js 中定义
     if (window.initializePaymentForm) {
         window.initializePaymentForm();
+    } else {
+        console.error('initializePaymentForm() 函数未找到！');
+        showCustomAlert('Error', '支付表单加载失败，请刷新页面。');
     }
+    
     const modal = document.getElementById('add-payment-modal');
     if (modal) {
         modal.classList.remove('hidden');
     }
 };
+// 🔴 [END] 修复
 
 window.handleAddNewRecurringExpense = function () {
     console.log('Show add recurring expense modal');
@@ -890,7 +902,7 @@ window.handleEnableRecurringExpense = function() {
 
 window.handleDeleteRecurringExpense = function() {
     console.log('handleDeleteRecurringExpense called');
-    showCustomAlert('Info', 'Delete recurring expense feature is available in the module');
+    showCustomAlert('Info', 'Delete recurring expense feature is under development');
 };
 
 window.handleRecurringDetailCancel = function() {
