@@ -163,37 +163,81 @@ def read_user_groups(
     """Retrieve a list of all groups the current user is a member of."""
     return crud.get_user_groups(db=db, user_id=current_user.id)
 
-# ----------------add for groups.html----------------------------------
+# ----------------add for groups.html (🔴 修复余额 BUG)----------------------------------
 @app.get("/api/groups/{group_id}", response_model=schemas.Group)
 def read_group(
     group_id: int,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """Retrieve details of a specific group."""
+    """
+    Retrieve details of a specific group, including the current user's
+    balance within that group.
+    """
 
-    print(f"=== 调试信息: 开始处理 /groups/{group_id} ===")
+    print(f"=== 调试信息: 开始处理 /api/groups/{group_id} ===")
     print(f"当前用户: {current_user.id} - {current_user.username}")
-    print(f"请求的群组ID: {group_id}")
 
-    # 检查群组是否存在
+    # 1. 检查群组是否存在
     group = crud.get_group_by_id(db=db, group_id=group_id)
-    print(f"从数据库获取的群组: {group}")
-
     if not group:
         print("错误: 群组不存在")
         raise HTTPException(status_code=404, detail="Group not found")
 
-    # 检查用户是否是群组成员
+    # 2. 检查用户是否是群组成员
     member = crud.get_group_member(db=db, user_id=current_user.id, group_id=group_id)
-    print(f"用户成员信息: {member}")
-
     if not member:
         print("错误: 用户不是群组成员")
         raise HTTPException(status_code=403, detail="Not a member of this group")
 
-    print(f"=== 调试信息: 成功返回群组数据 ===")
-    print(f"返回的群组: {group}")
+    # --- 🔴 修复：计算并附加用户余额 ---
+    try:
+        # 3. 调用结算逻辑获取整个群组的余额
+        # 注意：这里我们复用结算API的逻辑，而不是重新计算
+        settlement_summary = crud.get_group_settlement_summary(db, group_id)
+        
+        user_balance_owed = 0.0
+        user_balance_owing = 0.0
+        settlement_count = 0
+        
+        # 4. 遍历余额，找出当前用户的欠款/被欠款
+        for balance_info in settlement_summary.get('balances', []):
+            if balance_info['user_id'] == current_user.id:
+                # balance < 0: 用户欠钱 (应付)
+                if balance_info['balance'] < 0:
+                    user_balance_owed = abs(balance_info['balance'])
+                # balance > 0: 用户被欠钱 (应收)
+                elif balance_info['balance'] > 0:
+                    user_balance_owing = balance_info['balance']
+            
+            # 统计总共有多少笔待结算
+            if balance_info['status'] != 'settled':
+                settlement_count += 1
+
+        # 5. 将计算出的余额附加到 group 对象上
+        # (Pydantic 模式已在 schemas.py 中更新)
+        group.user_balance_owed = user_balance_owed / 100.0  # 从分转换为元
+        group.user_balance_owing = user_balance_owing / 100.0 # 从分转换为元
+        
+        if settlement_count == 0:
+            group.settlement_summary = "全部已结清"
+        else:
+            # 注意：这里的 "1 笔" 是一个简化的示例，
+            # 完整的 "X 笔" 计数需要更复杂的交易生成逻辑
+            # 为了修复0元bug，我们先提供一个有意义的提示
+            group.settlement_summary = f"总计 {settlement_count} 笔待清算"
+
+        print(f"附加余额: Owed={group.user_balance_owed}, Owing={group.user_balance_owing}")
+        
+    except Exception as e:
+        print(f"错误: 计算余额时出错: {e}")
+        # 即使计算失败，也返回默认的0.00
+        group.user_balance_owed = 0.0
+        group.user_balance_owing = 0.0
+        group.settlement_summary = "余额计算出错"
+    # --- 修复结束 ---
+
+    print(f"=== 调试信息: 成功返回群组数据 (含余额) ===")
     return group
 # ----------------end of add for groups.html----------------------------------
 
@@ -1112,7 +1156,7 @@ def get_user_expense_balance(
     # Calculate total received amount
     total_received = db.query(func.sum(models.Payment.amount)).filter(
         models.Payment.expense_id == expense_id,
-        models.Payment.to_user_id == user_id
+        models.Payment.to_user_i
     ).scalar() or 0.0
 
     expense_split = db.query(models.ExpenseSplit).filter(
@@ -1293,3 +1337,4 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=422,
         content={"detail": jsonable_encoder(exc.errors())},
     )
+}
