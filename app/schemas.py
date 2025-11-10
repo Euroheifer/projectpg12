@@ -51,6 +51,12 @@ class GroupUpdate(BaseModel):
 class Group(GroupBase):
     id: int
     admin_id: int
+    
+    # --- 🔴 修复：添加这些字段以匹配前端 group_page.js 的期望 ---
+    user_balance_owed: Optional[float] = 0.0
+    user_balance_owing: Optional[float] = 0.0
+    settlement_summary: Optional[str] = "暂无数据"
+    # --- 修复结束 ---
 
     class Config:
         from_attributes = True
