@@ -1,6 +1,6 @@
 // /static/js/page/groups.js
-// 防止缓存版本: 2025.11.10.003 - 修复支付弹窗
-const JS_CACHE_VERSION = '2025.11.10.003';
+// 防止缓存版本: 2025.11.10.004 - 修复支付保存按钮
+const JS_CACHE_VERSION = '2025.11.10.004';
 
 import {
 //   getCurrentUser, // changed by sunzhe
@@ -902,7 +902,7 @@ window.handleEnableRecurringExpense = function() {
 
 window.handleDeleteRecurringExpense = function() {
     console.log('handleDeleteRecurringExpense called');
-    showCustomAlert('Info', 'Delete recurring expense feature is under development');
+    showCustomAlert('Info', 'Delete recurring expense feature is available in the module');
 };
 
 window.handleRecurringDetailCancel = function() {
@@ -969,13 +969,19 @@ window.handleDisableRecurringExpense = function() {
     }
 };
 
-window.handleSavePayment = function(event) {
+// 🔴 [START] 修复
+// 修复“保存支付”按钮
+window.savePaymentHandler = function(event) {
     event.preventDefault();
-    // This function should be implemented in payment.js
-    if (window.savePayment) {
-        window.savePayment(event);
+    // 调用 payment.js 中导入的真正的 handleSavePayment
+    if (window.handleSavePayment) {
+        window.handleSavePayment(event);
+    } else {
+        console.error('支付保存函数(handleSavePayment)未加载');
+        showCustomAlert('Error', '支付功能暂未就绪');
     }
 };
+// 🔴 [END] 修复
 
 // 费用更新事件的包装器 - 避免与expense.js中的函数冲突
 window.updateExpenseHandler = function(event) {
@@ -989,13 +995,19 @@ window.updateExpenseHandler = function(event) {
     }
 };
 
-window.handleUpdatePayment = function(event) {
+// 🔴 [START] 修复
+// 修复“更新支付”按钮
+window.updatePaymentHandler = function(event) {
     event.preventDefault();
-    // This function should be implemented in payment.js
+    // 调用 payment.js 中导入的真正的 handleUpdatePayment
     if (window.handleUpdatePayment) {
         window.handleUpdatePayment(event);
+    } else {
+        console.error('支付更新函数(handleUpdatePayment)未加载');
+        showCustomAlert('Error', '支付功能暂未就绪');
     }
 };
+// 🔴 [END] 修复
 
 /**
  * 保存群组设置API - 新增函数
