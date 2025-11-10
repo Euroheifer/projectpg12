@@ -362,17 +362,19 @@ class SettlementResponse(BaseModel):
     settlement_summary: Optional[SettlementSummary] = None
     created_at: datetime
 
-# ----------- Audit Log Schemas -----------
+# ----------- Audit Log Schemas (🔴 修复) -----------
 class AuditLog(BaseModel):
     id: int
     group_id: int
     user_id: int
-    timestamp: datetime
+    timestamp: datetime # 🔴 修复：确保字段名与 models.py 一致
     action: str
     details: Optional[dict] = None
+    user: User  # 🔴 修复：添加 user 字段以接收关联的用户对象
 
     class Config:
         from_attributes = True
+# --- 修复结束 ---
 
 # --- 把这些粘贴到文件的最末尾 03 Nov ---
 ExpenseUpdate.model_rebuild()
