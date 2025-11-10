@@ -1,18 +1,23 @@
 // recurring_expense.js - 定期费用相关的CRUD操作、频率设置
-// 防止缓存版本: 2025.11.07.002 - 彻底修复版本
-const JS_CACHE_VERSION = '2025.11.07.002';
+// 防止缓存版本: 2025.11.07.003 - 修复版本
+const JS_CACHE_VERSION = '2025.11.07.003';
+
+// 🔴 修复：import 必须在顶层
+import { centsToAmountString as importedCentsToAmountString } from '../ui/utils.js';
 
 // 从 ui/utils.js 导入金额转换函数
-// 注意：修复导入路径
-try {
-    import { centsToAmountString } from '../ui/utils.js';
-} catch (error) {
-    console.warn('Failed to import from ../ui/utils.js, trying alternative path');
+let centsToAmountString;
+if (typeof importedCentsToAmountString === 'function') {
+    centsToAmountString = importedCentsToAmountString;
+} else {
+    console.warn('Failed to import from ../ui/utils.js, defining fallback');
     // 如果上面的路径失败，定义一个简单的替代函数
-    window.centsToAmountString = function(cents) {
+    centsToAmountString = function(cents) {
         return (cents / 100).toFixed(2);
     };
+    window.centsToAmountString = centsToAmountString;
 }
+
 
 // --- 全局状态 ---
 let recurringExpenseState = {
@@ -424,7 +429,7 @@ function updatePreviewList(previewData) {
         
         const amountSpan = document.createElement('span');
         amountSpan.className = 'text-sm font-medium text-gray-900';
-        const displayAmount = window.centsToAmountString ? window.centsToAmountString(item.amount) : (item.amount / 100).toFixed(2);
+        const displayAmount = centsToAmountString ? centsToAmountString(item.amount) : (item.amount / 100).toFixed(2);
         amountSpan.textContent = `¥${displayAmount}`;
         
         listItem.appendChild(dateSpan);
@@ -444,8 +449,8 @@ function updatePreviewSummary(previewData) {
     if (summaryElement) {
         const participantCount = recurringSelectedParticipants.size;
         const amountPerPerson = participantCount > 0 ? totalAmount / participantCount : 0;
-        const displayTotal = window.centsToAmountString ? window.centsToAmountString(totalAmount) : (totalAmount / 100).toFixed(2);
-        const displayPerPerson = window.centsToAmountString ? window.centsToAmountString(amountPerPerson) : (amountPerPerson / 100).toFixed(2);
+        const displayTotal = centsToAmountString ? centsToAmountString(totalAmount) : (totalAmount / 100).toFixed(2);
+        const displayPerPerson = centsToAmountString ? centsToAmountString(amountPerPerson) : (amountPerPerson / 100).toFixed(2);
         
         summaryElement.textContent = `共 ${totalCount} 次，合计 ¥${displayTotal}，每人 ¥${displayPerPerson}`;
     }
@@ -503,7 +508,7 @@ function updateSplitDetailDisplay() {
         
         const amountSpan = document.createElement('span');
         amountSpan.className = 'text-sm font-medium text-gray-900';
-        const displayAmount = window.centsToAmountString ? window.centsToAmountString(split.amount) : (split.amount / 100).toFixed(2);
+        const displayAmount = centsToAmountString ? centsToAmountString(split.amount) : (split.amount / 100).toFixed(2);
         amountSpan.textContent = `¥${displayAmount}`;
         
         detailItem.appendChild(memberName);
@@ -525,8 +530,8 @@ function updateRecurringSummary() {
     
     const summaryElement = document.getElementById('recurring-summary');
     if (summaryElement) {
-        const displayTotal = window.centsToAmountString ? window.centsToAmountString(totalAmount) : (totalAmount / 100).toFixed(2);
-        const displayPerPerson = window.centsToAmountString ? window.centsToAmountString(amountPerPerson) : (amountPerPerson / 100).toFixed(2);
+        const displayTotal = centsToAmountString ? centsToAmountString(totalAmount) : (totalAmount / 100).toFixed(2);
+        const displayPerPerson = centsToAmountString ? centsToAmountString(amountPerPerson) : (amountPerPerson / 100).toFixed(2);
         summaryElement.textContent = `总金额: ¥${displayTotal}，参与者: ${participantCount}人，每人: ¥${displayPerPerson}`;
     }
 }
@@ -949,7 +954,7 @@ function renderRecurringExpenseList(expenses) {
         details.className = 'text-sm text-gray-600 space-y-1';
         
         const amount = document.createElement('p');
-        const displayAmount = window.centsToAmountString ? window.centsToAmountString(expense.amount) : (expense.amount / 100).toFixed(2);
+        const displayAmount = centsToAmountString ? centsToAmountString(expense.amount) : (expense.amount / 100).toFixed(2);
         amount.textContent = `金额: ¥${displayAmount}`;
         
         const frequency = document.createElement('p');

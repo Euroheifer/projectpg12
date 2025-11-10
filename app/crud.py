@@ -8,6 +8,7 @@ from sqlalchemy import func
 from decimal import Decimal
 import logging
 import json
+import traceback # 导入 traceback
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from app import models, schemas, auth
@@ -1126,15 +1127,24 @@ def get_audit_logs(db: Session, group_id: int):
     ).filter(models.AuditLog.group_id == group_id).order_by(models.AuditLog.timestamp.desc()).all()
 
 
-# ----------- Settlement CRUD -----------
+# ----------- Settlement CRUD (🔴 修复版本) -----------
 
-def calculate_group_settlement_balance(db: Session, group_id: int) -> Dict[int, Dict]:
+def get_all_group_payments(db: Session, group_id: int) -> List[models.Payment]:
     """
-    计算群组所有成员的结算余额
-    返回：{user_id: {balance_info}}
+    (🔴 新增辅助函数) 获取一个群组 *所有* 费用下的 *所有* 支付记录。
+    """
+    return db.query(models.Payment)\
+             .join(models.Expense)\
+             .filter(models.Expense.group_id == group_id)\
+             .all()
+
+def calculate_group_settlement_balance(db: Session, group_id: int) -> (Dict[int, Dict], Dict[int, Any]):
+    """
+    (🔴 修复) 计算群组所有成员的结算余额
+    返回：(member_balances, member_data)
     """
     try:
-        # 获取群组所有成员
+        # 1. 获取群组所有成员
         members = get_group_members(db, group_id)
         member_data = {member.user_id: {
             'user': member.user,
@@ -1142,78 +1152,47 @@ def calculate_group_settlement_balance(db: Session, group_id: int) -> Dict[int, 
             'is_admin': member.is_admin
         } for member in members}
         
-        # 初始化每个成员的数据
-        member_balances = {}
-        for member_id in member_data:
-            member_balances[member_id] = {
-                'total_expenses': 0.0,  # 实际承担的费用
-                'total_payments_made': 0.0,  # 支付的金额
-                'total_payments_received': 0.0  # 收到的金额
-            }
+        # 2. 初始化每个成员的余额 (单位：分)
+        member_balances = {member_id: 0 for member_id in member_data}
         
-        # 获取群组所有费用
+        # 3. 获取群组所有费用
         expenses = get_group_expenses(db, group_id)
         logging.info(f"DEBUG: Found {len(expenses)} expenses for group {group_id}")
         
-        # 计算每个成员的实际费用承担额
+        # 4. 累加费用
         for expense in expenses:
-            try:
-                # 每个费用拆分给相关成员 - 添加空值检查
-                if hasattr(expense, 'splits') and expense.splits:
-                    for split in expense.splits:
-                        if split and split.user_id in member_balances:
-                            try:
-                                member_balances[split.user_id]['total_expenses'] += float(split.amount)
-                            except (ValueError, TypeError) as e:
-                                logging.warning(f"Invalid split amount for user {split.user_id}, expense {expense.id}: {e}")
-                                continue
-                
-                # 费用支付者已经预付了全部费用 - 添加安全检查
-                if expense.payer_id in member_balances:
-                    try:
-                        member_balances[expense.payer_id]['total_expenses'] += float(expense.amount)
-                    except (ValueError, TypeError) as e:
-                        logging.warning(f"Invalid expense amount for payer {expense.payer_id}, expense {expense.id}: {e}")
-                        continue
-            except Exception as e:
-                logging.error(f"Error processing expense {expense.id}: {e}")
-                continue
+            if expense.payer_id in member_balances:
+                # 付款人 "增加" 余额 (别人欠他的)
+                member_balances[expense.payer_id] += expense.amount
+            
+            if hasattr(expense, 'splits') and expense.splits:
+                for split in expense.splits:
+                    if split.user_id in member_balances:
+                        # 参与人 "减少" 余额 (他欠别人的)
+                        member_balances[split.user_id] -= split.amount
         
-        # 计算每个成员的总支付和收款
-        for expense in expenses:
-            try:
-                payments = get_expense_payments(db, expense.id)
-                for payment in payments:
-                    if payment and payment.from_user_id in member_balances:
-                        try:
-                            member_balances[payment.from_user_id]['total_payments_made'] += float(payment.amount)
-                        except (ValueError, TypeError) as e:
-                            logging.warning(f"Invalid payment amount from user {payment.from_user_id}, payment {payment.id}: {e}")
-                            continue
-                    if payment and payment.to_user_id in member_balances:
-                        try:
-                            member_balances[payment.to_user_id]['total_payments_received'] += float(payment.amount)
-                        except (ValueError, TypeError) as e:
-                            logging.warning(f"Invalid payment amount to user {payment.to_user_id}, payment {payment.id}: {e}")
-                            continue
-            except Exception as e:
-                logging.error(f"Error processing payments for expense {expense.id}: {e}")
-                continue
+        # 5. 累加支付 (结算)
+        payments = get_all_group_payments(db, group_id)
+        logging.info(f"DEBUG: Found {len(payments)} total payments for group {group_id}")
         
-        # 计算最终余额
-        for member_id in member_balances:
-            balance_info = member_balances[member_id]
-            try:
-                final_balance = balance_info['total_payments_made'] - balance_info['total_payments_received']
-                balance_info['final_balance'] = final_balance
-            except Exception as e:
-                logging.error(f"Error calculating final balance for member {member_id}: {e}")
-                balance_info['final_balance'] = 0.0
-        
-        # 调试信息：确保final_balance字段存在
-        logging.info(f"DEBUG: Calculated final balances for {len(member_balances)} members")
-        
-        return member_balances, member_data
+        for payment in payments:
+            if payment.from_user_id in member_balances:
+                # 付款人 "增加" 余额 (还钱)
+                member_balances[payment.from_user_id] += payment.amount
+            if payment.to_user_id in member_balances:
+                # 收款人 "减少" 余额 (收钱)
+                member_balances[payment.to_user_id] -= payment.amount
+
+        # 6. 准备返回数据 (包含详细信息，仍然使用分)
+        final_balances_info = {}
+        for member_id, final_balance_cents in member_balances.items():
+            final_balances_info[member_id] = {
+                'final_balance': final_balance_cents
+                # 注意：这里不再计算 total_expenses 等，因为它们在旧逻辑中是错误的
+            }
+
+        logging.info(f"DEBUG: Calculated final balances (in cents) for {len(final_balances_info)} members")
+        return final_balances_info, member_data
     
     except Exception as e:
         logging.error(f"Error in calculate_group_settlement_balance for group {group_id}: {e}")
@@ -1223,7 +1202,7 @@ def calculate_group_settlement_balance(db: Session, group_id: int) -> Dict[int, 
 
 def get_group_settlement_summary(db: Session, group_id: int) -> Dict:
     """
-    获取群组结算汇总信息
+    (🔴 修复) 获取群组结算汇总信息
     """
     try:
         # 获取群组信息
@@ -1235,28 +1214,23 @@ def get_group_settlement_summary(db: Session, group_id: int) -> Dict:
         members = get_group_members(db, group_id)
         logging.info(f"DEBUG: Found {len(members)} members for group {group_id}")
         
-        # 计算结算余额
-        member_balances, member_data = calculate_group_settlement_balance(db, group_id)
+        # 计算结算余额 (使用 🔴 修复后 的函数)
+        member_balances_cents, member_data = calculate_group_settlement_balance(db, group_id)
         
-        # 调试信息：检查member_balances的结构
-        logging.info(f"DEBUG: member_balances keys: {list(member_balances.keys())}")
-        if member_balances:
-            first_key = list(member_balances.keys())[0]
-            logging.info(f"DEBUG: first member balance keys: {list(member_balances[first_key].keys())}")
-            logging.info(f"DEBUG: first member balance data: {member_balances[first_key]}")
+        # 调试信息
+        logging.info(f"DEBUG: member_balances_cents keys: {list(member_balances_cents.keys())}")
         
         # 生成结算平衡列表
         balances = []
-        for member_id in member_balances:
+        for member_id, balance_info in member_balances_cents.items():
             try:
                 user_info = member_data[member_id]
-                balance_info = member_balances[member_id]
-                final_balance = balance_info.get('final_balance', 0.0)
+                final_balance_cents = balance_info.get('final_balance', 0)
                 
                 # 确定状态
-                if final_balance > 0.01:  # 应收钱
+                if final_balance_cents > 1:  # 应收钱 (使用 1 分作为阈值)
                     status = 'creditor'
-                elif final_balance < -0.01:  # 应付钱
+                elif final_balance_cents < -1:  # 应付钱
                     status = 'debtor'
                 else:  # 基本平衡
                     status = 'settled'
@@ -1264,35 +1238,36 @@ def get_group_settlement_summary(db: Session, group_id: int) -> Dict:
                 balance_obj = {
                     'user_id': member_id,
                     'username': user_info['user'].username,
-                    'total_expenses': balance_info.get('total_expenses', 0.0),
-                    'total_payments_made': balance_info.get('total_payments_made', 0.0),
-                    'total_payments_received': balance_info.get('total_payments_received', 0.0),
-                    'balance': final_balance,
-                    'status': status
+                    'balance': final_balance_cents, # 保持分为单位
+                    'status': status,
+                    # 🔴 移除旧的、错误的字段
+                    # 'total_expenses': 0.0,
+                    # 'total_payments_made': 0.0,
+                    # 'total_payments_received': 0.0,
                 }
                 balances.append(balance_obj)
             except Exception as e:
                 logging.error(f"Error processing balance for member {member_id}: {e}")
                 continue
         
-        # 计算群组总支出 - 添加安全处理
+        # 计算群组总支出
         expenses = get_group_expenses(db, group_id)
-        total_amount = 0.0
+        total_amount_cents = 0
         for expense in expenses:
             try:
-                total_amount += float(expense.amount)
+                total_amount_cents += int(expense.amount)
             except (ValueError, TypeError) as e:
                 logging.warning(f"Invalid expense amount for expense {expense.id}: {e}")
                 continue
         
-        logging.info(f"DEBUG: Total amount calculated: {total_amount}")
+        logging.info(f"DEBUG: Total amount calculated (in cents): {total_amount_cents}")
         
         return {
             'group_id': group_id,
             'group_name': group.name,
-            'total_amount': total_amount,
+            'total_amount': total_amount_cents, # 保持分为单位
             'member_count': len(members),
-            'balances': balances,
+            'balances': balances, # 包含分为单位的余额
             'last_updated': datetime.now()
         }
     
@@ -1304,30 +1279,31 @@ def get_group_settlement_summary(db: Session, group_id: int) -> Dict:
 
 def generate_settlement_transactions(member_balances: Dict, member_data: Dict = None) -> List[Dict]:
     """
-    生成推荐的结算交易路径
+    (🔴 修复) 生成推荐的结算交易路径
     使用贪心算法最小化交易次数
+    - 传入的 member_balances 是 {member_id: {'final_balance': <cents>}}
     """
     # 分离债权人和债务人
     creditors = []  # 应收钱的人
     debtors = []    # 应付钱的人
     
     for member_id, balance_info in member_balances.items():
-        final_balance = balance_info['final_balance']
+        final_balance_cents = balance_info['final_balance']
         # 获取用户名
         username = f"User{member_id}"
         if member_data and member_id in member_data:
             username = member_data[member_id]['user'].username
         
-        if final_balance > 0.01:  # 应收
+        if final_balance_cents > 1:  # 应收
             creditors.append({
                 'user_id': member_id,
-                'amount': final_balance,
+                'amount': final_balance_cents,
                 'username': username
             })
-        elif final_balance < -0.01:  # 应付
+        elif final_balance_cents < -1:  # 应付
             debtors.append({
                 'user_id': member_id,
-                'amount': abs(final_balance),
+                'amount': abs(final_balance_cents),
                 'username': username
             })
     
@@ -1343,25 +1319,25 @@ def generate_settlement_transactions(member_balances: Dict, member_data: Dict = 
         creditor = creditors[i]
         debtor = debtors[j]
         
-        # 计算交易金额
-        transaction_amount = min(creditor['amount'], debtor['amount'])
+        # 计算交易金额 (分)
+        transaction_amount_cents = min(creditor['amount'], debtor['amount'])
         
-        if transaction_amount > 0.01:  # 忽略很小的金额
+        if transaction_amount_cents > 1:  # 忽略很小的金额
             transactions.append({
                 'from_user_id': debtor['user_id'],  # 债务人付钱
                 'to_user_id': creditor['user_id'],   # 债权人收钱
-                'amount': transaction_amount,
+                'amount': transaction_amount_cents, # 保持分为单位
                 'description': f"结算付款：{debtor['username']} 支付给 {creditor['username']}"
             })
         
         # 更新余额
-        creditor['amount'] -= transaction_amount
-        debtor['amount'] -= transaction_amount
+        creditor['amount'] -= transaction_amount_cents
+        debtor['amount'] -= transaction_amount_cents
         
         # 移动到下一个
-        if creditor['amount'] <= 0.01:
+        if creditor['amount'] <= 1:
             i += 1
-        if debtor['amount'] <= 0.01:
+        if debtor['amount'] <= 1:
             j += 1
     
     return transactions
@@ -1369,62 +1345,91 @@ def generate_settlement_transactions(member_balances: Dict, member_data: Dict = 
 
 def execute_settlement(db: Session, group_id: int, creator_id: int, description: Optional[str] = None) -> Dict:
     """
-    执行群组结算操作
+    (🔴 修复) 执行群组结算操作
     创建结算交易的支付记录
     """
-    # 获取结算汇总
+    # 1. 获取结算汇总 (使用 🔴 修复后 的函数)
     settlement_summary = get_group_settlement_summary(db, group_id)
-    member_balances = {balance['user_id']: balance for balance in settlement_summary['balances']}
     
-    # 生成推荐交易
-    transactions = generate_settlement_transactions(member_balances)
+    # 2. 准备 member_balances 和 member_data
+    members = get_group_members(db, group_id)
+    member_data = {member.user_id: {
+        'user': member.user,
+        'nickname': member.nickname,
+        'is_admin': member.is_admin
+    } for member in members}
     
-    # 创建支付记录
+    member_balances_dict = {
+        balance['user_id']: {'final_balance': balance['balance']} 
+        for balance in settlement_summary['balances']
+    }
+    
+    # 3. 生成推荐交易 (以分为单位)
+    transactions = generate_settlement_transactions(member_balances_dict, member_data)
+    
+    if not transactions:
+        raise ValueError("没有需要结算的款项")
+
+    # 4. 获取群组的 *第一个* 费用ID，用于关联支付
+    # 这是一个简化处理，理想情况下结算支付不应与单一费用关联
+    # 但根据当前模型 Payment.expense_id 是必填项
+    first_expense = db.query(models.Expense).filter(models.Expense.group_id == group_id).first()
+    if not first_expense:
+        raise ValueError("群组中没有任何费用，无法创建结算支付")
+    
+    reference_expense_id = first_expense.id
+
+    # 5. 创建支付记录
     created_payments = []
     for transaction in transactions:
         payment_data = schemas.PaymentCreate(
             from_user_id=transaction['from_user_id'],
             to_user_id=transaction['to_user_id'],
-            amount=int(transaction['amount'] * 100),  # 转换为分
+            amount=transaction['amount'],  # 已经是分
             description=transaction.get('description', description or f'群组 {settlement_summary["group_name"]} 结算')
         )
         
-        # 为每个费用创建支付记录
-        # 这里我们为所有费用创建一个汇总支付
-        expenses = get_group_expenses(db, group_id)
-        if expenses:
-            # 使用第一个费用作为参考创建支付
-            expense = expenses[0]  # 或者选择最新费用
-            try:
-                payment = create_payment(
-                    db=db,
-                    expense_id=expense.id,
-                    creator_id=creator_id,
-                    payment=payment_data
-                )
-                created_payments.append(payment)
-            except Exception as e:
-                logging.error(f"创建支付记录失败: {e}")
-                continue
+        try:
+            payment = create_payment(
+                db=db,
+                expense_id=reference_expense_id, # 关联到第一个费用
+                creator_id=creator_id,
+                payment=payment_data
+            )
+            created_payments.append(payment)
+        except Exception as e:
+            logging.error(f"创建支付记录失败: {e}")
+            db.rollback() # 回滚单次支付创建
+            continue # 继续尝试下一笔
     
-    # 创建结算审计日志
+    # 6. 创建结算审计日志
+    # (注意：create_payment 内部已经创建了 CREATE_PAYMENT 日志)
     create_audit_log(
         db=db,
         group_id=group_id,
         user_id=creator_id,
         action="EXECUTE_SETTLEMENT",
         details={
-            "settlement_summary": settlement_summary,
-            "transactions": transactions,
-            "created_payments": [p.id for p in created_payments],
-            "description": description
+            "description": description or "群组结算",
+            "transactions_created": [jsonable_encoder(p) for p in created_payments],
+            "reference_expense_id": reference_expense_id
         }
     )
     
+    # 7. 提交事务 (create_payment 内部已提交，这里多提交一次以保存审计日志)
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logging.error(f"提交结算审计日志失败: {e}")
+
+    # 8. 获取 *新* 的结算汇总
+    new_settlement_summary = get_group_settlement_summary(db, group_id)
+
     return {
         'success': True,
         'message': f'结算成功完成，创建了 {len(created_payments)} 笔支付记录',
-        'settlement_summary': settlement_summary,
+        'settlement_summary': new_settlement_summary, # 返回最新的汇总
         'transactions': transactions,
         'created_payments': [p.id for p in created_payments]
     }
