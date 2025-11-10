@@ -1,6 +1,6 @@
 // recurring_expense.js - 定期费用相关的CRUD操作、频率设置
-// 防止缓存版本: 2025.11.10.002 - 修复金额单位混淆
-const JS_CACHE_VERSION = '2025.11.10.002';
+// 防止缓存版本: 2025.11.10.003 - 修复分摊按钮
+const JS_CACHE_VERSION = '2025.11.10.003';
 
 // 🔴 修复：import 必须在顶层
 import { 
@@ -284,13 +284,19 @@ export function setRecurringSplitMethod(method) {
     
     recurringSplitMethod = method;
     
-    const methodButtons = document.querySelectorAll('.split-method-option');
-    methodButtons.forEach(btn => {
-        btn.classList.remove('selected');
-        if (btn.getAttribute('data-method') === method) {
-            btn.classList.add('selected');
+    // 🔴 修复：使用正确的 ID
+    const equalBtn = document.getElementById('recurring-split-equal');
+    const customBtn = document.getElementById('recurring-split-exact');
+    
+    if (equalBtn && customBtn) {
+        if (method === 'equal') {
+            equalBtn.classList.add('active');
+            customBtn.classList.remove('active');
+        } else {
+            equalBtn.classList.remove('active');
+            customBtn.classList.add('active');
         }
-    });
+    }
     
     updateRecurringSplitCalculation();
     updateSplitDetailDisplay();
@@ -450,11 +456,23 @@ function updatePreviewSummary(previewData) {
  */
 function updateRecurringSplitCalculation() {
     const amountInput = document.getElementById('recurring-amount');
-    if (!amountInput) return;
+    if (!amountInput || !amountInput.value) { // 🔴
+        recurringMemberSplits = []; // 🔴 清空
+        renderSplitDetails(); // 🔴 渲染空状态
+        updateRecurringSummary(); // 🔴 更新摘要
+        return;
+    }
     
     // 🔴 修复：立即转换为分
     const totalAmountInCents = amountToCents(amountInput.value);
     const selectedMemberIds = Array.from(recurringSelectedParticipants);
+
+    if (selectedMemberIds.length === 0) { // 🔴
+        recurringMemberSplits = [];
+        renderSplitDetails();
+        updateRecurringSummary();
+        return;
+    }
     
     // 重新计算每个成员的分摊金额
     recurringMemberSplits = selectedMemberIds.map(userId => {
@@ -462,15 +480,10 @@ function updateRecurringSplitCalculation() {
         if (!member) return null;
         
         // 🔴 修复：以分为单位计算
-        // ！！！注意：这里需要处理除不尽和余数的问题，否则总和可能不等于 totalAmountInCents
         const count = selectedMemberIds.length;
-        if (count === 0) return { user_id: userId, user: member.user, amount: 0 };
-
         const baseAmount = Math.floor(totalAmountInCents / count);
         const remainder = totalAmountInCents % count;
         
-        // 分配余数 (简单地分配给第一个人)
-        // 更好的方法是按顺序分配
         let splitAmountInCents = baseAmount;
         const memberIndex = selectedMemberIds.indexOf(userId);
         if (memberIndex < remainder) {
@@ -498,7 +511,8 @@ function updateRecurringSplitCalculation() {
  * 🔴 修复：split.amount 是以分为单位的
  */
 function updateSplitDetailDisplay() {
-    const splitDetailContainer = document.getElementById('recurring-split-detail');
+    // 🔴 修复：使用正确的 ID
+    const splitDetailContainer = document.getElementById('recurring-split-list');
     if (!splitDetailContainer) {
         console.error('找不到分摊详情容器');
         return;
@@ -548,13 +562,28 @@ function updateRecurringSummary() {
     const amountPerPersonInCents = participantCount > 0 ? Math.floor(totalAmountInCents / participantCount) : 0;
     // (注意: 简单的平均值可能因余数而不准确, 但对于摘要显示足够了)
 
-    const summaryElement = document.getElementById('recurring-summary');
+    // 🔴 修复：使用正确的 ID
+    const summaryElement = document.getElementById('recurring-split-summary');
     if (summaryElement) {
         // 🔴 修复：使用 centsToAmountString 显示
         const displayTotal = centsToAmountString ? centsToAmountString(totalAmountInCents) : (totalAmountInCents / 100).toFixed(2);
         const displayPerPerson = centsToAmountString ? centsToAmountString(amountPerPersonInCents) : (amountPerPersonInCents / 100).toFixed(2);
         
-        summaryElement.textContent = `总金额: ¥${displayTotal}，参与者: ${participantCount}人，每人约: ¥${displayPerPerson}`;
+        // 🔴 修复：提供更丰富的摘要
+        summaryElement.innerHTML = `
+            <div class="flex justify-between text-sm">
+                <span>总金额:</span>
+                <span class="font-medium">¥${displayTotal}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+                <span>参与者:</span>
+                <span class="font-medium">${participantCount} 人</span>
+            </div>
+            <div class="flex justify-between text-sm">
+                <span>每人约:</span>
+                <span class="font-medium">¥${displayPerPerson}</span>
+            </div>
+        `;
     }
 }
 
@@ -1168,6 +1197,24 @@ function initializeEventListeners() {
             console.log('支付人选择已更改');
         });
     }
+
+    // 🔴 [START] 新增代码
+    // 绑定 "添加定期费用" 模态框中的 "Equally Split" / "Custom Amount" 按钮
+    const recSplitMethodContainer = document.getElementById('recurring-split-method-selection');
+    if (recSplitMethodContainer) {
+        recSplitMethodContainer.addEventListener('click', (event) => {
+            const button = event.target.closest('.split-toggle-btn');
+            if (button && button.dataset.method) {
+                const method = button.dataset.method; // 'equal' or 'custom'
+                setRecurringSplitMethod(method); // 调用 recurring_expense.js 中已有的函数
+                console.log(`✅ "添加定期费用" 模态框: 分摊方式切换为 ${method}`);
+            }
+        });
+        console.log('✅ "添加定期费用" 模态框: 分摊按钮事件监听器已绑定');
+    } else {
+        console.error('❌ 找不到 "添加定期费用" 模态框的分摊按钮容器 #recurring-split-method-selection');
+    }
+    // 🔴 [END] 新增代码
     
     console.log('定期费用事件监听器初始化完成');
 }
