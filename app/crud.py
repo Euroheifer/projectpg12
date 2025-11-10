@@ -815,12 +815,15 @@ def check_member_in_expense(db: Session, expense_id: int, user_id: int) -> bool:
         models.ExpenseSplit.user_id == user_id
     ).first() is not None
 
+# 🔴 [START] 修复
 def create_payment(
     db: Session,
     expense_id: int,
     creator_id: int,
-    payment: schemas.PaymentCreate
+    payment: schemas.PaymentCreate,
+    image_file: Optional[UploadFile] = None  # 修复：添加 image_file
 ) -> models.Payment:
+# 🔴 [END] 修复
     """Creates a new payment related to an expense."""
     expense = get_expense_by_id(db, expense_id)
     if not expense:
@@ -840,6 +843,27 @@ def create_payment(
     # Use Decimal for amount precision
     payment_amount_dec = Decimal(str(payment.amount)).quantize(Decimal("0.01"))
 
+    # 🔴 [START] 修复：添加文件上传逻辑
+    image_url = None
+    if image_file and image_file.filename:
+        upload_dir = "app/static/uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_extension = os.path.splitext(image_file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_extension}"
+        file_location = os.path.join(upload_dir, unique_filename)
+
+        try:
+            with open(file_location, "wb") as file_object:
+                shutil.copyfileobj(image_file.file, file_object)
+            image_url = f"/static/uploads/{unique_filename}"
+            logging.info(f"Successfully saved payment file to: {file_location}")
+        except Exception as e:
+            logging.error(f"Failed to save uploaded payment file '{image_file.filename}': {e}")
+            if image_file.file:
+                image_file.file.close()
+    # 🔴 [END] 修复
+
     db_payment = models.Payment(
         expense_id=expense_id,
         from_user_id=payment.from_user_id,
@@ -848,7 +872,7 @@ def create_payment(
         description=payment.description,
         payment_date=date.today(), # Use date type
         creator_id=creator_id,
-        image_url=getattr(payment, 'image_url', None)
+        image_url=image_url # 🔴 修复：使用新的 image_url
     )
 
     db.add(db_payment)
@@ -1386,7 +1410,8 @@ def execute_settlement(db: Session, group_id: int, creator_id: int, description:
                 db=db,
                 expense_id=reference_expense_id, # 关联到第一个费用
                 creator_id=creator_id,
-                payment=payment_data
+                payment=payment_data,
+                image_file=None # 🔴 修复：结算支付没有图片
             )
             created_payments.append(payment)
         except Exception as e:
