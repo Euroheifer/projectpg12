@@ -147,7 +147,7 @@ class ExpenseCreate(BaseModel):
     payer_id: int
     image_url: Optional[str] = None
     #date: Optional[date] = None  # 明确声明为可选
-    date: Optional[str] = None
+    date: Optional[date] = None # 🔴 修复：从 str 改回 date 来修复 Scheduler 错误
     
 # class ExpenseUpdate(BaseModel):
     # description: Optional[str] = None
@@ -162,7 +162,7 @@ class ExpenseUpdate(BaseModel):
     amount: Optional[int] = None
     payer_id: Optional[int] = None
     #date: Optional[date] = None
-    date: Optional[str] = None
+    date: Optional[date] = None # 🔴 修复：从 str 改回 date
     image_url: Optional[str] = None
     split_type: Optional[str] = None
     splits: Optional[List['ExpenseSplitCreate']] = None
@@ -262,7 +262,7 @@ class ExpenseCreateWithSplits(ExpenseCreate):
     splits: List[ExpenseSplitCreate]
     split_type: str = "equal"
     #date: Optional[date] = None #03 Nov
-    date: Optional[str] = None
+    date: Optional[date] = None # 🔴 修复：从 str 改回 date
     
 class ExpenseWithSplits(Expense):
     splits: List[ExpenseSplit] = []
@@ -316,13 +316,13 @@ class BalanceSummary(BaseModel):
 # ************************************************************************ #
 # ----------- Settlement Schemas -----------
 class SettlementBalance(BaseModel):
-    """单个群组成员的结算余额信息"""
+    """(🔴 修复) 单个群组成员的结算余额信息"""
     user_id: int
     username: str
-    total_expenses: float  # 总支出
-    total_payments_made: float  # 总支付金额
-    total_payments_received: float  # 总收款金额
-    balance: float  # 最终余额，正数表示应收，负数表示应付
+    total_expenses: Optional[float] = None  # 🔴 修复：设为可选
+    total_payments_made: Optional[float] = None  # 🔴 修复：设为可选
+    total_payments_received: Optional[float] = None  # 🔴 修复：设为可选
+    balance: float  # 最终余额 (这是 crud.py 唯一返回的)
     status: str  # 状态：' creditor'（债权方）、'debtor'（债务方）、'settled'（已结清）
 
 class SettlementMember(BaseModel):
@@ -333,10 +333,10 @@ class SettlementMember(BaseModel):
     is_admin: bool
 
 class SettlementTransaction(BaseModel):
-    """推荐支付路径"""
+    """(🔴 修复) 推荐支付路径"""
     from_user_id: int
     to_user_id: int
-    amount: float
+    amount: float # 🔴 修复：crud.py 生成的是 float
     description: str
 
 class SettlementSummary(BaseModel):
