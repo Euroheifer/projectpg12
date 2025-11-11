@@ -1,5 +1,6 @@
+[File: app/schemas.py]
 from pydantic import BaseModel, EmailStr, Field, model_validator
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union  # 🔴 修复：导入 Union
 from datetime import date, datetime
 from app.models import InvitationStatus
 
@@ -152,8 +153,8 @@ class ExpenseCreate(BaseModel):
     amount: int
     payer_id: int
     image_url: Optional[str] = None
-    #date: Optional[date] = None  # 明确声明为可选
-    date: Optional[date] = None # 🔴 修复：从 str 改回 date
+    # 🔴 修复：允许 date 是 str 或 date 对象，以匹配两个调用路径
+    date: Optional[Union[date, str]] = None
     
 # class ExpenseUpdate(BaseModel):
     # description: Optional[str] = None
@@ -167,8 +168,8 @@ class ExpenseUpdate(BaseModel):
     description: Optional[str] = None
     amount: Optional[int] = None
     payer_id: Optional[int] = None
-    #date: Optional[date] = None
-    date: Optional[date] = None # 🔴 修复：从 str 改回 date
+    # 🔴 修复：允许 date 是 str 或 date 对象
+    date: Optional[Union[date, str]] = None
     image_url: Optional[str] = None
     split_type: Optional[str] = None
     splits: Optional[List['ExpenseSplitCreate']] = None
