@@ -3,35 +3,35 @@ import { createNewGroup, handleCreateGroup, closeCreateGroupModal, getUserGroups
 import { acceptInvitation, declineInvitation, getPendingInvitations } from '../api/invitations.js';
 import { getAuthToken } from '../ui/utils.js';
 
-// 当前用户信息
+// Current user information
 let currentUser = null;
 
-// 页面初始化 - 获取并渲染数据
+// Page initialization - get and render data
 async function initializeHomePage() {
-    console.log('开始初始化主页...');
+    console.log('Starting homepage initialization...');
 
-    // 获取当前用户信息
+    // Get current user information
     await getCurrentUserInfo();
 
-    // 获取并渲染数据
+    // Get and render data
     await loadAndRenderData();
 
-    // 绑定事件监听器
+    // Bind event listeners
     bindEventListeners();
 
-    console.log('主页初始化完成');
+    console.log('Homepage initialization completed');
 }
 
-// 获取当前用户信息 - 使用正确的API端点
+// Get current user information - using correct API endpoint
 async function getCurrentUserInfo() {
     try {
         const token = getAuthToken();
         if (!token) {
-            console.warn('未找到认证token');
+            console.warn('Authentication token not found');
             return;
         }
 
-        console.log('正在从API获取用户信息...');
+        console.log('Getting user information from API...');
         const response = await fetch('/me', {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -40,84 +40,84 @@ async function getCurrentUserInfo() {
 
         if (response.ok) {
             currentUser = await response.json();
-            console.log('从API获取的用户信息:', currentUser);
+            console.log('User information from API:', currentUser);
 
         } else {
-            console.error('获取用户信息失败，状态码:', response.status);
+            console.error('Failed to get user information, status code:', response.status);
             const errorText = await response.text();
-            console.error('错误信息:', errorText);
+            console.error('Error message:', errorText);
         }
     } catch (error) {
-        console.error('获取用户信息失败:', error);
+        console.error('Failed to get user information:', error);
     }
 }
 
-// 获取并渲染数据
+// Get and render data
 async function loadAndRenderData() {
     try {
-        console.log('开始加载数据...');
+        console.log('Starting data loading...');
         
-        // 并行获取群组和邀请数据
+        // Get group and invitation data in parallel
         const [groups, invitations] = await Promise.all([
             getUserGroups().catch(error => {
-                console.error('获取群组数据失败:', error);
+                console.error('Failed to get group data:', error);
                 return [];
             }),
             getPendingInvitations().catch(error => {
-                console.error('获取邀请数据失败:', error);
+                console.error('Failed to get invitation data:', error);
                 return [];
             })
         ]);
 
-        console.log('获取到的数据:', { groups, invitations });
-        console.log('当前用户信息:', currentUser);
+        console.log('Retrieved data:', { groups, invitations });
+        console.log('Current user information:', currentUser);
         
-        // 确保数据是数组
+        // Ensure data is arrays
         const groupsArray = Array.isArray(groups) ? groups : [];
         const invitationsArray = Array.isArray(invitations) ? invitations : [];
         
-        console.log('处理后的数据:', { 
-            groupsCount: groupsArray.length, 
-            invitationsCount: invitationsArray.length 
+        console.log('Processed data:', {
+            groupsCount: groupsArray.length,
+            invitationsCount: invitationsArray.length
         });
 
-        // 检查群组数据结构
+        // Check group data structure
         if (groupsArray.length > 0) {
-            console.log('第一个群组的完整数据结构:', groupsArray[0]);
+            console.log('First group complete data structure:', groupsArray[0]);
         }
         
-        // 检查邀请数据结构
+        // Check invitation data structure
         if (invitationsArray.length > 0) {
-            console.log('第一个邀请的完整数据结构:', invitationsArray[0]);
+            console.log('First invitation complete data structure:', invitationsArray[0]);
         }
 
-        // 渲染数据到页面
+        // Render data to page
         renderGroups(groupsArray);
         renderInvitations(invitationsArray);
 
     } catch (error) {
-        console.error('加载数据失败:', error);
+        console.error('Failed to load data:', error);
         showErrorStates();
     }
 }
 
-// 渲染群组列表 - 修复版本
+// Render group list - fixed version
 function renderGroups(groups) {
     const container = document.getElementById('my-groups-list');
     if (!container) return;
 
-    console.log('渲染群组数据:', groups);
+    console.log('Rendering group data:', groups);
 
     if (!groups || groups.length === 0) {
         container.innerHTML = `
             <div class="col-span-full text-center p-8 text-gray-500 bg-gray-50 rounded-lg">
                 <i class="fa-solid fa-users text-5xl text-gray-300 mb-4"></i>
-                <h3 class="text-lg font-medium text-gray-600 mb-2">还没有加入任何群组</h3>
-                <p class="text-sm text-gray-500 mb-4">创建或接受邀请来开始管理群组费用</p>
+                <h3 class="text-lg font-medium text-gray-600 mb-2">No groups joined yet</h3>
+                <p class="text-sm text-gray-500 mb-4">Create or accept invitations to start managing group expenses</p>
                 <button onclick="handleCreateGroup()"
                     class="inline-flex items-center space-x-1 py-2 px-4 rounded-lg text-white bg-emerald-500 hover:bg-emerald-600 transition duration-150">
                     <i class="fa-solid fa-plus w-4 h-4"></i>
-                    <span>创建第一个群组</span>
+                    <span>Create First Group</span>
                 </button>
             </div>
         `;
@@ -125,16 +125,16 @@ function renderGroups(groups) {
     }
 
     container.innerHTML = groups.map(group => {
-        console.log('处理群组:', group);
+        console.log('Processing group:', group);
 
-        // 计算结余信息 - 修复版本
+        // Calculate balance information - fixed version
         const balance = group.balance || group.user_balance || 0;
         const owes = balance < 0;
         const balanceAmount = Math.abs(balance).toFixed(2);
         const balanceColor = owes ? 'text-red-400' : 'text-emerald-500';
-        const balanceText = owes ? `您欠 ¥${balanceAmount}` : `您被欠 ¥${balanceAmount}`;
+        const balanceText = owes ? `You owe ¥${balanceAmount}` : `You are owed ¥${balanceAmount}`;
 
-        // 判断是否是管理员 - 修复版本
+        // Determine if admin - fixed version
         let isAdmin = false;
         if (group.is_admin !== undefined) {
             isAdmin = group.is_admin;
@@ -144,7 +144,7 @@ function renderGroups(groups) {
             isAdmin = true;
         }
 
-        console.log(`群组 ${group.name} 的管理员状态:`, {
+        console.log(`Group ${group.name} admin status:`, {
             isAdmin,
             groupAdminId: group.admin_id,
             currentUserId: currentUser?.id,
@@ -152,7 +152,7 @@ function renderGroups(groups) {
             groupIsAdmin: group.is_admin
         });
 
-        // 获取成员数量 - 修复版本
+        // Get member count - fixed version
         let memberCount = '0';
         if (group.member_count !== undefined) {
             memberCount = group.member_count.toString();
@@ -162,12 +162,12 @@ function renderGroups(groups) {
             memberCount = group.member_count.toString();
         }
 
-        // 获取群组描述 - 修复版本
-        const description = group.description || group.group_description || '暂无描述';
+        // Get group description - fixed version
+        const description = group.description || group.group_description || 'No description';
 
-        // 安全处理群组名称
-        const safeGroupName = group.name || group.group_name || '未命名群组';
-        const safeGroupId = group.id || group.group_id || '未知';
+        // Safely handle group name
+        const safeGroupName = group.name || group.group_name || 'Unnamed Group';
+        const safeGroupId = group.id || group.group_id || 'Unknown';
 
         return `
         <div class="group-card bg-white p-5 rounded-xl border border-gray-200 shadow-md hover:bg-gray-50 fade-in"
@@ -175,16 +175,16 @@ function renderGroups(groups) {
             <div class="mb-3">
                 <div class="flex items-center justify-between">
                     <h3 class="text-xl font-bold text-gray-900 truncate">${safeGroupName}</h3>
-                    ${isAdmin ? '<span class="admin-badge">管理员</span>' : ''}
+                    ${isAdmin ? '<span class="admin-badge">Admin</span>' : ''}
                 </div>
             </div>
-            <!-- 添加群组描述 -->
+            <!-- Add group description -->
             <p class="text-sm text-gray-500 mb-2 line-clamp-2">${description}</p>
-            <p class="text-sm text-gray-500 mb-2">成员: ${memberCount} 人</p>
+            <p class="text-sm text-gray-500 mb-2">Members: ${memberCount} people</p>
             <div class="flex items-center space-x-2 pt-2 border-t border-gray-100">
-                <span class="${balanceColor} font-bold text-base">结余: ${balanceText}</span>
+                <span class="${balanceColor} font-bold text-base">Balance: ${balanceText}</span>
                 <svg class="w-5 h-5 ${balanceColor}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="${owes ? 'M19 9l-7 7-7-7' : 'M5 15l7-7 7 7'}"></path>
                 </svg>
             </div>
@@ -193,53 +193,53 @@ function renderGroups(groups) {
     }).join('');
 }
 
-// 渲染邀请列表 - 修复版本
+// Render invitation list - fixed version
 function renderInvitations(invitations) {
     const container = document.getElementById('invitation-list-container');
     if (!container) {
-        console.error('找不到邀请列表容器元素: invitation-list-container');
+        console.error('Cannot find invitation list container element: invitation-list-container');
         return;
     }
 
-    console.log('开始渲染邀请数据:', invitations);
-    console.log('数据类型:', typeof invitations);
-    console.log('是否为数组:', Array.isArray(invitations));
-    console.log('邀请数量:', invitations ? invitations.length : '邀请数据为空');
+    console.log('Starting to render invitation data:', invitations);
+    console.log('Data type:', typeof invitations);
+    console.log('Is array:', Array.isArray(invitations));
+    console.log('Invitation count:', invitations ? invitations.length : 'Invitation data is empty');
 
     if (!invitations || invitations.length === 0) {
-        console.log('没有邀请数据，显示空状态');
+        console.log('No invitation data, showing empty state');
         container.innerHTML = `
             <div class="text-center p-6 text-gray-500">
                 <i class="fa-solid fa-inbox text-5xl text-gray-300 mb-3"></i>
-                <p class="mt-2">您当前没有待处理的邀请。</p>
+                <p class="mt-2">You currently have no pending invitations.</p>
             </div>
         `;
         return;
     }
 
-    console.log('开始渲染', invitations.length, '个邀请');
+    console.log('Starting to render', invitations.length, 'invitations');
     
     try {
         container.innerHTML = invitations.map((invitation, index) => {
-            console.log(`处理第 ${index + 1} 个邀请:`, invitation);
+            console.log(`Processing invitation ${index + 1}:`, invitation);
             
-            // 安全获取邀请数据
+            // Safely get invitation data
             const invitationId = invitation.id || invitation.invitation_id;
-            const groupName = invitation.group?.name || invitation.group_name || invitation.group?.group_name || '未知群组';
-            const inviterName = invitation.inviter?.username || invitation.inviter_name || invitation.inviter?.name || '未知用户';
+            const groupName = invitation.group?.name || invitation.group_name || invitation.group?.group_name || 'Unknown Group';
+            const inviterName = invitation.inviter?.username || invitation.inviter_name || invitation.inviter?.name || 'Unknown User';
             const groupId = invitation.group?.id || invitation.group_id;
             
             if (!invitationId) {
-                console.warn('邀请数据缺少ID，跳过:', invitation);
+                console.warn('Invitation data missing ID, skipping:', invitation);
                 return `
                     <div class="bg-red-50 border border-red-200 p-4 mb-3 rounded-lg">
-                        <p class="text-red-600">邀请数据格式错误，缺少ID</p>
+                        <p class="text-red-600">Invalid invitation data format, missing ID</p>
                         <pre class="text-xs text-red-500 mt-2">${JSON.stringify(invitation, null, 2)}</pre>
                     </div>
                 `;
             }
 
-            console.log(`邀请 ${invitationId} 解析结果:`, { groupName, inviterName, groupId });
+            console.log(`Invitation ${invitationId} parsing result:`, { groupName, inviterName, groupId });
 
             return `
             <div class="invitation-card bg-white rounded-lg border border-gray-200 p-4 mb-3 shadow-sm hover:shadow-md transition duration-200"
@@ -251,37 +251,37 @@ function renderInvitations(invitations) {
                 </div>
                 <p class="text-sm text-gray-600 mb-3">
                     <i class="fa-solid fa-user-tag mr-1"></i>
-                    邀请人: 
+                    Invited by:
                     ${inviterName}
                 </p>
                 <div class="flex space-x-2">
                     <button class="accept-invitation-btn flex-1 py-2 px-3 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition duration-150 flex items-center justify-center space-x-1">
                         <i class="fa-solid fa-check w-3 h-3"></i>
-                        <span>接受邀请</span>
+                        <span>Accept</span>
                     </button>
                     <button class="decline-invitation-btn flex-1 py-2 px-3 bg-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-400 transition duration-150 flex items-center justify-center space-x-1">
                         <i class="fa-solid fa-times w-3 h-3"></i>
-                        <span>拒绝</span>
+                        <span>Decline</span>
                     </button>
                 </div>
             </div>
             `;
         }).join('');
 
-        console.log('邀请渲染完成，绑定事件处理...');
+        console.log('Invitation rendering completed, binding event handlers...');
         
-        // 绑定接受/拒绝邀请的事件处理
+        // Bind accept/decline invitation event handlers
         bindInvitationEvents();
         
     } catch (error) {
-        console.error('渲染邀请时发生错误:', error);
+        console.error('Error occurred when rendering invitations:', error);
         container.innerHTML = `
             <div class="text-center p-6 text-red-500">
                 <i class="fa-solid fa-exclamation-triangle text-3xl mb-3"></i>
-                <p>渲染邀请列表时发生错误</p>
+                <p>Error occurred when rendering invitation list</p>
                 <p class="text-sm text-red-400 mt-1">${error.message}</p>
                 <button onclick="loadAndRenderData()" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                    重新加载
+                    Reload
                 </button>
             </div>
         `;
@@ -289,17 +289,17 @@ function renderInvitations(invitations) {
 }
 
 /**
- * 绑定邀请事件处理 - 新增函数
+ * Bind invitation event handlers - new function
  */
 function bindInvitationEvents() {
-    // 使用事件委托处理接受邀请
+    // Use event delegation to handle invitation acceptance
     document.addEventListener('click', function(event) {
         if (event.target.closest('.accept-invitation-btn')) {
             event.preventDefault();
             const invitationCard = event.target.closest('.invitation-card');
             const invitationId = invitationCard?.dataset.invitationId;
             if (invitationId) {
-                console.log('接受邀请:', invitationId);
+                console.log('Accepting invitation:', invitationId);
                 handleAcceptInvitation(parseInt(invitationId), invitationCard);
             }
         }
@@ -309,7 +309,7 @@ function bindInvitationEvents() {
             const invitationCard = event.target.closest('.invitation-card');
             const invitationId = invitationCard?.dataset.invitationId;
             if (invitationId) {
-                console.log('拒绝邀请:', invitationId);
+                console.log('Declining invitation:', invitationId);
                 handleDeclineInvitation(parseInt(invitationId), invitationCard);
             }
         }
@@ -317,70 +317,70 @@ function bindInvitationEvents() {
 }
 
 /**
- * 处理接受邀请 - 新增函数
+ * Handle invitation acceptance - new function
  */
 async function handleAcceptInvitation(invitationId, invitationCard) {
     try {
-        // 禁用按钮，防止重复点击
+        // Disable buttons to prevent double-clicking
         const buttons = invitationCard.querySelectorAll('button');
         buttons.forEach(btn => btn.disabled = true);
 
-        console.log('开始接受邀请:', invitationId);
+        console.log('Starting to accept invitation:', invitationId);
         
-        // 调用接受邀请API
+        // Call accept invitation API
         await acceptInvitation(invitationId);
         
-        // 显示成功消息
-        showNotification('邀请已接受', 'success');
+        // Show success message
+        showNotification('Invitation accepted', 'success');
         
-        // 刷新数据
+        // Refresh data
         await loadAndRenderData();
         
     } catch (error) {
-        console.error('接受邀请失败:', error);
-        showNotification(error.message || '接受邀请失败，请重试', 'error');
+        console.error('Failed to accept invitation:', error);
+        showNotification(error.message || 'Failed to accept invitation, please try again', 'error');
         
-        // 恢复按钮状态
+        // Restore button state
         const buttons = invitationCard.querySelectorAll('button');
         buttons.forEach(btn => btn.disabled = false);
     }
 }
 
 /**
- * 处理拒绝邀请 - 新增函数
+ * Handle invitation decline - new function
  */
 async function handleDeclineInvitation(invitationId, invitationCard) {
     try {
-        // 禁用按钮，防止重复点击
+        // Disable buttons to prevent double-clicking
         const buttons = invitationCard.querySelectorAll('button');
         buttons.forEach(btn => btn.disabled = true);
 
-        console.log('开始拒绝邀请:', invitationId);
+        console.log('Starting to decline invitation:', invitationId);
         
-        // 调用拒绝邀请API
+        // Call decline invitation API
         await declineInvitation(invitationId);
         
-        // 显示成功消息
-        showNotification('已拒绝邀请', 'info');
+        // Show success message
+        showNotification('Invitation declined', 'info');
         
-        // 刷新数据
+        // Refresh data
         await loadAndRenderData();
         
     } catch (error) {
-        console.error('拒绝邀请失败:', error);
-        showNotification(error.message || '拒绝邀请失败，请重试', 'error');
+        console.error('Failed to decline invitation:', error);
+        showNotification(error.message || 'Failed to decline invitation, please try again', 'error');
         
-        // 恢复按钮状态
+        // Restore button state
         const buttons = invitationCard.querySelectorAll('button');
         buttons.forEach(btn => btn.disabled = false);
     }
 }
 
 /**
- * 显示通知 - 新增函数
+ * Show notification - new function
  */
 function showNotification(message, type = 'info') {
-    // 创建通知元素
+    // Create notification element
     const notification = document.createElement('div');
     notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
         type === 'success' ? 'bg-green-500 text-white' :
@@ -389,10 +389,10 @@ function showNotification(message, type = 'info') {
     }`;
     notification.textContent = message;
     
-    // 添加到页面
+    // Add to page
     document.body.appendChild(notification);
     
-    // 3秒后自动移除
+    // Auto remove after 3 seconds
     setTimeout(() => {
         if (notification.parentNode) {
             notification.parentNode.removeChild(notification);
@@ -400,7 +400,7 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// 显示错误状态（可移除）
+// Show error states (can be removed)
 function showErrorStates() {
     const groupsContainer = document.getElementById('my-groups-list');
     const invitesContainer = document.getElementById('invitation-list-container');
@@ -409,9 +409,9 @@ function showErrorStates() {
         groupsContainer.innerHTML = `
             <div class="col-span-full text-center p-6 text-red-500">
                 <i class="fa-solid fa-exclamation-triangle text-3xl mb-3"></i>
-                <p>加载群组失败，请刷新页面重试</p>
+                <p>Failed to load groups, please refresh the page and try again</p>
                 <button onclick="loadAndRenderData()" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                    重新加载
+                    Reload
                 </button>
             </div>
         `;
@@ -421,20 +421,20 @@ function showErrorStates() {
         invitesContainer.innerHTML = `
             <div class="text-center p-6 text-red-500">
                 <i class="fa-solid fa-exclamation-triangle text-3xl mb-3"></i>
-                <p>加载邀请失败，请刷新页面重试</p>
+                <p>Failed to load invitations, please refresh the page and try again</p>
                 <button onclick="loadAndRenderData()" class="mt-3 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                    重新加载
+                    Reload
                 </button>
             </div>
         `;
     }
 }
 
-// 绑定事件监听器
+// Bind event listeners
 function bindEventListeners() {
-    console.log('绑定事件监听器...');
+    console.log('Binding event listeners...');
 
-    // 模态框相关事件
+    // Modal related events
     const createGroupModal = document.getElementById('create-group-modal');
     const groupNameInput = document.getElementById('group-name');
 
@@ -461,33 +461,33 @@ function bindEventListeners() {
         });
     }
 
-    // 自动刷新数据（可选）
+    // Auto refresh data (optional)
     setInterval(async () => {
-        // 只在用户活跃时刷新
+        // Only refresh when user is active
         if (document.visibilityState === 'visible') {
-            console.log('定期刷新主页数据...');
+            console.log('Periodically refreshing homepage data...');
             await loadAndRenderData();
         }
-    }, 30000); // 每30秒刷新一次
+    }, 30000); // Refresh every 30 seconds
 
-    console.log('事件监听器绑定完成');
+    console.log('Event listeners binding completed');
 }
 
-// 重定向到群组详情页
+// Redirect to group detail page
 function redirectToGroupDetail(groupId, groupName) {
-    console.log(`重定向到群组详情页: ${groupName} (ID: ${groupId})`);
+    console.log(`Redirecting to group detail page: ${groupName} (ID: ${groupId})`);
     window.location.href = `/groups/${groupId}`;
 }
 
-// 页面加载完成后初始化
+// Initialize after page loads
 document.addEventListener('DOMContentLoaded', function () {
     initializeHomePage();
 });
 
-// 暴露函数到全局，供onclick使用
+// Expose functions to global for onclick usage
 window.redirectToGroupDetail = redirectToGroupDetail;
 
-// 暴露数据加载函数
+// Expose data loading function
 window.loadAndRenderData = loadAndRenderData;
 
-console.log('主页模块已加载，所有函数已暴露到全局');
+console.log('Homepage module loaded, all functions exposed to global');
