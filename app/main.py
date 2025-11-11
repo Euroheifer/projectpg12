@@ -1142,7 +1142,7 @@ def get_user_expense_balance(
     target_member = crud.get_group_member(db, group_id=db_expense.group_id, user_id=user_id)
     if not target_member:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_44_NOT_FOUND,
             detail=f"Target user {user_id} is not a member of this group"
         )
 
@@ -1337,4 +1337,3 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         status_code=422,
         content={"detail": jsonable_encoder(exc.errors())},
     )
-}
