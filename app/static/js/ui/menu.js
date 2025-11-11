@@ -277,10 +277,7 @@ if (typeof window.menuInitialized === 'undefined') {
     }
 
     // 我的资料
-    function handleMyProfile() {
-        console.log('跳转到我的资料页面');
-        // window.location.href = '/profile';
-    }
+   
 
     // 返回主页
     function handleBackToDashboard() {
