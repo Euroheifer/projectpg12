@@ -54,7 +54,7 @@ let isRecurringFormInitialized = false;
  * 初始化定期费用表单
  */
 export function initializeRecurringExpenseForm() {
-    console.log('定期费用模块开始初始化...');
+    console.log('Recurring expense module starting to initialize...');
     
     if (isRecurringFormInitialized) {
         console.log('定期费用表单已初始化，跳过重复执行');
@@ -125,7 +125,7 @@ function initializePayerSelector() {
     console.log('初始化付款人选择器，组员数据:', window.groupMembers);
     
     if (window.groupMembers && window.groupMembers.length > 0) {
-        payerSelect.innerHTML = '<option value="">请选择付款人</option>';
+        payerSelect.innerHTML = '<option value="">Please select payer</option>';
         window.groupMembers.forEach(member => {
             const option = document.createElement('option');
             option.value = member.user_id; 
@@ -617,7 +617,7 @@ function validateRecurringExpenseForm() {
     }
     
     if (!payerSelect.value) {
-        return { isValid: false, message: '请选择付款人' };
+        return { isValid: false, message: 'Please select payer' };
     }
     
     if (recurringSelectedParticipants.size === 0) {

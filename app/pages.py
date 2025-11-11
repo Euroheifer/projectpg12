@@ -22,17 +22,17 @@ async def read_root(request: Request):
 # ---------- userHTML Routes ----------
 @pages_router.get("/signup", response_class=HTMLResponse)
 async def signup_page(request: Request):
-    context = {"request": request, "title": "用户注册"}
+    context = {"request": request, "title": "User Registration"}
     return templates.TemplateResponse("signup.html", context)
 
 @pages_router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    context = {"request": request, "title": "用户登录"}
+    context = {"request": request, "title": "User Login"}
     return templates.TemplateResponse("login.html", context)
 
 @pages_router.get("/home", response_class=HTMLResponse)
 async def home_page(request: Request):
-    context = {"request": request, "title": "用户首页"}
+    context = {"request": request, "title": "User Home"}
     return templates.TemplateResponse("home.html", context)
 
 @pages_router.get("/groups/{group_id}")

@@ -14,7 +14,7 @@ export async function getPendingInvitations() {
             throw new Error('用户未登录');
         }
 
-        console.log('正在获取邀请列表...');
+        console.log('Getting invitation list...');
         const response = await fetch('/invitations/me', {
             method: 'GET',
             headers: {

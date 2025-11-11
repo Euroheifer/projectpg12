@@ -1,6 +1,6 @@
 {% extends "menu.html" %}
 
-{% block title %}群组详情 | Project PG12{% endblock %}
+{% block title %}Group Details | Project PG12{% endblock %}
 
 {% block head_content %}
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -154,7 +154,7 @@
         display: none;
     }
 
-    /* 返回按钮样式 */
+    /* Back按钮样式 */
     .back-button-container {
         position: absolute;
         left: 1rem;
@@ -174,7 +174,7 @@
         box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
     }
 
-    /* 确保主要内容不会与返回按钮重叠 */
+    /* 确保主要内容不会与Back按钮重叠 */
     main {
         position: relative;
         z-index: 1;
@@ -198,11 +198,11 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7">
                         </path>
                     </svg>
-                    <span>返回</span>
+                    <span>Back</span>
                 </button>
 
                 <h2 id="group-name-display" class="text-3xl font-extrabold text-gray-900 mb-4 sm:mb-0">
-                    周末旅行基金 <span class="text-sm font-normal text-gray-500">(ID: 1)</span>
+                    Weekend Travel Fund <span class="text-sm font-normal text-gray-500">(ID: 1)</span>
                 </h2>
                 </div>
             <div class="flex flex-wrap gap-3 mt-4 sm:mt-0">
@@ -213,7 +213,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
                     </svg>
-                    <span>添加费用</span>
+                    <span>Add Expense</span>
                 </button>
 
                 <button onclick="handleAddNewPayment()"
@@ -224,20 +224,20 @@
                             d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1">
                         </path>
                     </svg>
-                    <span>添加支付</span>
+                    <span>Add Payment</span>
                 </button>
             </div>
         </div>
 
         <div id="group-summary" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div class="balance-card bg-white p-6 rounded-xl border border-danger/20 shadow-lg">
-                <p class="text-sm font-medium text-danger">您欠款 (应付)</p>
+                <p class="text-sm font-medium text-danger">You Owe (Payable)</p>
                 <p class="text-3xl font-bold text-danger mt-1" id="balance-owed">¥150.50</p>
                 <p id="balance-owed-context" class="text-xs text-gray-500 mt-2">给 2 位成员</p>
             </div>
 
             <div class="balance-card bg-white p-6 rounded-xl border border-success/20 shadow-lg">
-                <p class="text-sm font-medium text-success">被欠款 (应收)</p>
+                <p class="text-sm font-medium text-success">Others Owe You (Receivable)</p>
                 <p class="text-3xl font-bold text-success mt-1" id="balance-owing-me">¥45.00</p>
                 <p id="balance-owing-me-context" class="text-xs text-gray-500 mt-2">从 1 位成员</p>
             </div>
@@ -245,8 +245,8 @@
             <div
                 class="balance-card bg-white p-6 rounded-xl border border-warning/20 shadow-lg flex flex-col justify-between">
                 <div>
-                    <p class="text-sm font-medium text-warning">建议结算</p>
-                    <p id="settlement-summary-text" class="text-xl font-bold text-gray-900 mt-1">总计 2 笔待清算</p>
+                    <p class="text-sm font-medium text-warning">Suggested Settlement</p>
+                    <p id="settlement-summary-text" class="text-xl font-bold text-gray-900 mt-1">Total \d+ items pending settlement</p>
                 </div>
                 <button onclick="handleSettleUp()"
                     class="w-full py-2 bg-warning/80 text-white rounded-lg hover:bg-warning transition duration-150 shadow-md transform hover:scale-[1.01] active:scale-[0.99] text-sm mt-3">
@@ -265,19 +265,19 @@
             <div class="flex space-x-8 overflow-x-auto">
                 <button id="tab-expenses" onclick="setActiveTab('expenses')"
                     class="tab-button active pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
-                    费用 (<span id="expense-count">3</span>)
+                    Expenses (<span id="expense-count">\1</span>)
                 </button>
                 <button id="tab-recurring" onclick="setActiveTab('recurring')"
                     class="tab-button pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
-                    定期费用 (<span id="recurring-count">2</span>)
+                    Recurring Expenses (<span id="recurring-count">\1</span>)
                 </button>
                 <button id="tab-payments" onclick="setActiveTab('payments')"
                     class="tab-button pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
-                    支付 (<span id="payment-count">2</span>)
+                    Payments (<span id="payment-count">\1</span>)
                 </button>
                 <button id="tab-members" onclick="setActiveTab('members')"
                     class="tab-button pb-3 px-1 text-gray-500 hover:text-primary transition duration-150 whitespace-nowrap">
-                    成员 (<span id="member-count">4</span>)
+                    Members (<span id="member-count">\1</span>)
                 </button>
 
                 <button id="tab-invite" onclick="setActiveTab('invite')"
@@ -359,7 +359,7 @@
                 <div class="mt-6 flex justify-end space-x-3">
                     <button onclick="clearInviteForm()"
                         class="py-2 px-4 rounded-lg text-gray-700 bg-gray-100 hover:bg-gray-200 transition duration-150 text-sm font-medium">
-                        取消
+                        Cancel
                     </button>
                     <button onclick="inviteNewMember()" id="invite-submit-button"
                         class="py-2 px-4 rounded-lg text-white bg-success hover:bg-emerald-600 transition duration-150 shadow-md text-sm font-medium">
@@ -379,18 +379,18 @@
                         <div class="space-y-4">
                             <div>
                                 <label for="group-name-input" class="block text-sm font-medium text-gray-700 mb-1">
-                                    群组名称
+                                    Group Name
                                 </label>
                                 <input type="text" id="group-name-input"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-                                    placeholder="输入群组名称" value="周末旅行基金">
-                                <p class="text-xs text-gray-500 mt-1">群组名称将显示在所有成员界面中</p>
+                                    placeholder="输入Group Name" value="Weekend Travel Fund">
+                                <p class="text-xs text-gray-500 mt-1">Group Name将显示在所有成员界面中</p>
                             </div>
 
                             <div>
                                 <label for="group-description-input"
                                     class="block text-sm font-medium text-gray-700 mb-1">
-                                    群组描述 (可选)
+                                    Group Description (Optional)
                                 </label>
                                 <textarea id="group-description-input" rows="3"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
@@ -451,7 +451,7 @@
             <div class="flex space-x-3">
                 <button onclick="closeDeleteConfirm()"
                     class="flex-1 py-2 px-4 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 text-sm font-medium">
-                    取消
+                    Cancel
                 </button>
                 <button onclick="confirmDeleteExpense()"
                     class="flex-1 py-2 px-4 bg-danger text-white rounded-lg hover:bg-red-600 transition duration-150 text-sm font-medium">
@@ -480,7 +480,7 @@
             <div class="flex space-x-3">
                 <button onclick="closeDeletePaymentConfirm()"
                     class="flex-1 py-2 px-4 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 text-sm font-medium">
-                    取消
+                    Cancel
                 </button>
                 <button onclick="confirmDeletePayment()"
                     class="flex-1 py-2 px-4 bg-danger text-white rounded-lg hover:bg-red-600 transition duration-150 text-sm font-medium">
@@ -512,7 +512,7 @@
             <div class="flex space-x-3">
                 <button onclick="cancelUpdateRole()"
                     class="flex-1 py-2 px-4 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 text-sm font-medium">
-                    取消
+                    Cancel
                 </button>
                 <button onclick="confirmUpdateRole()"
                     class="flex-1 py-2 px-4 bg-primary text-white rounded-lg hover:bg-primary-dark transition duration-150 text-sm font-medium">
@@ -541,7 +541,7 @@
             <div class="flex space-x-3">
                 <button onclick="cancelRemoveMember()"
                     class="flex-1 py-2 px-4 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition duration-150 text-sm font-medium">
-                    取消
+                    Cancel
                 </button>
                 <button onclick="confirmRemoveMember()"
                     class="flex-1 py-2 px-4 bg-danger text-white rounded-lg hover:bg-red-600 transition duration-150 text-sm font-medium">
@@ -653,7 +653,7 @@
                 </button>
                 <button type="button" onclick="handleCancel()"
                     class="w-full py-2 mt-2 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition duration-150">
-                    取消
+                    Cancel
                 </button>
             </div>
 
@@ -745,7 +745,7 @@
                 </button>
                 <button type="button" onclick="handlePaymentCancel()"
                     class="w-full py-2 mt-2 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition duration-150">
-                    取消
+                    Cancel
                 </button>
             </div>
 
@@ -849,7 +849,7 @@
                 <div class="flex space-x-3">
                     <button type="button" onclick="handleDetailCancel()"
                         class="py-3 px-6 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition duration-150">
-                        取消
+                        Cancel
                     </button>
                     <button type="submit"
                         class="py-3 px-6 bg-primary text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-primary-dark transition duration-200">
@@ -1006,7 +1006,7 @@
                 </button>
                 <button type="button" onclick="handleRecurringCancel()"
                     class="w-full py-2 mt-2 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition duration-150">
-                    取消
+                    Cancel
                 </button>
             </div>
 
@@ -1201,7 +1201,7 @@
                 <div class="flex space-x-3">
                     <button type="button" onclick="handlePaymentDetailCancel()"
                         class="py-3 px-6 text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition duration-150">
-                        取消
+                        Cancel
                     </button>
         <button type="submit"
                         class="py-3 px-6 bg-success text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-emerald-600 transition duration-200">
