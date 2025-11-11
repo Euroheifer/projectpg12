@@ -1,6 +1,6 @@
 [File: app/schemas.py]
 from pydantic import BaseModel, EmailStr, Field, model_validator
-from typing import Optional, List, Dict, Any, Union  # 🔴 修复：导入 Union
+from typing import Optional, List, Dict, Any, Union
 from datetime import date, datetime
 from app.models import InvitationStatus
 
