@@ -1,53 +1,33 @@
-#pages.py 定义一个处理首页请求的路由，返回 HTML 页面
+# pages.py defines a route to handle home page requests and return HTML pages
 from fastapi import APIRouter, Request, Depends
-from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.security import HTTPBearer
+from fastapi.responses import HTMLResponse
 
-from sqlalchemy.orm import Session
-from app import crud
-from app.database import get_db
-from app.dependencies import get_current_user 
+templates = Jinja2Templates(directory="templates")
+security = HTTPBearer()
+router = APIRouter()
 
-
-templates = Jinja2Templates(directory="app/templates")
-
-pages_router = APIRouter(tags=["pages"])
-
-@pages_router.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    context = {"request": request, "title": "Project PG12 Web Application"}
-    return templates.TemplateResponse("index.html", context)
-
-
-# ---------- userHTML Routes ----------
-@pages_router.get("/signup", response_class=HTMLResponse)
 async def signup_page(request: Request):
-    context = {"request": request, "title": "用户注册"}
+    context = {"request": request, "title": "User Registration"}
     return templates.TemplateResponse("signup.html", context)
 
-@pages_router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
-    context = {"request": request, "title": "用户登录"}
+    context = {"request": request, "title": "User Login"}
     return templates.TemplateResponse("login.html", context)
 
-@pages_router.get("/home", response_class=HTMLResponse)
 async def home_page(request: Request):
-    context = {"request": request, "title": "用户首页"}
+    context = {"request": request, "title": "User Home"}
     return templates.TemplateResponse("home.html", context)
 
-@pages_router.get("/groups/{group_id}")
 async def get_group_page(request: Request, group_id: int):
-    # 根据用户权限返回统一的 group.html
+    # Return unified group.html based on user permissions
     return templates.TemplateResponse("groups.html", {"request": request})
 
-@pages_router.get("/group_admin", response_class=HTMLResponse)
 async def groups_admin_page(request: Request):
-    context = {"request": request, "title": "用户界面（管理员）"}
+    context = {"request": request, "title": "User Interface (Admin)"}
     return templates.TemplateResponse("group_details_admin.html", context)
 
-@pages_router.get("/group_member", response_class=HTMLResponse)
 async def groups_member_page(request: Request):
-    context = {"request": request, "title": "用户界面（成员）"}
+    context = {"request": request, "title": "User Interface (Member)"}
     return templates.TemplateResponse("group_details_member.html", context)
-
-

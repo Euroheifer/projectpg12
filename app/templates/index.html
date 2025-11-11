@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 确保标题与 FastAP app.title 匹配 -->
+    <!-- Ensure title matches FastAPI app.title -->
     <title>Project PG12</title>
-    <!-- 加载 Tailwind CSS -->
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 使用 Inter 字体 */
+        /* Use Inter font */
         body {
             font-family: 'Inter', sans-serif;
         }
@@ -18,46 +18,46 @@
 
 <body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
 
-    <!-- 主容器 -->
+    <!-- Main container -->
     <div class="w-full max-w-4xl bg-white shadow-xl rounded-xl p-8 mt-10">
 
-        <!-- 头部/标题 -->
+        <!-- Header/Title -->
         <header class="text-center mb-10">
             <h1 class="text-4xl font-extrabold text-indigo-700 mb-2">
-                Project PG12 - 迭代 2 启动
+                Project PG12 - Iteration 2 Launch
             </h1>
             <p class="text-lg text-gray-500">
-                后端服务已部署：FastAPI (Staging/Production)
+                Backend service deployed: FastAPI (Staging/Production)
             </p>
         </header>
 
-        <!-- 内容区域 -->
+        <!-- Content area -->
         <main id="app-content" class="text-center py-12 border-t border-gray-200">
-            <h2 class="text-2xl font-semibold text-gray-800 mb-4">欢迎来到 PG12！</h2>
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Welcome to PG12!</h2>
             <p class="text-gray-600 mb-6">
-                后端正在运行在：<code class="bg-gray-200 p-1 rounded">http://localhost:8080</code> (Staging)
-                和 <code class="bg-gray-200 p-1 rounded">https://172.25.76.174/</code> (Production)
+                Backend is running at: <code class="bg-gray-200 p-1 rounded">http://localhost:8080</code> (Staging)
+                and <code class="bg-gray-200 p-1 rounded">https://172.25.76.174/</code> (Production)
             </p>
             <div class="flex justify-center space-x-4 mt-8">
                 <a href="/docs" target="_blank"
                     class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md">
-                    查看 FastAPI 文档
+                    View FastAPI Documentation
                 </a>
                 <a href="/placeholder"
                     class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150 shadow-md">
-                    开始使用
+                    Get Started
                 </a>
             </div>
         </main>
 
-        <!-- 认证操作区域 -->
+        <!-- Authentication actions area -->
         <section id="auth-actions" class="mt-10 pt-4 border-t border-gray-200 text-center">
-            <h3 class="text-xl font-semibold text-gray-700 mb-4">用户认证</h3>
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">User Authentication</h3>
             <p class="text-sm text-gray-500 mb-4">
-                点击按钮前往文档页面测试用户登录和注册路由。
+                Click buttons to go to documentation page to test user login and registration routes.
             </p>
             <div class="flex justify-center space-x-4">
-                <!-- 登录按钮 (链接到 /docs 路由) -->
+                <!-- Login button (link to /docs route) -->
                 <!-- <button onclick="window.open('/users/signup/', '_blank')"  -->
                 <button onclick="window.location.href='/login'"
                     class="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition duration-150 shadow-lg">
@@ -65,17 +65,17 @@
                         <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
                             clip-rule="evenodd" />
                     </svg>
-                    <span>登录 (Sign In)</span>
+                    <span>Sign In</span>
                 </button>
 
-                <!-- 注册按钮 (链接到 /docs 路由) -->
+                <!-- Registration button (link to /docs route) -->
                 <button onclick="window.location.href='/signup'"
                     class="flex items-center space-x-2 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-6 rounded-lg transition duration-150 shadow-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a1 1 0 100 2h10a1 1 0 000-2H8z" />
+                        <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a1 1 0 100 2h10a1 1 0 100-2H8z" />
                         <path d="M11 14a1 1 0 100-2h7a1 1 0 000-2h-7a1 1 0 100 2z" />
                     </svg>
-                    <span>注册 (Register)</span>
+                    <span>Register</span>
                 </button>
             </div>
         </section>
