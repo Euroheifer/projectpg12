@@ -1,6 +1,6 @@
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
-// 防止缓存版本: 2025.11.10.006 - 修复所有 updateSplitCalculation ReferenceError
-const JS_CACHE_VERSION = '2025.11.10.006';
+// 防止缓存版本: 2025.11.10.007 - 修复缺失的 updateSplitCalculation
+const JS_CACHE_VERSION = '2025.11.10.007';
 
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
 import { getTodayDate, requireAdmin, getAuthToken, showCustomAlert, amountToCents } from '../ui/utils.js'; // 🔴 修复：导入 amountToCents
@@ -543,6 +543,92 @@ export function handleParticipantSelection(checkbox, containerId) {
     }, 100);
 }
 
+
+// 🔴 修复：添加缺失的 updateSplitCalculation 函数
+// 这个函数是为 "添加费用" 弹窗服务的
+export function updateSplitCalculation() {
+    // 1. 🔴 更改选择器为 "add-expense-modal"
+    const form = document.querySelector('#add-expense-modal #expense-form'); 
+    if (!form) {
+        console.warn('添加费用表单未找到，无法计算分摊');
+        return;
+    }
+
+    // 2. 🔴 更改选择器为 '#amount'
+    const amountInput = form.querySelector('#amount');
+    if (!amountInput || !amountInput.value) {
+        memberSplits = []; // 🔴 更改为 memberSplits
+        renderSplitDetails();
+        updateSplitSummary();
+        return;
+    }
+
+    const totalAmountInCents = amountToCents(amountInput.value);
+    if (isNaN(totalAmountInCents) || totalAmountInCents <= 0) {
+        memberSplits = []; // 🔴 更改为 memberSplits
+        renderSplitDetails();
+        updateSplitSummary();
+        return;
+    }
+
+    // 3. 🔴 更改选择器为 '#participants-section'
+    const checkedInputs = form.querySelectorAll('#participants-section input:checked');
+    const participants = Array.from(checkedInputs).map(input => parseInt(input.value));
+    
+    if (participants.length === 0) {
+        memberSplits = []; // 🔴 更改为 memberSplits
+        renderSplitDetails();
+        updateSplitSummary();
+        return;
+    }
+    
+    // 4. 🔴 更改选择器为 '#split-equal'
+    const isEqualSplit = form.querySelector('#split-equal').classList.contains('active');
+    const method = isEqualSplit ? 'equal' : 'custom';
+
+    // 5. 🔴 更改为 memberSplits
+    memberSplits = participants.map(userId => {
+        const member = window.groupMembers.find(m => m.user_id === userId);
+        const existingSplit = memberSplits.find(s => s.user_id === userId); 
+        return {
+            user_id: userId,
+            amount: existingSplit && method === 'custom' ? existingSplit.amount : 0, 
+            member_name: member ? (member.user.username || member.nickname) : `User ${userId}`
+        };
+    });
+
+    if (method === 'equal') {
+        const baseAmountInCents = Math.floor(totalAmountInCents / participants.length);
+        const remainderInCents = totalAmountInCents % participants.length;
+        
+        memberSplits.forEach((split, index) => { // 🔴 更改为 memberSplits
+            split.amount = baseAmountInCents;
+            if (index < remainderInCents) {
+                split.amount += 1;
+            }
+        });
+    } else {
+        const sumCurrentSplits = memberSplits.reduce((sum, s) => sum + s.amount, 0);
+        
+        if (Math.abs(sumCurrentSplits - totalAmountInCents) > 1 || sumCurrentSplits === 0) {
+            const baseAmountInCents = Math.floor(totalAmountInCents / participants.length);
+            const remainderInCents = totalAmountInCents % participants.length;
+            
+            memberSplits.forEach((split, index) => { // 🔴 更改为 memberSplits
+                split.amount = baseAmountInCents;
+                if (index < remainderInCents) {
+                    split.amount += 1;
+                }
+            });
+        }
+    }
+
+    // 6. 🔴 调用 renderSplitDetails 和 updateSplitSummary
+    renderSplitDetails();
+    updateSplitSummary();
+    
+    console.log('主表单分摊计算完成 (分):', memberSplits);
+}
 
 
 export function setDetailSplitMethod(method) {
