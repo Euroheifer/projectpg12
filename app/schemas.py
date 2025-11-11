@@ -1,4 +1,3 @@
-[File: app/schemas.py]
 from pydantic import BaseModel, EmailStr, Field, model_validator
 from typing import Optional, List, Dict, Any, Union
 from datetime import date, datetime
