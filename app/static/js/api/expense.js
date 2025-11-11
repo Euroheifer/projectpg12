@@ -1,6 +1,6 @@
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
-// 防止缓存版本: 2025.11.10.005 - 修复 updateSplitCalculation ReferenceError
-const JS_CACHE_VERSION = '2025.11.10.005';
+// 防止缓存版本: 2025.11.10.006 - 修复所有 updateSplitCalculation ReferenceError
+const JS_CACHE_VERSION = '2025.11.10.006';
 
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
 import { getTodayDate, requireAdmin, getAuthToken, showCustomAlert, amountToCents } from '../ui/utils.js'; // 🔴 修复：导入 amountToCents
@@ -92,9 +92,11 @@ export function initializeExpenseForm() {
             }
             console.log('Participants updated:', selectedParticipants);
             
-            // 重新计算分摊
+            // 🔴 修复：显式调用 window.updateSplitCalculation
             setTimeout(() => {
-                updateSplitCalculation();
+                if (window.updateSplitCalculation) {
+                    window.updateSplitCalculation();
+                }
             }, 100);
         });
         participantsContainer.appendChild(label);
@@ -430,7 +432,10 @@ label.className = 'flex items-center space-x-3 p-3 bg-white rounded-lg border bo
             // 🔴 修复：为详情弹窗的复选框添加事件监听
             label.querySelector('input').addEventListener('change', (e) => {
                 console.log('详情弹窗参与者变化');
-                updateDetailSplitCalculation(); // 🔴 调用详情的计算函数
+                // 🔴 修复：显式调用 window.updateDetailSplitCalculation
+                if (window.updateDetailSplitCalculation) {
+                    window.updateDetailSplitCalculation();
+                }
             });
             participantsContainer.appendChild(label);
         });
@@ -531,7 +536,10 @@ export function handleParticipantSelection(checkbox, containerId) {
     
     // 重新计算分摊
     setTimeout(() => {
-        updateSplitCalculation();
+        // 🔴 修复：显式调用 window.updateSplitCalculation
+        if (window.updateSplitCalculation) {
+            window.updateSplitCalculation();
+        }
     }, 100);
 }
 
