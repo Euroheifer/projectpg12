@@ -1,6 +1,6 @@
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
-// 防止缓存版本: 2025.11.10.004 - 修复“更新费用”422错误和详情分摊
-const JS_CACHE_VERSION = '2025.11.10.004';
+// 防止缓存版本: 2025.11.10.005 - 修复 updateSplitCalculation ReferenceError
+const JS_CACHE_VERSION = '2025.11.10.005';
 
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
 import { getTodayDate, requireAdmin, getAuthToken, showCustomAlert, amountToCents } from '../ui/utils.js'; // 🔴 修复：导入 amountToCents
@@ -807,7 +807,10 @@ export function handleAmountChange() {
     
     // 延迟执行，确保 DOM 已更新
     setTimeout(() => {
-        updateSplitCalculation();
+        // 🔴 修复：显式调用 window.updateSplitCalculation
+        if (window.updateSplitCalculation) {
+            window.updateSplitCalculation();
+        }
     }, 100);
 }
 
@@ -973,8 +976,10 @@ export function handleDetailAmountChange() {
     console.log('详情金额发生变化，重新计算分摊');
     
     setTimeout(() => {
-        // 🔴 修复：调用详情分摊计算
-        updateDetailSplitCalculation();
+        // 🔴 修复：显式调用 window.updateDetailSplitCalculation
+        if (window.updateDetailSplitCalculation) {
+            window.updateDetailSplitCalculation();
+        }
     }, 100);
 }
 
