@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Registration</title>
-    <!-- Import Tailwind CSS CDN -->
+    <!-- Include Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Configure Tailwind CSS to use Inter font and custom theme -->
     <script>
@@ -17,7 +17,7 @@
                     },
                     colors: {
                         primary: '#4F46E5', // Indigo-600
-                        'primary-dark': '#4338CA', // Indigo-700
+                        'primary-dark': '#4338CA', // Indigo-700,
                     }
                 }
             }
@@ -46,7 +46,7 @@
 
         <!-- Header/Logo -->
         <div class="text-center mb-8">
-            <!-- Assumed logo or icon -->
+            <!-- Hypothetical logo or icon -->
             <svg class="w-12 h-12 text-primary mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -64,7 +64,7 @@
                 <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
                 <input type="text" id="username" name="username" required
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition duration-150"
-                    placeholder="Enter username">
+                    placeholder="Please enter username">
             </div>
 
             <!-- Email input -->
@@ -88,10 +88,10 @@
                 <label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
                 <input type="password" id="confirm-password" name="confirm-password" required minlength="6"
                     class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition duration-150"
-                    placeholder="Enter password again">
+                    placeholder="Please enter password again">
             </div>
 
-            <!-- Message display area (instead of alert()) -->
+            <!-- Message display area (replacing alert()) -->
             <div id="message-box" class="hidden p-3 mb-4 rounded-lg text-sm text-center" role="alert"></div>
 
             <!-- Registration button -->
@@ -109,14 +109,14 @@
                 Already have an account?
                 <a href="/login" id="login-redirect-link"
                     class="font-medium text-primary hover:text-primary-dark transition duration-150">
-                    Go to login
+                    Go to Login
                 </a>
             </p>
         </div>
 
     </div>
 
-    <!-- Link to signup js -->
+    <!-- link to signup js -->
     <script type="module" src="/static/js/page/auth_page.js"></script>
 
 

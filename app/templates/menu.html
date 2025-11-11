@@ -64,7 +64,7 @@
             }
         }
 
-        /* Replace crown admin indicator with simple red badge */
+        /* Replace crown admin badge with simple red badge */
         .admin-badge {
             background: #FEE2E2;
             color: #DC2626;
@@ -144,7 +144,7 @@
 
     {% block content %}{% endblock %}
 
-    <!-- Custom popup -->
+    <!-- Custom modal -->
     <div id="custom-alert-modal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition duration-300 scale-100">
@@ -154,7 +154,7 @@
         </div>
     </div>
 
-    <!-- Logout confirmation popup -->
+    <!-- Logout confirmation modal -->
     <div id="logout-confirm-modal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition duration-300 scale-100">
@@ -163,12 +163,12 @@
                     <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3v-3m0-6V7a3 3 0 013-3h4">
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3v-3m0-4V7a3 3 0 013-3h4">
                         </path>
                     </svg>
                 </div>
                 <h3 class="text-xl font-bold text-gray-900 mb-2">Confirm Logout</h3>
-                <p class="text-gray-600">Are you sure you want to logout? After logout, you need to log in again to access your groups.</p>
+                <p class="text-gray-600">Are you sure you want to logout? After logging out, you need to login again to access your groups.</p>
             </div>
             <div class="flex space-x-3">
                 <button onclick="closeLogoutConfirm()"
