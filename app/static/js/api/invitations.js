@@ -1,21 +1,20 @@
-// File: app/static/js/api/invitations.js
-// Version: 2025.11.06.001
+// file: app/static/js/api/invitations.js
+// 防止缓存版本: 2025.11.06
 const JS_CACHE_VERSION = '2025.11.06.001';
 
-// Import utility functions
-import { getAuthToken } from '../ui/utils.js';
+import { showCustomAlert } from '../ui/utils.js';
 
 /**
- * Get pending invitation list
+ * 获取待处理的邀请列表
  */
 export async function getPendingInvitations() {
     try {
-        const token = getAuthToken();
+        const token = localStorage.getItem('access_token');
         if (!token) {
-            throw new Error('User not logged in');
+            throw new Error('用户未登录');
         }
 
-        console.log('Getting invitation list...');
+        console.log('正在获取邀请列表...');
         const response = await fetch('/invitations/me', {
             method: 'GET',
             headers: {
@@ -24,119 +23,120 @@ export async function getPendingInvitations() {
             }
         });
 
-        console.log('Invitation API response status:', response.status);
-
+        console.log('邀请API响应状态:', response.status);
+        
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Failed to get invitation list:', response.status, errorText);
-            throw new Error(`Failed to get invitation list: ${response.status} - ${errorText}`);
+            console.error('获取邀请列表失败:', response.status, errorText);
+            throw new Error(`获取邀请列表失败: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
-        console.log('Invitation data received:', data);
-        console.log('Invitation count:', Array.isArray(data) ? data.length : 'Data is not an array');
-
+        console.log('获取到的邀请数据:', data);
+        console.log('邀请数量:', Array.isArray(data) ? data.length : '数据不是数组');
+        
         return data;
-
     } catch (error) {
-        console.error('Error getting invitation list:', error);
+        console.error('获取邀请列表错误:', error);
         throw error;
     }
 }
 
 /**
- * Accept group invitation
+ * 接受群组邀请
  */
 export async function acceptInvitation(invitationId) {
     try {
-        const token = getAuthToken();
+        const token = localStorage.getItem('access_token');
         if (!token) {
-            throw new Error('User not logged in');
+            throw new Error('用户未登录');
         }
 
-        console.log('Accepting invitation:', invitationId);
-
-        const response = await fetch(`/invitations/${invitationId}/accept`, {
+        const response = await fetch(`/invitations/${invitationId}/respond`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({
+                action: "accept"
+            })
         });
 
         if (response.ok) {
-            showCustomAlert('Successfully joined the group!', false);
-            // Delay page refresh to let user see success message
+            showCustomAlert('已成功加入群组！', false);
+            // 延迟刷新页面，让用户看到成功消息
             setTimeout(() => {
                 window.location.reload();
             }, 1500);
             return true;
         } else {
             const errorData = await response.json();
-            throw new Error(errorData.detail || 'Failed to accept invitation');
+            throw new Error(errorData.detail || '接受邀请失败');
         }
     } catch (error) {
-        console.error('Accept invitation error:', error);
-        showCustomAlert(error.message || 'Failed to accept invitation, please try again');
+        console.error('接受邀请错误:', error);
+        showCustomAlert(error.message || '接受邀请失败，请重试');
         return false;
     }
 }
 
 /**
- * Decline group invitation
+ * 拒绝群组邀请
  */
 export async function declineInvitation(invitationId) {
     try {
-        const token = getAuthToken();
+        const token = localStorage.getItem('access_token');
         if (!token) {
-            throw new Error('User not logged in');
+            throw new Error('用户未登录');
         }
 
-        console.log('Declining invitation:', invitationId);
-
-        const response = await fetch(`/invitations/${invitationId}/decline`, {
+        const response = await fetch(`/invitations/${invitationId}/respond`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({
+                action: "reject"
+            })
         });
 
         if (response.ok) {
-            showCustomAlert('Invitation declined', false);
-            // Delay page refresh to let user see success message
+            showCustomAlert('已拒绝邀请', false);
+            // 延迟刷新页面，让用户看到成功消息
             setTimeout(() => {
                 window.location.reload();
             }, 1500);
             return true;
         } else {
             const errorData = await response.json();
-            throw new Error(errorData.detail || 'Failed to decline invitation');
+            throw new Error(errorData.detail || '拒绝邀请失败');
         }
     } catch (error) {
-        console.error('Decline invitation error:', error);
-        showCustomAlert(error.message || 'Failed to decline invitation, please try again');
+        console.error('拒绝邀请错误:', error);
+        showCustomAlert(error.message || '拒绝邀请失败，请重试');
         return false;
     }
 }
 
 /**
- * Send group invitation
+ * 发送群组邀请
  */
-export async function sendGroupInvitation(groupId, inviteeEmail) {
+export async function sendInvitation(groupId, inviteeEmail) {
     try {
-        const token = getAuthToken();
+        const token = localStorage.getItem('access_token');
         if (!token) {
-            throw new Error('User not logged in');
+            throw new Error('用户未登录');
         }
 
-        console.log('Sending invitation:', { groupId, inviteeEmail });
-
+        console.log('发送邀请:', { groupId, inviteeEmail });
+        
         const requestBody = {
-            invitee_email: inviteeEmail  // Ensure field name matches backend expectations
+            invitee_email: inviteeEmail  // 确保字段名与后端期望一致
         };
-
-        console.log('Request body:', requestBody);
+        
+        console.log('请求体:', requestBody);
 
         const response = await fetch(`/groups/${groupId}/invite`, {
             method: 'POST',
@@ -147,26 +147,27 @@ export async function sendGroupInvitation(groupId, inviteeEmail) {
             body: JSON.stringify(requestBody)
         });
 
-        console.log('Invitation API response status:', response.status);
-
+        console.log('邀请API响应状态:', response.status);
+        
         if (response.ok) {
             const result = await response.json();
-            console.log('Invitation sent successfully:', result);
-            showCustomAlert('Invitation sent successfully!');
+            console.log('邀请发送成功:', result);
+            showCustomAlert('邀请发送成功！');
             return result;
         } else {
             const errorData = await response.json();
-            console.error('Failed to send invitation:', response.status, errorData);
-            throw new Error(errorData.detail || 'Failed to send invitation');
+            console.error('邀请发送失败:', response.status, errorData);
+            throw new Error(errorData.detail || '发送邀请失败');
         }
     } catch (error) {
-        console.error('Send invitation error:', error);
-        showCustomAlert(error.message || 'Failed to send invitation, please try again');
+        console.error('发送邀请错误:', error);
+        showCustomAlert(error.message || '发送邀请失败，请重试');
         return false;
     }
 }
 
-// Expose functions to global for onclick calls in HTML
+// 暴露函数到全局，供HTML中的onclick调用
 window.acceptInvitation = acceptInvitation;
 window.declineInvitation = declineInvitation;
-window.sendGroupInvitation = sendGroupInvitation;
+window.sendInvitation = sendInvitation;
+window.getPendingInvitations = getPendingInvitations;

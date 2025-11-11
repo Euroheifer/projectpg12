@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Group Management System{% endblock %}</title>
+    <title>{% block title %}群组管理系统{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -64,7 +64,7 @@
             }
         }
 
-        /* Replace crown admin badge with simple red badge */
+        /* 替换皇冠管理员标识为简单的红色徽章 */
         .admin-badge {
             background: #FEE2E2;
             color: #DC2626;
@@ -84,12 +84,12 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="relative flex justify-end h-16">
 
-                <!-- Centered title -->
+                <!-- 居中标题 -->
                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span class="text-xl font-bold text-gray-900 pointer-events-auto">Group Management System</span>
+                    <span class="text-xl font-bold text-gray-900 pointer-events-auto">群组管理系统</span>
                 </div>
 
-                <!-- Right side user menu -->
+                <!-- 右侧用户菜单 -->
                 <div class="flex items-center relative z-10" id="user-menu-container">
 
                     <button id="user-display-button" onclick="toggleUserMenu()"
@@ -112,7 +112,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                             </svg>
-                            <span>My Profile</span>
+                            <span>我的资料</span>
                         </button>
 
                         <button onclick="handleBackToDashboard(); toggleUserMenu();"
@@ -123,7 +123,7 @@
                                     d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6">
                                 </path>
                             </svg>
-                            <span>Home</span>
+                            <span>主页</span>
                         </button>
 
                         <button onclick="showLogoutConfirmation()"
@@ -134,7 +134,7 @@
                                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3v-3m0-6V7a3 3 0 013-3h4">
                                 </path>
                             </svg>
-                            <span>Logout</span>
+                            <span>退出登录</span>
                         </button>
                     </div>
                 </div>
@@ -144,17 +144,17 @@
 
     {% block content %}{% endblock %}
 
-    <!-- Custom modal -->
+    <!-- 自定义弹窗 -->
     <div id="custom-alert-modal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition duration-300 scale-100">
             <p id="alert-message" class="text-lg font-medium mb-4 text-center"></p>
             <button onclick="closeCustomAlert()"
-                class="w-full py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition duration-150">OK</button>
+                class="w-full py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition duration-150">确定</button>
         </div>
     </div>
 
-    <!-- Logout confirmation modal -->
+    <!-- 退出登录确认弹窗 -->
     <div id="logout-confirm-modal"
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
         <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full transform transition duration-300 scale-100">
@@ -163,21 +163,21 @@
                     <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3v-3m0-4V7a3 3 0 013-3h4">
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3v-3m0-6V7a3 3 0 013-3h4">
                         </path>
                     </svg>
                 </div>
-                <h3 class="text-xl font-bold text-gray-900 mb-2">Confirm Logout</h3>
-                <p class="text-gray-600">Are you sure you want to logout? After logging out, you need to login again to access your groups.</p>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">确认退出登录</h3>
+                <p class="text-gray-600">您确定要退出登录吗？退出后需要重新登录才能访问您的群组。</p>
             </div>
             <div class="flex space-x-3">
                 <button onclick="closeLogoutConfirm()"
                     class="flex-1 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition duration-150 font-medium">
-                    Cancel
+                    取消
                 </button>
                 <button onclick="confirmLogout()"
                     class="flex-1 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition duration-150 font-medium">
-                    Confirm Logout
+                    确认退出
                 </button>
             </div>
         </div>
