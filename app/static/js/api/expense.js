@@ -1,6 +1,6 @@
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
-// 防止缓存版本: 2025.11.10.003 - 修复分摊按钮
-const JS_CACHE_VERSION = '2025.11.10.003';
+// 防止缓存版本: 2025.11.10.004 - 修复“更新费用”422错误和详情分摊
+const JS_CACHE_VERSION = '2025.11.10.004';
 
 // expense.js - 费用相关的CRUD操作、分摊计算、表单处理
 import { getTodayDate, requireAdmin, getAuthToken, showCustomAlert, amountToCents } from '../ui/utils.js'; // 🔴 修复：导入 amountToCents
@@ -12,14 +12,22 @@ let currentSplitMethod = 'equal';
 let memberSplits = [];
 let currentEditingExpense = null;
 
+// 🔴 修复：为“详情”弹窗添加独立的状态
+let detailMemberSplits = [];
+
 // ----------- 初始化费用表单 ---------------- //
 export function initializeExpenseForm() {
     const today = getTodayDate();
     const dateInput = document.getElementById('date');
     if (dateInput) dateInput.value = today;
 
-    // 从 group_page_en.js 获取已加载的成员列表
-    const members = window.groupMembers || []; 
+    // 🔴 修复：添加重试逻辑，确保 groupMembers 已加载
+    if (!window.groupMembers || window.groupMembers.length === 0) {
+        console.warn('initializeExpenseForm: groupMembers 未加载，500毫秒后重试...');
+        setTimeout(initializeExpenseForm, 500);
+        return;
+    }
+    console.log('initializeExpenseForm: groupMembers 已加载，开始填充表单。');
     
     // 1. 从 groups.html 获取表单元素
     const payerSelect = document.getElementById('payer'); //
@@ -34,14 +42,14 @@ export function initializeExpenseForm() {
     payerSelect.innerHTML = '';
     participantsContainer.innerHTML = '';
 
-    if (members.length === 0) {
+    if (window.groupMembers.length === 0) {
         console.warn('initializeExpenseForm: window.groupMembers is empty. Dropdowns will be empty.');
         payerSelect.innerHTML = '<option value="">No members found</option>';
         return;
     }
 
     // 3. 填充 "谁支付了?" (Payer) 下拉框
-    members.forEach(member => {
+    window.groupMembers.forEach(member => {
         const option = document.createElement('option');
         option.value = member.user_id; //
         option.textContent = member.user.username || member.nickname || `User ${member.user_id}`;
@@ -55,7 +63,7 @@ export function initializeExpenseForm() {
 
     // 4. 填充 "参与者" (Participants) 复选框
     selectedParticipants = new Set(); // 重置参与者 Set
-    members.forEach(member => {
+    window.groupMembers.forEach(member => {
         selectedParticipants.add(member.user_id); // 默认选中所有人
         
         const label = document.createElement('label');
@@ -408,7 +416,7 @@ export function initializeExpenseDetailForm(expense) {
             const memberName = member.user.username || member.nickname;
 
             const label = document.createElement('label');
-            label.className = 'flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-300 shadow-sm';
+label.className = 'flex items-center space-x-3 p-3 bg-white rounded-lg border border-gray-300 shadow-sm';
             
             label.innerHTML = `
                 <input 
@@ -419,7 +427,11 @@ export function initializeExpenseDetailForm(expense) {
                 >
                 <span class="font-medium text-gray-800">${memberName}</span>
             `;
-            // TODO: 为这些复选框添加事件监听器来更新 split 数据结构
+            // 🔴 修复：为详情弹窗的复选框添加事件监听
+            label.querySelector('input').addEventListener('change', (e) => {
+                console.log('详情弹窗参与者变化');
+                updateDetailSplitCalculation(); // 🔴 调用详情的计算函数
+            });
             participantsContainer.appendChild(label);
         });
     }
@@ -437,23 +449,28 @@ export function initializeExpenseDetailForm(expense) {
     }
 	// 🚨 关键：添加图片预览和文件上传重置逻辑 (新代码)
     const previewContainer = form.querySelector('#detail-current-receipt-preview');
+    const previewLink = form.querySelector('#detail-current-receipt-link'); // 🔴 修复：获取A标签
     const previewImg = form.querySelector('#detail-current-receipt-img');
-    const fileNameDisplay = form.querySelector('#detail-file-name-display');
+    const fileNameDisplay = form.querySelector('#detail-file-name-display'); // 🔴 修复：这是用于新文件上传的
 
     if (expense.image_url) {
         // 如果存在图片 URL，显示预览
         if (previewImg) previewImg.src = expense.image_url;
+        if (previewLink) previewLink.href = expense.image_url; // 🔴 修复：设置链接
         if (previewContainer) previewContainer.classList.remove('hidden');
-        if (fileNameDisplay) fileNameDisplay.textContent = '当前收据已上传。点击选择替换';
+        // if (fileNameDisplay) fileNameDisplay.textContent = '当前收据已上传。点击选择替换';
     } else {
         // 如果没有图片，隐藏预览
         if (previewContainer) previewContainer.classList.add('hidden');
-        if (fileNameDisplay) fileNameDisplay.textContent = '点击上传收据图片 (最大 1MB)';
+        // if (fileNameDisplay) fileNameDisplay.textContent = '点击上传收据图片 (最大 1MB)';
     }
     
-    // 确保文件输入框被重置
-    const fileInput = form.querySelector('#detail-receipt-file');
-    if (fileInput) fileInput.value = ""; 
+    // 确保文件输入框被重置 (这个功能在详情页暂时不支持)
+    // const fileInput = form.querySelector('#detail-receipt-file');
+    // if (fileInput) fileInput.value = ""; 
+
+    // 🔴 修复：在表单填充最后，调用分摊计算
+    updateDetailSplitCalculation();
 }
 
 export function setSplitMethod(method, triggerUpdate = true) {
@@ -543,69 +560,80 @@ export function setDetailSplitMethod(method) {
         }
     }
     
-    // 更新详情分摊计算
+    // 🔴 修复：调用详情分摊计算
     updateDetailSplitCalculation();
 }
 
-export function updateSplitCalculation() {
-    const amountInput = document.getElementById('amount');
-    if (!amountInput || !amountInput.value) {
-        memberSplits = []; // 🔴 清空
-        renderSplitDetails(); // 🔴 渲染空状态
-        updateSplitSummary(); // 🔴 更新摘要
+// 🔴 修复：重写 `updateDetailSplitCalculation`
+export function updateDetailSplitCalculation() {
+    const form = document.querySelector('#expense-detail-modal #expense-detail-form');
+    if (!form) {
+        console.warn('详情表单未找到，无法计算分摊');
         return;
     }
-    
-    // 🔴 修复：立即转换为分
+
+    const amountInput = form.querySelector('#detail-amount');
+    if (!amountInput || !amountInput.value) {
+        detailMemberSplits = [];
+        renderDetailSplitDetails();
+        updateDetailSplitSummary();
+        return;
+    }
+
     const totalAmountInCents = amountToCents(amountInput.value);
     if (isNaN(totalAmountInCents) || totalAmountInCents <= 0) {
-        memberSplits = [];
-        renderSplitDetails();
-        updateSplitSummary();
+        detailMemberSplits = [];
+        renderDetailSplitDetails();
+        updateDetailSplitSummary();
         return;
     }
+
+    // 获取选中的参与者
+    const checkedInputs = form.querySelectorAll('#detail-participants-container input:checked');
+    const participants = Array.from(checkedInputs).map(input => parseInt(input.value));
     
-    const participants = Array.from(selectedParticipants);
     if (participants.length === 0) {
-        memberSplits = [];
-        renderSplitDetails();
-        updateSplitSummary();
+        detailMemberSplits = [];
+        renderDetailSplitDetails();
+        updateDetailSplitSummary();
         return;
     }
     
-    // 🔴 修复：以分为单位计算
-    // 初始化分摊数据
-    memberSplits = participants.map(userId => {
+    // 获取当前分摊方式
+    const isEqualSplit = form.querySelector('#detail-split-equal').classList.contains('active');
+    const method = isEqualSplit ? 'equal' : 'custom';
+
+    // 初始化/更新分摊数据
+    detailMemberSplits = participants.map(userId => {
         const member = window.groupMembers.find(m => m.user_id === userId);
-        const existingSplit = memberSplits.find(s => s.user_id === userId); // 保留自定义金额
+        const existingSplit = detailMemberSplits.find(s => s.user_id === userId); // 保留自定义金额
         return {
             user_id: userId,
-            amount: existingSplit && currentSplitMethod === 'custom' ? existingSplit.amount : 0, // 🔴 amount 存储分
+            amount: existingSplit && method === 'custom' ? existingSplit.amount : 0, // 🔴 amount 存储分
             member_name: member ? (member.user.username || member.nickname) : `User ${userId}`
         };
     });
-    
-    if (currentSplitMethod === 'equal') {
-        // 等额分摊计算（以分为单位）
+
+    if (method === 'equal') {
         const baseAmountInCents = Math.floor(totalAmountInCents / participants.length);
         const remainderInCents = totalAmountInCents % participants.length;
         
-        memberSplits.forEach((split, index) => {
+        detailMemberSplits.forEach((split, index) => {
             split.amount = baseAmountInCents;
             if (index < remainderInCents) {
-                split.amount += 1; // 🔴 分配余数
+                split.amount += 1;
             }
         });
     } else {
-        // 自定义分摊 - 保持当前值或重新计算
-        const sumCurrentSplits = memberSplits.reduce((sum, s) => sum + s.amount, 0);
+        // 自定义分摊
+        const sumCurrentSplits = detailMemberSplits.reduce((sum, s) => sum + s.amount, 0);
         
         // 如果自定义总和不等于总金额 (或为0)，重新初始化为等额
         if (Math.abs(sumCurrentSplits - totalAmountInCents) > 1 || sumCurrentSplits === 0) {
             const baseAmountInCents = Math.floor(totalAmountInCents / participants.length);
             const remainderInCents = totalAmountInCents % participants.length;
             
-            memberSplits.forEach((split, index) => {
+            detailMemberSplits.forEach((split, index) => {
                 split.amount = baseAmountInCents;
                 if (index < remainderInCents) {
                     split.amount += 1;
@@ -613,65 +641,147 @@ export function updateSplitCalculation() {
             });
         }
     }
-    
+
     // 重新渲染UI
-    renderSplitDetails();
-    updateSplitSummary();
+    renderDetailSplitDetails();
+    updateDetailSplitSummary();
     
-    console.log('分摊计算完成 (分):', memberSplits);
+    console.log('详情分摊计算完成 (分):', detailMemberSplits);
 }
 
-export function updateDetailSplitCalculation() {
-    const form = document.querySelector('#expense-detail-modal #expense-detail-form');
-    if (!form) return;
-    
-    const amountInput = form.querySelector('#detail-amount');
-    if (!amountInput || !amountInput.value) {
+// 🔴 修复：新增 `renderDetailSplitDetails`
+export function renderDetailSplitDetails() {
+    const container = document.getElementById('detail-split-list');
+    if (!container) {
+        console.warn('详情分摊容器未找到');
         return;
     }
     
-    // 🔴 修复：转换为分
+    if (detailMemberSplits.length === 0) {
+        container.innerHTML = `<div class="text-center py-4 text-gray-500"><p>请选择参与者</p></div>`;
+        return;
+    }
+    
+    const method = document.querySelector('#detail-split-equal').classList.contains('active') ? 'equal' : 'custom';
+    
+    container.innerHTML = detailMemberSplits.map(split => `
+        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-sm font-medium">
+                    ${split.member_name.charAt(0).toUpperCase()}
+                </div>
+                <span class="font-medium text-gray-800">${split.member_name}</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                ${method === 'custom' ? `
+                    <div class="flex items-center space-x-1">
+                        <span class="text-gray-500">$</span>
+                        <input 
+                            type="number" 
+                            step="0.01" 
+                            min="0" 
+                            value="${centsToAmountString(split.amount)}"
+                            class="w-20 px-2 py-1 border border-gray-300 rounded text-right text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                            onchange="handleDetailCustomAmountChange(this, ${split.user_id})"
+                        >
+                    </div>
+                ` : `
+                    <span class="font-semibold text-primary">$${centsToAmountString(split.amount)}</span>
+                `}
+            </div>
+        </div>
+    `).join('');
+}
+
+// 🔴 修复：新增 `updateDetailSplitSummary`
+export function updateDetailSplitSummary() {
+    const summaryContainer = document.getElementById('detail-split-summary');
+    if (!summaryContainer) {
+        console.warn('详情分摊摘要容器未找到');
+        return;
+    }
+    
+    const amountInput = document.getElementById('detail-amount');
+    const totalAmountInCents = amountToCents(amountInput.value);
+    
+    const validation = validateDetailSplitAmounts();
+    const participantCount = detailMemberSplits.length;
+    
+    const averageSplitInCents = participantCount > 0 ? totalAmountInCents / participantCount : 0;
+    
+    summaryContainer.innerHTML = `
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+            <div class="flex justify-between items-center">
+                <span class="text-sm font-medium text-blue-800">分摊摘要</span>
+            </div>
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div class="text-center">
+                    <div class="text-lg font-bold text-blue-900">$${centsToAmountString(totalAmountInCents)}</div>
+                    <div class="text-blue-600">总金额</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-lg font-bold text-blue-900">${participantCount}</div>
+                    <div class="text-blue-600">参与人数</div>
+                </div>
+            </div>
+            <div class="border-t border-blue-200 pt-2">
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-blue-700">分摊验证:</span>
+                    <span class="font-medium ${
+                        validation.isValid ? 'text-green-600' : 'text-red-600'
+                    }">
+                        ${validation.message}
+                    </span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 🔴 修复：新增 `validateDetailSplitAmounts`
+export function validateDetailSplitAmounts() {
+    const amountInput = document.getElementById('detail-amount');
+    if (!amountInput || !amountInput.value) {
+        return { isValid: false, message: '请输入总金额' };
+    }
+    
     const totalAmountInCents = amountToCents(amountInput.value);
     if (isNaN(totalAmountInCents) || totalAmountInCents <= 0) {
-        return;
+        return { isValid: false, message: '请输入有效的总金额' };
     }
     
-    // 获取选中的参与者
-    const checkedInputs = form.querySelectorAll('#detail-participants-container input:checked');
-    const participants = Array.from(checkedInputs).map(input => parseInt(input.value));
+    const sumSplitsInCents = detailMemberSplits.reduce((sum, split) => sum + (split.amount || 0), 0);
+    const differenceInCents = Math.abs(sumSplitsInCents - totalAmountInCents);
     
-    if (participants.length === 0) {
-        return;
+    if (differenceInCents <= 1) {
+        if (differenceInCents === 1 && detailMemberSplits.length > 0) {
+             detailMemberSplits[0].amount += (totalAmountInCents - sumSplitsInCents);
+        }
+        return { isValid: true, message: '分摊金额匹配' };
+    } else {
+        const status = sumSplitsInCents > totalAmountInCents ? '超出' : '不足';
+        return { 
+            isValid: false, 
+            message: `分摊金额${status} ¥${(differenceInCents / 100).toFixed(2)}`
+        };
     }
-    
-    // 获取当前分摊方式
-    const isEqualSplit = form.querySelector('#detail-split-equal').classList.contains('active');
-    const method = isEqualSplit ? 'equal' : 'custom';
-    
-    // 🔴 修复：以分为单位计算
-    const baseAmountInCents = Math.floor(totalAmountInCents / participants.length);
-    const remainderInCents = totalAmountInCents % participants.length;
-    
-    // 更新每个参与者的分摊显示
-    participants.forEach((userId, index) => {
-        const member = window.groupMembers.find(m => m.user_id === userId);
-        const memberName = member ? (member.user.username || member.nickname) : `User ${userId}`;
-        
-        let splitAmountInCents = baseAmountInCents;
-        if (index < remainderInCents) {
-            splitAmountInCents += 1;
-        }
-        
-        // 更新显示（如果存在对应的输入框）
-        const amountInput = form.querySelector(`[data-user-id="${userId}"]`);
-        if (amountInput && method === 'custom') {
-            // 🔴 修复：转换为元显示
-            amountInput.value = (splitAmountInCents / 100).toFixed(2);
-        }
-    });
-    
-    console.log('详情分摊计算完成');
 }
+
+// 🔴 修复：新增 `handleDetailCustomAmountChange`
+export function handleDetailCustomAmountChange(input, memberId) {
+    const newValueInCents = amountToCents(input.value);
+    
+    const splitIndex = detailMemberSplits.findIndex(s => s.user_id === memberId);
+    if (splitIndex !== -1) {
+        detailMemberSplits[splitIndex].amount = newValueInCents;
+    }
+    
+    validateDetailSplitAmounts();
+    updateDetailSplitSummary();
+    
+    console.log('详情自定义金额更新 (分):', memberId, newValueInCents, detailMemberSplits);
+}
+
 
 export function handleCustomAmountChange(input, memberId) {
     // 🔴 修复：将输入的元转换为分存储
@@ -863,6 +973,7 @@ export function handleDetailAmountChange() {
     console.log('详情金额发生变化，重新计算分摊');
     
     setTimeout(() => {
+        // 🔴 修复：调用详情分摊计算
         updateDetailSplitCalculation();
     }, 100);
 }
@@ -887,7 +998,9 @@ export async function handleUpdateExpense(event) {
     const description = form.querySelector('#detail-description').value;
     const amountString = form.querySelector('#detail-amount').value;
     const payer_id = parseInt(form.querySelector('#detail-payer').value);
-    const date = form.querySelector('#detail-date').value;
+    
+    // 🔴 修复：不再发送 date 字段
+    // const date = form.querySelector('#detail-date').value;
     
     // 🚨 注意：文件更新在此修复中被禁用 (见下文)
     // const receiptFile = form.querySelector('#detail-receipt-file').files[0];
@@ -900,32 +1013,31 @@ export async function handleUpdateExpense(event) {
     }
     const amountInCents = Math.round(amountFloat * 100);
 
-    // 3. 构造 splits
-    const updatedParticipants = Array.from(form.querySelectorAll('#detail-participants-container input:checked'))
-        .map(input => parseInt(input.value));
+    // 3. 构造 splits (🔴 修复：使用 detailMemberSplits)
+    // 确保分摊数据是同步的
+    updateDetailSplitCalculation();
         
-    if (updatedParticipants.length === 0) {
+    if (detailMemberSplits.length === 0) {
         showCustomAlert('Error', 'You must split the expense with at least one person.');
         return;
     }
-
-    const updatedSplits = updatedParticipants.map(userId => {
-        // 🔴 修复：以分为单位计算
-        const count = updatedParticipants.length;
-        const baseAmount = Math.floor(amountInCents / count);
-        const remainder = amountInCents % count;
-        const index = updatedParticipants.indexOf(userId);
-        const amount = baseAmount + (index < remainder ? 1 : 0);
-        return { user_id: userId, amount: amount }; 
+    
+    // 🔴 修复：从 `detailMemberSplits` 而不是 `updatedParticipants` 构建
+    const updatedSplits = detailMemberSplits.map(split => {
+        return { user_id: split.user_id, amount: split.amount }; // 已经是分
     });
+    
+    // 🔴 修复：获取当前分摊方式
+    const split_type = form.querySelector('#detail-split-equal').classList.contains('active') ? 'equal' : 'custom';
 
     // 4. 🔴 更改：构造一个普通的 JS 对象，而不是 FormData
+    // 🔴 修复：移除 date 字段
     const updateData = {
         description: description,
         amount: amountInCents,
         payer_id: payer_id,
-        date: date,
-        split_type: 'equal', // 简化
+        // date: date, // <-- 🔴 移除此行以修复 422 错误
+        split_type: split_type, // 🔴 修复：发送正确的分摊方式
         splits: updatedSplits
         // 故意省略 'image_file'
     };
@@ -1082,6 +1194,13 @@ window.showCustomAlert = showCustomAlert;
 window.renderSplitDetails = renderSplitDetails;
 window.updateSplitSummary = updateSplitSummary;
 window.validateSplitAmounts = validateSplitAmounts;
+
+// 🔴 修复：暴露详情弹窗的计算/渲染函数
+window.renderDetailSplitDetails = renderDetailSplitDetails;
+window.updateDetailSplitSummary = updateDetailSplitSummary;
+window.validateDetailSplitAmounts = validateDetailSplitAmounts;
+window.handleDetailCustomAmountChange = handleDetailCustomAmountChange;
+
 
 // 如果这些函数在其他地方已经定义，确保不会重复定义
 if (typeof window.closeCustomAlert !== 'function') {
