@@ -1,5 +1,5 @@
-// payment.js - 支付相关的CRUD操作、表单处理
-// 防止缓存版本: 2025.11.10.003 - 修复模块导出
+// payment.js - Payment-related CRUD operations, form processing
+// Prevent caching version: 2025.11.10.003 - Fix module exports
 const JS_CACHE_VERSION = '2025.11.10.003';
 
 import { 
@@ -11,43 +11,43 @@ import {
     requireAdmin 
 } from '../ui/utils.js';
 
-// --- 全局状态 ---
+// --- Global State ---
 let currentEditingPayment = null;
 
 /**
- * 初始化支付表单
- * 🔴 修复：此函数现在将填充所有下拉菜单
+ * Initialize payment form
+ * 🔴 Fix: This function will now populate all dropdown menus
  */
 export function initializePaymentForm() {
-    console.log('初始化支付表单');
+    console.log('Initializing payment form');
 
-    // 设置默认日期
+    // Set default date
     const dateInput = document.getElementById('payment-date');
     if (dateInput) {
         dateInput.value = getTodayDate();
     }
 
-    // 获取群组成员列表
+    // Get group member list
     const members = window.groupMembers || [];
     
-    // 初始化付款人选择器 ("谁支付了?")
+    // Initialize payer selector ("Who paid?")
     const payerSelect = document.getElementById('payment-payer');
     if (payerSelect) {
         payerSelect.innerHTML = '';
         
         if (members.length === 0) {
-            payerSelect.innerHTML = '<option value="">未找到成员</option>';
+            payerSelect.innerHTML = '<option value="">No members found</option>';
         } else {
-            payerSelect.innerHTML = '<option value="">请选择付款人</option>'; // 🔴 添加默认提示
+            payerSelect.innerHTML = '<option value="">Please select a payer</option>'; // 🔴 Add default prompt
             members.forEach(member => {
                 const option = document.createElement('option');
-                // 🔴 修复：使用正确的成员ID和用户名
+                // 🔴 Fix: Use correct member ID and username
                 const memberId = member.user_id;
                 option.value = memberId;
-                const memberName = member.user?.username || member.nickname || `用户 ${memberId}`;
+                const memberName = member.user?.username || member.nickname || `User ${memberId}`;
                 option.textContent = memberName;
                 
-                // 设置当前用户为默认付款人
+                // Set the current user as the default payer
                 if (memberId === window.CURRENT_USER_ID) {
                     option.selected = true;
                 }
@@ -56,199 +56,199 @@ export function initializePaymentForm() {
         }
     }
 
-    // 🔴 修复：初始化收款人选择器 ("支付给谁?")
-    const payeeSelect = document.getElementById('payment-to'); // 🔴 修复：ID 是 'payment-to'
+    // 🔴 Fix: Initialize payee selector ("Pay to whom?")
+    const payeeSelect = document.getElementById('payment-to'); // 🔴 Fix: ID is 'payment-to'
     if (payeeSelect) {
         payeeSelect.innerHTML = '';
         
         if (members.length === 0) {
-            payeeSelect.innerHTML = '<option value="">未找到成员</option>';
+            payeeSelect.innerHTML = '<option value="">No members found</option>';
         } else {
-            payeeSelect.innerHTML = '<option value="">请选择收款人</option>'; // 🔴 添加默认提示
+            payeeSelect.innerHTML = '<option value="">Please select a payee</option>'; // 🔴 Add default prompt
             members.forEach(member => {
                 const option = document.createElement('option');
-                // 🔴 修复：使用正确的成员ID和用户名
+                // 🔴 Fix: Use correct member ID and username
                 const memberId = member.user_id;
                 option.value = memberId;
-                const memberName = member.user?.username || member.nickname || `用户 ${memberId}`;
+                const memberName = member.user?.username || member.nickname || `User ${memberId}`;
                 option.textContent = memberName;
                 payeeSelect.appendChild(option);
             });
         }
     } else {
-        console.error('❌ 找不到收款人选择器 #payment-to'); // 🔴 修复：更新错误日志
+        console.error('❌ Could not find payee selector #payment-to'); // 🔴 Fix: Update error log
     }
 
-    // 🔴 修复：填充 "为哪个费用支付"
+    // 🔴 Fix: Populate "For which expense"
     const expenseSelect = document.getElementById('payment-for-expense');
-    const expenses = window.expensesList || []; // 从全局获取费用列表
+    const expenses = window.expensesList || []; // Get expense list from global
     if (expenseSelect) {
-        expenseSelect.innerHTML = '<option value="">请选择费用</option>'; // 重置
+        expenseSelect.innerHTML = '<option value="">Please select an expense</option>'; // Reset
         if (expenses.length === 0) {
-            expenseSelect.innerHTML = '<option value="">暂无费用</option>';
+            expenseSelect.innerHTML = '<option value="">No expenses yet</option>';
         } else {
             expenses.forEach(expense => {
                 const option = document.createElement('option');
                 option.value = expense.id;
-                // 🔴 修复：使用 centsToAmountString 
+                // 🔴 Fix: Use centsToAmountString 
                 option.textContent = `[¥${centsToAmountString(expense.amount)}] ${expense.description}`;
                 expenseSelect.appendChild(option);
             });
         }
-        console.log(`✅ 费用下拉菜单已初始化，共 ${expenses.length} 个费用`);
+        console.log(`✅ Expense dropdown initialized with ${expenses.length} expenses`);
     } else {
-        console.error('❌ 找不到费用选择器 #payment-for-expense');
+        console.error('❌ Could not find expense selector #payment-for-expense');
     }
 
 
-    // 绑定事件监听器
+    // Bind event listeners
     bindPaymentFormEvents();
 }
 
 /**
- * 绑定支付表单事件监听器
+ * Bind payment form event listeners
  */
 function bindPaymentFormEvents() {
-    // 文件上传事件
-    const fileInput = document.getElementById('payment-receipt-file'); // 🔴 修复：使用正确的 ID
+    // File upload event
+    const fileInput = document.getElementById('payment-receipt-file'); // 🔴 Fix: Use correct ID
     if (fileInput) {
         fileInput.addEventListener('change', () => updatePaymentFileNameDisplay(fileInput));
     }
 
-    // 表单提交事件 (已在 groups.html 中通过 onsubmit 绑定)
+    // Form submission event (already bound via onsubmit in groups.html)
 }
 
 /**
- * 表单验证
+ * Form validation
  */
 function validatePaymentForm(formData) {
     const errors = [];
 
-    // 🔴 修复：使用正确的表单字段名
+    // 🔴 Fix: Use correct form field names
     const payerId = formData.get('payment-payer');
     const payeeId = formData.get('payment-to');
 
-    // 验证付款人
+    // Validate payer
     if (!payerId) {
-        errors.push('请选择付款人');
+        errors.push('Please select a payer');
     }
 
-    // 验证收款人
+    // Validate payee
     if (!payeeId) {
-        errors.push('请选择收款人');
+        errors.push('Please select a payee');
     }
 
-    // 验证付款人和收款人不能相同
+    // Validate that payer and payee are not the same
     if (payerId === payeeId) {
-        errors.push('付款人和收款人不能是同一个人');
+        errors.push('Payer and payee cannot be the same person');
     }
 
-    // 验证金额
+    // Validate amount
     const amount = formData.get('payment-amount');
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
-        errors.push('请输入有效的金额');
+        errors.push('Please enter a valid amount');
     }
 
-    // 验证日期
+    // Validate date
     if (!formData.get('payment-date')) {
-        errors.push('请选择日期');
+        errors.push('Please select a date');
     }
     
-    // 验证费用
+    // Validate expense
     if (!formData.get('payment-for-expense')) {
-        errors.push('请选择一个关联的费用');
+        errors.push('Please select an associated expense');
     }
 
     return errors;
 }
 
 /**
- * 保存支付 - 修复版本
+ * Save payment - Fixed version
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export async function handleSavePayment(event) {
     event.preventDefault();
-    console.log('保存支付');
+    console.log('Saving payment');
 
     const form = document.getElementById('payment-form');
     if (!form) {
-        console.error('找不到支付表单');
-        showCustomAlert('错误', '支付表单不存在');
+        console.error('Could not find payment form');
+        showCustomAlert('Error', 'Payment form does not exist');
         return;
     }
 
     try {
-        // 获取表单数据
+        // Get form data
         const formData = new FormData(form);
         
-        // 🔴 修复：创建 FormData 时，HTML input 的 'name' 属性是关键。
-        // 我们需要从 'name' 属性转换到后
+        // 🔴 Fix: When creating FormData, the 'name' attribute of the HTML input is key.
+        // We need to convert from the 'name' attribute to the backend
         const paymentData = {
             description: formData.get('payment-description'),
             amount: amountToCents(formData.get('payment-amount')),
             to_user_id: parseInt(formData.get('payment-to'), 10),
             from_user_id: parseInt(formData.get('payment-payer'), 10),
             date: formData.get('payment-date'),
-            // expense_id 将从 URL 获取, image_url 将通过 FormData 添加
+            // expense_id will be obtained from the URL, image_url will be added via FormData
         };
         
-        // 🔴 修复：使用新的 FormData 进行 API 提交
+        // 🔴 Fix: Use new FormData for API submission
         const apiFormData = new FormData();
         apiFormData.append('description', paymentData.description);
         apiFormData.append('amount', paymentData.amount);
         apiFormData.append('to_user_id', paymentData.to_user_id);
         apiFormData.append('from_user_id', paymentData.from_user_id);
-        // apiFormData.append('date', paymentData.date); // 支付日期由后端设置
+        // apiFormData.append('date', paymentData.date); // Payment date is set by the backend
         
         const receiptFile = formData.get('payment-receipt-file');
         if (receiptFile && receiptFile.size > 0) {
              apiFormData.append('image_file', receiptFile);
         }
 
-        // 验证（使用 paymentData 验证）
+        // Validation (use paymentData for validation)
         const errors = [];
-        if (!paymentData.from_user_id) errors.push('请选择付款人');
-        if (!paymentData.to_user_id) errors.push('请选择收款人');
-        if (paymentData.from_user_id === paymentData.to_user_id) errors.push('付款人和收款人不能是同一个人');
-        if (paymentData.amount <= 0) errors.push('请输入有效的金额');
+        if (!paymentData.from_user_id) errors.push('Please select a payer');
+        if (!paymentData.to_user_id) errors.push('Please select a payee');
+        if (paymentData.from_user_id === paymentData.to_user_id) errors.push('Payer and payee cannot be the same person');
+        if (paymentData.amount <= 0) errors.push('Please enter a valid amount');
         
         const expenseId = formData.get('payment-for-expense'); // 🔴
-        if (!expenseId) errors.push('请选择一个关联的费用');
+        if (!expenseId) errors.push('Please select an associated expense');
         
         if (errors.length > 0) {
-            showCustomAlert('表单验证失败', errors.join('<br>'));
+            showCustomAlert('Form validation failed', errors.join('<br>'));
             return;
         }
 
-        // 获取认证令牌
+        // Get authentication token
         const token = getAuthToken();
         if (!token) {
-            showCustomAlert('错误', '用户未登录，请重新登录');
+            showCustomAlert('Error', 'User not logged in, please log in again');
             return;
         }
         
-        console.log('保存支付记录，费用ID:', expenseId);
+        console.log('Saving payment record, Expense ID:', expenseId);
 
-        // API调用
+        // API call
         const response = await fetch(`/expenses/${expenseId}/payments`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`
-                // 'Content-Type' 'multipart/form-data' 由浏览器自动设置
+                // 'Content-Type' 'multipart/form-data' is set automatically by the browser
             },
-            body: apiFormData // 🔴 发送 apiFormData
+            body: apiFormData // 🔴 Send apiFormData
         });
 
         if (!response.ok) {
             const errorData = await response.json();
-            let errorMessage = '保存支付失败';
+            let errorMessage = 'Failed to save payment';
 
             if (errorData.detail) {
                 if (typeof errorData.detail === 'string') {
                     errorMessage = errorData.detail;
                 } else if (Array.isArray(errorData.detail)) {
                     errorMessage = errorData.detail.map(err => {
-                        let field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : '未知字段';
+                        let field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : 'Unknown field';
                         return `${field}: ${err.msg}`;
                     }).join('<br>');
                 } else {
@@ -259,39 +259,39 @@ export async function handleSavePayment(event) {
             throw new Error(errorMessage);
         }
 
-        // 成功处理
-        showCustomAlert('成功', '支付记录保存成功');
+        // Handle success
+        showCustomAlert('Success', 'Payment record saved successfully');
         
-        // 关闭弹窗
+        // Close modal
         const modal = document.getElementById('add-payment-modal');
         if (modal) {
             modal.classList.add('hidden');
         }
 
-        // 重置表单
+        // Reset form
         form.reset();
         initializePaymentForm();
 
-        // 刷新支付列表
+        // Refresh payment list
         await refreshPaymentsList();
 
     } catch (error) {
-        console.error('保存支付错误:', error);
-        showCustomAlert('错误', error.message || '保存支付时发生未知错误');
+        console.error('Error saving payment:', error);
+        showCustomAlert('Error', error.message || 'An unknown error occurred while saving the payment');
     }
 }
 
 /**
- * 更新支付 - 修复版本
+ * Update payment - Fixed version
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export async function handleUpdatePayment(event) {
     event.preventDefault();
-    console.log('更新支付');
+    console.log('Updating payment');
 
     const form = document.getElementById('payment-detail-form');
-    if (!currentEditingPayment) { // 🔴 修复：检查 currentEditingPayment
-        console.error('没有正在编辑的支付');
+    if (!currentEditingPayment) { // 🔴 Fix: Check currentEditingPayment
+        console.error('No payment is being edited');
         return;
     }
 
@@ -318,31 +318,31 @@ export async function handleUpdatePayment(event) {
         }
         
         const errors = [];
-        if (!paymentData.from_user_id) errors.push('请选择付款人');
-        if (!paymentData.to_user_id) errors.push('请选择收款人');
-        if (paymentData.from_user_id === paymentData.to_user_id) errors.push('付款人和收款人不能是同一个人');
-        if (paymentData.amount <= 0) errors.push('请输入有效的金额');
+        if (!paymentData.from_user_id) errors.push('Please select a payer');
+        if (!paymentData.to_user_id) errors.push('Please select a payee');
+        if (paymentData.from_user_id === paymentData.to_user_id) errors.push('Payer and payee cannot be the same person');
+        if (paymentData.amount <= 0) errors.push('Please enter a valid amount');
         
         const expenseId = formData.get('payment-detail-for-expense'); // 🔴
-        if (!expenseId) errors.push('请选择一个关联的费用');
+        if (!expenseId) errors.push('Please select an associated expense');
         
         if (errors.length > 0) {
-            showCustomAlert('表单验证失败', errors.join('<br>'));
+            showCustomAlert('Form validation failed', errors.join('<br>'));
             return;
         }
 
         const token = getAuthToken();
         if (!token) {
-            showCustomAlert('错误', '用户未登录，请重新登录');
+            showCustomAlert('Error', 'User not logged in, please log in again');
             return;
         }
 
         const paymentId = currentEditingPayment.id;
-        console.log('更新支付记录:', { expenseId, paymentId });
+        console.log('Updating payment record:', { expenseId, paymentId });
 
-        // API调用
-        const response = await fetch(`/payments/${paymentId}`, { // 🔴 修复：使用 /payments/{payment_id} 端点
-            method: 'PATCH', // 🔴 修复：使用 PATCH
+        // API call
+        const response = await fetch(`/payments/${paymentId}`, { // 🔴 Fix: Use /payments/{payment_id} endpoint
+            method: 'PATCH', // 🔴 Fix: Use PATCH
             headers: {
                 'Authorization': `Bearer ${token}`
             },
@@ -351,14 +351,14 @@ export async function handleUpdatePayment(event) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            let errorMessage = '更新支付失败';
+            let errorMessage = 'Failed to update payment';
 
             if (errorData.detail) {
                 if (typeof errorData.detail === 'string') {
                     errorMessage = errorData.detail;
                 } else if (Array.isArray(errorData.detail)) {
                     errorMessage = errorData.detail.map(err => {
-                        let field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : '未知字段';
+                        let field = err.loc && err.loc.length > 1 ? err.loc[err.loc.length - 1] : 'Unknown field';
                         return `${field}: ${err.msg}`;
                     }).join('<br>');
                 } else {
@@ -369,54 +369,54 @@ export async function handleUpdatePayment(event) {
             throw new Error(errorMessage);
         }
 
-        // 成功处理
-        showCustomAlert('成功', '支付记录更新成功');
+        // Handle success
+        showCustomAlert('Success', 'Payment record updated successfully');
         
-        // 关闭弹窗
+        // Close modal
         const modal = document.getElementById('payment-detail-modal');
         if (modal) {
             modal.classList.add('hidden');
         }
 
-        // 刷新支付列表
+        // Refresh payment list
         await refreshPaymentsList();
 
     } catch (error) {
-        console.error('更新支付错误:', error);
-        showCustomAlert('错误', error.message || '更新支付时发生未知错误');
+        console.error('Error updating payment:', error);
+        showCustomAlert('Error', error.message || 'An unknown error occurred while updating the payment');
     }
 }
 
 /**
- * 删除支付 - 修复版本
+ * Delete payment - Fixed version
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export async function handleDeletePayment(paymentId) {
     if (!paymentId) {
-        // 🔴 尝试从 currentEditingPayment 获取
+        // 🔴 Try to get from currentEditingPayment
         if (currentEditingPayment) {
             paymentId = currentEditingPayment.id;
         } else {
-            showCustomAlert('错误', '支付ID不存在');
+            showCustomAlert('Error', 'Payment ID does not exist');
             return;
         }
     }
 
-    // 确认删除
-    const confirmed = confirm('确定要删除这个支付记录吗？此操作无法撤销。');
+    // Confirm deletion
+    const confirmed = confirm('Are you sure you want to delete this payment record? This action cannot be undone.');
     if (!confirmed) return;
 
     try {
         const token = getAuthToken();
         if (!token) {
-            showCustomAlert('错误', '用户未登录，请重新登录');
+            showCustomAlert('Error', 'User not logged in, please log in again');
             return;
         }
 
-        console.log('删除支付记录:', { paymentId });
+        console.log('Deleting payment record:', { paymentId });
 
-        // API调用
-        const response = await fetch(`/payments/${paymentId}`, { // 🔴 修复：使用 /payments/{payment_id}
+        // API call
+        const response = await fetch(`/payments/${paymentId}`, { // 🔴 Fix: Use /payments/{payment_id}
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -424,12 +424,12 @@ export async function handleDeletePayment(paymentId) {
         });
 
         if (!response.ok) {
-             // 🔴 修复：后端在 DELETE 成功时返回 204
+             // 🔴 Fix: Backend returns 204 on successful DELETE
             if (response.status === 204) {
-                 // 这实际上是成功了
+                 // This is actually a success
             } else {
                 const errorData = await response.json();
-                let errorMessage = '删除支付失败';
+                let errorMessage = 'Failed to delete payment';
 
                 if (errorData.detail) {
                     if (typeof errorData.detail === 'string') {
@@ -442,40 +442,40 @@ export async function handleDeletePayment(paymentId) {
             }
         }
 
-        // 成功处理
-        showCustomAlert('成功', '支付记录删除成功');
+        // Handle success
+        showCustomAlert('Success', 'Payment record deleted successfully');
 
-        // 关闭相关弹窗
+        // Close related modals
         const detailModal = document.getElementById('payment-detail-modal');
         if (detailModal) {
             detailModal.classList.add('hidden');
         }
 
-        // 刷新支付列表
+        // Refresh payment list
         await refreshPaymentsList();
 
     } catch (error) {
-        console.error('删除支付错误:', error);
-        showCustomAlert('错误', error.message || '删除支付时发生未知错误');
+        console.error('Error deleting payment:', error);
+        showCustomAlert('Error', error.message || 'An unknown error occurred while deleting the payment');
     }
 }
 
 /**
- * 确认删除支付（用于确认弹窗）
+ * Confirm payment deletion (for confirmation modal)
  */
-// 🔴 修复：添加 export
-export async function confirmDeletePayment() { // 🔴 修复：不需要 paymentId
-    console.log('确认删除支付');
+// 🔴 Fix: Add export
+export async function confirmDeletePayment() { // 🔴 Fix: No paymentId needed
+    console.log('Confirming payment deletion');
     
-    if (!currentEditingPayment) { // 🔴 修复：从全局状态获取
-        showCustomAlert('错误', '支付ID不存在');
+    if (!currentEditingPayment) { // 🔴 Fix: Get from global state
+        showCustomAlert('Error', 'Payment ID does not exist');
         return;
     }
 
-    // 调用删除函数
+    // Call delete function
     await handleDeletePayment(currentEditingPayment.id);
 
-    // 关闭确认弹窗
+    // Close confirmation modal
     const confirmModal = document.getElementById('delete-payment-confirm-modal');
     if (confirmModal) {
         confirmModal.classList.add('hidden');
@@ -483,21 +483,21 @@ export async function confirmDeletePayment() { // 🔴 修复：不需要 paymen
 }
 
 /**
- * 填充支付详情表单 - 修复版本
+ * Populate payment detail form - Fixed version
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export function populatePaymentDetailForm(payment) {
-    console.log('填充支付详情表单', payment);
+    console.log('Populating payment detail form', payment);
 
     if (!payment) return;
 
     const form = document.getElementById('payment-detail-form');
     if (!form) {
-        console.error('找不到支付详情表单');
+        console.error('Could not find payment detail form');
         return;
     }
 
-    // 填充基本信息
+    // Populate basic information
     const amountField = document.getElementById('payment-detail-amount');
     if (amountField) {
         amountField.value = centsToAmountString(payment.amount);
@@ -505,7 +505,7 @@ export function populatePaymentDetailForm(payment) {
 
     const dateField = document.getElementById('payment-detail-date');
     if (dateField) {
-        // 🔴 修复：后端 payment_date 是 date, 不是 datetime
+        // 🔴 Fix: Backend payment_date is a date, not datetime
         dateField.value = payment.payment_date ? payment.payment_date.split('T')[0] : getTodayDate();
     }
 
@@ -514,64 +514,64 @@ export function populatePaymentDetailForm(payment) {
         descriptionField.value = payment.description || '';
     }
 
-    // 🔴 修复：填充成员下拉菜单
+    // 🔴 Fix: Populate member dropdowns
     const members = window.groupMembers || [];
     const payerSelect = document.getElementById('payment-detail-payer');
-    const payeeSelect = document.getElementById('payment-detail-to'); // 🔴 修复：ID
+    const payeeSelect = document.getElementById('payment-detail-to'); // 🔴 Fix: ID
 
     if (payerSelect) {
-        payerSelect.innerHTML = '<option value="">请选择付款人</option>';
+        payerSelect.innerHTML = '<option value="">Please select a payer</option>';
         members.forEach(member => {
             const option = document.createElement('option');
             const memberId = member.user_id;
             option.value = memberId;
-            option.textContent = member.user?.username || member.nickname || `用户 ${memberId}`;
-            if (memberId === payment.from_user_id) option.selected = true; // 🔴 修复：from_user_id
+            option.textContent = member.user?.username || member.nickname || `User ${memberId}`;
+            if (memberId === payment.from_user_id) option.selected = true; // 🔴 Fix: from_user_id
             payerSelect.appendChild(option);
         });
     }
 
     if (payeeSelect) {
-        payeeSelect.innerHTML = '<option value="">请选择收款人</option>';
+        payeeSelect.innerHTML = '<option value="">Please select a payee</option>';
         members.forEach(member => {
             const option = document.createElement('option');
             const memberId = member.user_id;
             option.value = memberId;
-            option.textContent = member.user?.username || member.nickname || `用户 ${memberId}`;
-            if (memberId === payment.to_user_id) option.selected = true; // 🔴 修复：to_user_id
+            option.textContent = member.user?.username || member.nickname || `User ${memberId}`;
+            if (memberId === payment.to_user_id) option.selected = true; // 🔴 Fix: to_user_id
             payeeSelect.appendChild(option);
         });
     }
     
-    // 🔴 修复：填充费用下拉菜单
+    // 🔴 Fix: Populate expense dropdown
     const expenseSelect = document.getElementById('payment-detail-for-expense');
     const expenses = window.expensesList || [];
     if (expenseSelect) {
-        expenseSelect.innerHTML = '<option value="">请选择费用</option>';
+        expenseSelect.innerHTML = '<option value="">Please select an expense</option>';
         expenses.forEach(expense => {
             const option = document.createElement('option');
             option.value = expense.id;
             option.textContent = `[¥${centsToAmountString(expense.amount)}] ${expense.description}`;
-            if (expense.id === payment.expense_id) option.selected = true; // 🔴 修复：expense_id
+            if (expense.id === payment.expense_id) option.selected = true; // 🔴 Fix: expense_id
             expenseSelect.appendChild(option);
         });
     }
 
 
-    // 设置表单可编辑状态（基于权限）
+    // Set form editable state (based on permissions)
     const isAdmin = window.IS_CURRENT_USER_ADMIN;
-    // 🔴 修复：支付的创建者是 creator_id
+    // 🔴 Fix: The creator of the payment is creator_id
     const isOwner = payment.creator_id === window.CURRENT_USER_ID; 
 
-    // 只有管理员或支付人自己可以编辑
+    // Only admins or the payment creator can edit
     const canEdit = isAdmin || isOwner;
 
     Array.from(form.elements).forEach(element => {
-        if (element.tagName === 'BUTTON') return; // 跳过按钮
+        if (element.tagName === 'BUTTON') return; // Skip buttons
         element.disabled = !canEdit;
     });
 
-    // 🔴 修复：隐藏/显示按钮
+    // 🔴 Fix: Hide/show buttons
     const deleteButton = form.querySelector('button[onclick="handleDeletePayment()"]');
     const saveButton = form.querySelector('button[type="submit"]');
 
@@ -580,55 +580,55 @@ export function populatePaymentDetailForm(payment) {
 }
 
 /**
- * 刷新支付列表 - 修复版本
+ * Refresh payment list - Fixed version
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export async function refreshPaymentsList() {
-    console.log('刷新支付列表');
+    console.log('Refreshing payment list');
 
     try {
-        // 🔴 v12.0修复：费用ID不存在时优雅处理
-        // 🔴 修复：支付是按群组获取的，不是按费用
+        // 🔴 v12.0 Fix: Handle gracefully when expense ID does not exist
+        // 🔴 Fix: Payments are retrieved by group, not by expense
         const groupId = window.currentGroupId;
         if (!groupId) {
-            console.log('群组ID不存在，显示空支付列表');
+            console.log('Group ID does not exist, showing empty payment list');
             updatePaymentsDisplay([]);
             return;
         }
 
         const token = getAuthToken();
         if (!token) {
-            console.warn('未找到认证令牌');
+            console.warn('Authentication token not found');
             updatePaymentsDisplay([]);
             return;
         }
 
-        console.log('获取支付列表，群组ID:', groupId);
+        console.log('Getting payment list, Group ID:', groupId);
 
-        // 🔴 修复：支付API应按群组获取 (假设)
-        // 噢，等等，auth.js (line 212) 确实是按群组聚合的。
-        // `getGroupPayments` (in auth.js) 会获取所有费用，然后获取每个费用的支付
+        // 🔴 Fix: Payment API should get by group (assumption)
+        // Oh, wait, auth.js (line 212) does aggregate by group.
+        // `getGroupPayments` (in auth.js) will get all expenses, then get payments for each expense
         const payments = await window.getGroupPayments(groupId);
-        window.paymentsList = payments; // 更新全局支付列表
+        window.paymentsList = payments; // Update global payment list
 
-        // 渲染支付列表UI
+        // Render payment list UI
         renderPaymentsList(payments);
 
     } catch (error) {
-        console.warn('刷新支付列表失败，显示空列表:', error);
+        console.warn('Failed to refresh payment list, showing empty list:', error);
         updatePaymentsDisplay([]);
     }
 }
 
-// 🔴 v12.0新增：统一更新支付显示的辅助函数
+// 🔴 v12.0 New: Unified helper function to update payment display
 function updatePaymentsDisplay(payments) {
     const container = document.getElementById('payments-list');
     if (container) {
         if (payments.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-8 text-gray-500">
-                    <p>暂无支付记录</p>
-                    <small>点击添加支付记录按钮来创建新的支付</small>
+                    <p>No payment records yet</p>
+                    <small>Click the Add Payment button to create a new payment</small>
                 </div>
             `;
         } else {
@@ -638,12 +638,12 @@ function updatePaymentsDisplay(payments) {
 }
 
 /**
- * 渲染支付列表UI - 修复版本
+ * Render payment list UI - Fixed version
  */
 function renderPaymentsList(payments) {
     const container = document.getElementById('payments-list');
     if (!container) {
-        console.error('支付列表容器未找到');
+        console.error('Payment list container not found');
         return;
     }
 
@@ -652,7 +652,7 @@ function renderPaymentsList(payments) {
     if (!payments || payments.length === 0) {
         container.innerHTML = `
             <div class="text-center py-8 text-gray-500">
-                <p>暂无支付记录</p>
+                <p>No payment records yet</p>
             </div>
         `;
         return;
@@ -665,7 +665,7 @@ function renderPaymentsList(payments) {
 }
 
 /**
- * 创建支付记录卡片 - 修复版本
+ * Create payment record card - Fixed version
  */
 function createPaymentCard(payment) {
     const card = document.createElement('div');
@@ -673,7 +673,7 @@ function createPaymentCard(payment) {
 
     const amountDisplay = centsToAmountString(payment.amount);
     
-    // 🔴 修复：使用 getMemberNameById
+    // 🔴 Fix: Use getMemberNameById
     const payerName = getMemberNameById(payment.from_user_id);
     const payeeName = getMemberNameById(payment.to_user_id);
 
@@ -684,7 +684,7 @@ function createPaymentCard(payment) {
                     <h3 class="font-semibold text-lg text-gray-900">
                         ¥${amountDisplay}
                     </h3>
-                    ${payment.image_url ? '<span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">有附件</span>' : ''}
+                    ${payment.image_url ? '<span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Attachment</span>' : ''}
                 </div>
                 <p class="text-sm text-gray-600 mb-1">
                     ${payerName} → ${payeeName}
@@ -699,14 +699,14 @@ function createPaymentCard(payment) {
                     class="text-blue-600 hover:text-blue-800 text-sm"
                     onclick="openPaymentDetail(${payment.id})"
                 >
-                    查看
+                    View
                 </button>
                 ${(window.IS_CURRENT_USER_ADMIN || payment.creator_id === window.CURRENT_USER_ID) ? `
                     <button 
                         class="text-red-600 hover:text-red-800 text-sm"
                         onclick="handleDeletePayment(${payment.id})"
                     >
-                        删除
+                        Delete
                     </button>
                 ` : ''}
             </div>
@@ -717,52 +717,52 @@ function createPaymentCard(payment) {
 }
 
 /**
- * 根据ID获取成员名称 - 修复版本
+ * Get member name by ID - Fixed version
  */
 function getMemberNameById(userId) {
     const members = window.groupMembers || [];
     const member = members.find(m => {
-        // 尝试多种ID字段匹配
+        // Try matching multiple ID fields
         return m.user_id === userId || 
                m.id === userId || 
                (m.user && m.user.id === userId);
     });
     
     if (member) {
-        // 🔴 修复：使用正确的用户名获取逻辑
+        // 🔴 Fix: Use correct username retrieval logic
         return member.user?.username || 
                member.nickname || 
-               `用户 ${userId}`;
+               `User ${userId}`;
     }
     
-    return `用户 ${userId}`;
+    return `User ${userId}`;
 }
 
 /**
- * 打开支付详情 - 修复版本
+ * Open payment details - Fixed version
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export function openPaymentDetail(paymentId) {
-    console.log('打开支付详情', paymentId);
+    console.log('Opening payment details', paymentId);
 
-    // 查找支付记录
+    // Find payment record
     const payment = window.paymentsList?.find(p => p.id === paymentId);
     
     if (!payment) {
-        showCustomAlert('错误', '未找到支付记录');
+        showCustomAlert('Error', 'Payment record not found');
         return;
     }
 
-    // 设置当前编辑支付
+    // Set current editing payment
     currentEditingPayment = payment;
 
-    // 填充详情表单
+    // Populate detail form
     populatePaymentDetailForm(payment);
 
-    // 初始化支付详情表单
+    // Initialize payment detail form
     initializePaymentDetailForm(payment);
 
-    // 打开详情弹窗
+    // Open detail modal
     const modal = document.getElementById('payment-detail-modal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -770,88 +770,88 @@ export function openPaymentDetail(paymentId) {
 }
 
 /**
- * 更新支付文件名显示
+ * Update payment file name display
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export function updatePaymentFileNameDisplay(input) {
-    console.log('更新支付文件名显示', input.files[0]?.name);
+    console.log('Updating payment file name display', input.files[0]?.name);
 
-    const fileNameSpan = document.getElementById('payment-file-name-display'); // 🔴 修复 ID
+    const fileNameSpan = document.getElementById('payment-file-name-display'); // 🔴 Fix ID
     if (fileNameSpan) {
         if (input.files && input.files[0]) {
-            fileNameSpan.textContent = `已选择: ${input.files[0].name}`;
+            fileNameSpan.textContent = `Selected: ${input.files[0].name}`;
             fileNameSpan.className = 'text-sm text-green-600';
         } else {
-            fileNameSpan.textContent = '点击上传支付凭证图片 (最大 1MB)';
+            fileNameSpan.textContent = 'Click to upload payment proof image (Max 1MB)';
             fileNameSpan.className = 'text-gray-700';
         }
     }
 }
 
 /**
- * 更新支付详情文件名显示
+ * Update payment detail file name display
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export function updatePaymentDetailFileNameDisplay(input) {
-    console.log('更新支付详情文件名显示', input.files[0]?.name);
+    console.log('Updating payment detail file name display', input.files[0]?.name);
 
     const fileNameSpan = document.getElementById('payment-detail-file-name-display');
     if (fileNameSpan) {
         if (input.files && input.files[0]) {
-            fileNameSpan.textContent = `已选择新文件: ${input.files[0].name}`;
+            fileNameSpan.textContent = `Selected new file: ${input.files[0].name}`;
             fileNameSpan.className = 'text-sm text-green-600';
         } else {
-            fileNameSpan.textContent = '点击上传支付凭证图片 (最大 1MB)';
+            fileNameSpan.textContent = 'Click to upload payment proof image (Max 1MB)';
             fileNameSpan.className = 'text-gray-700';
         }
     }
 }
 
 /**
- * 初始化支付详情表单
+ * Initialize payment detail form
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export function initializePaymentDetailForm(payment) {
-    console.log('初始化支付详情表单:', payment);
+    console.log('Initializing payment detail form:', payment);
 
-    // 绑定事件监听器
+    // Bind event listeners
     bindPaymentDetailFormEvents();
 }
 
 /**
- * 绑定支付详情表单事件
+ * Bind payment detail form events
  */
 function bindPaymentDetailFormEvents() {
-    // 详情表单文件上传事件
-    const detailFileInput = document.getElementById('payment-detail-receipt-file'); // 🔴 修复 ID
+    // Detail form file upload event
+    const detailFileInput = document.getElementById('payment-detail-receipt-file'); // 🔴 Fix ID
     if (detailFileInput) {
         detailFileInput.addEventListener('change', () => updatePaymentDetailFileNameDisplay(detailFileInput));
     }
 
-    // 详情表单提交事件 (已在 groups.html 中通过 onsubmit 绑定)
+    // Detail form submission event (already bound via onsubmit in groups.html)
 }
 
 /**
- * 处理添加新支付
+ * Handle adding a new payment
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export function handleAddNewPayment() {
     console.log('add new payment');
     
-    // 重置当前编辑支付
+    // Reset current editing payment
     currentEditingPayment = null;
 
-    // 初始化表单
+    // Initialize form
     initializePaymentForm();
 
-    // 清空文件选择
-    const fileInput = document.getElementById('payment-receipt-file'); // 🔴 修复 ID
+    // Clear file selection
+    const fileInput = document.getElementById('payment-receipt-file'); // 🔴 Fix ID
     if (fileInput) {
         fileInput.value = '';
         updatePaymentFileNameDisplay(fileInput);
     }
 
-    // 打开添加支付弹窗
+    // Open add payment modal
     const modal = document.getElementById('add-payment-modal');
     if (modal) {
         modal.classList.remove('hidden');
@@ -859,19 +859,19 @@ export function handleAddNewPayment() {
 }
 
 /**
- * 处理支付取消
+ * Handle payment cancellation
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export function handlePaymentCancel() {
     console.log('cancel payment form');
 
-    // 关闭添加支付弹窗
+    // Close add payment modal
     const modal = document.getElementById('add-payment-modal');
     if (modal) {
         modal.classList.add('hidden');
     }
 
-    // 重置表单
+    // Reset form
     const form = document.getElementById('payment-form');
     if (form) {
         form.reset();
@@ -879,26 +879,26 @@ export function handlePaymentCancel() {
 }
 
 /**
- * 处理支付详情取消
+ * Handle payment detail cancellation
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export function handlePaymentDetailCancel() {
     console.log('cancel payment detail');
 
-    // 关闭详情弹窗
+    // Close detail modal
     const modal = document.getElementById('payment-detail-modal');
     if (modal) {
         modal.classList.add('hidden');
     }
 
-    // 清除当前编辑支付
+    // Clear current editing payment
     currentEditingPayment = null;
 }
 
 /**
- * 关闭删除支付确认弹窗
+ * Close delete payment confirmation modal
  */
-// 🔴 修复：添加 export
+// 🔴 Fix: Add export
 export function closeDeletePaymentConfirm() {
     const modal = document.getElementById('delete-payment-confirm-modal');
     if (modal) {
@@ -906,7 +906,7 @@ export function closeDeletePaymentConfirm() {
     }
 }
 
-// 暴露所有支付相关函数到全局 window 对象
+// Expose all payment-related functions to the global window object
 window.handleSavePayment = handleSavePayment;
 window.handleUpdatePayment = handleUpdatePayment;
 window.handleDeletePayment = handleDeletePayment;
@@ -923,25 +923,25 @@ window.initializePaymentDetailForm = initializePaymentDetailForm;
 window.refreshPaymentsList = refreshPaymentsList;
 window.closeDeletePaymentConfirm = closeDeletePaymentConfirm;
 
-console.log('支付模块已加载，所有函数已暴露到全局');
+console.log('Payment module loaded, all functions exposed to global');
 
-// 🔴 v6.1修复：立即绑定事件监听器（替代内联事件处理器）
+// 🔴 v6.1 Fix: Immediately bind event listeners (instead of inline event handlers)
 initializePaymentEventListeners();
 
 /**
- * 🔴 v6.1修复：初始化支付事件监听器
- * 替代HTML中的内联事件处理器，避免时序问题
+ * 🔴 v6.1 Fix: Initialize payment event listeners
+ * Replaces inline event handlers in HTML to avoid timing issues
  */
 function initializePaymentEventListeners() {
-    console.log('初始化支付事件监听器...');
+    console.log('Initializing payment event listeners...');
     
-    // 绑定主要支付表单事件
+    // Bind main payment form events
     bindPaymentFormEvents();
     
-    // 绑定支付详情表单事件
+    // Bind payment detail form events
     bindPaymentDetailFormEvents();
     
-    console.log('支付事件监听器初始化完成');
+    console.log('Payment event listeners initialized');
 }
 
-console.log('支付模块已加载，所有函数已暴露到全局');
+console.log('Payment module loaded, all functions exposed to global');

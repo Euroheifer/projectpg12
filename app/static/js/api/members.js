@@ -1,54 +1,54 @@
-// member_management.js - 成员管理、邀请、角色设置
-// 防止缓存版本: 2025.11.06
+// member_management.js - Member management, invitation, role setting
+// Prevent caching version: 2025.11.06
 const JS_CACHE_VERSION = '2025.11.06.001';
 
 import { requireAdmin, isValidEmail, getAuthToken } from '../ui/utils.js';
 
-// --- 全局状态 ---
+// --- Global State ---
 
-// 成员管理状态
+// Member management state
 let memberToRemove = null;
 let memberToUpdateRole = null;
 
-// --- 辅助函数 ---
+// --- Helper Functions ---
 
 /**
- * 从URL中提取群组ID
- * @returns {number|null} 群组ID，如果无法获取则返回null
+ * Extract group ID from the URL
+ * @returns {number|null} Group ID, or null if it cannot be retrieved
  */
 function getGroupIdFromURL() {
     try {
         const path = window.location.pathname;
-        // 尝试从路径中提取群组ID：/group/{group_id}/details
+        // Try to extract group ID from the path: /group/{group_id}/details
         const match = path.match(/\/group\/(\d+)\/details/);
         if (match) {
             return parseInt(match[1]);
         }
         
-        // 尝试从查询参数中获取：?group_id={id}
+        // Try to get from query parameters: ?group_id={id}
         const urlParams = new URLSearchParams(window.location.search);
         const groupIdFromQuery = urlParams.get('group_id');
         if (groupIdFromQuery) {
             return parseInt(groupIdFromQuery);
         }
         
-        // 尝试从页面元素中获取
+        // Try to get from page element
         const groupIdElement = document.getElementById('current-group-id');
         if (groupIdElement) {
             return parseInt(groupIdElement.value);
         }
         
-        console.warn('无法从URL中获取群组ID:', path);
+        console.warn('Could not get group ID from URL:', path);
         return null;
     } catch (error) {
-        console.error('获取群组ID时发生错误:', error);
+        console.error('An error occurred while getting the group ID:', error);
         return null;
     }
 }
 
 /**
- * 显示加载状态
- * @param {string} type - 操作类型 ('update-role' | 'remove-member')
+ * Show loading state
+ * @param {string} type - Operation type ('update-role' | 'remove-member')
  */
 function showLoadingState(type) {
     const modal = type === 'update-role' ? 
@@ -63,18 +63,18 @@ function showLoadingState(type) {
             loadingElement.classList.remove('hidden');
         }
         
-        // 禁用按钮
+        // Disable button
         const confirmButton = modal.querySelector('button[onclick*="confirm"]');
         if (confirmButton) {
             confirmButton.disabled = true;
-            confirmButton.textContent = '处理中...';
+            confirmButton.textContent = 'Processing...';
         }
     }
 }
 
 /**
- * 隐藏加载状态
- * @param {string} type - 操作类型 ('update-role' | 'remove-member')
+ * Hide loading state
+ * @param {string} type - Operation type ('update-role' | 'remove-member')
  */
 function hideLoadingState(type) {
     const modal = type === 'update-role' ? 
@@ -89,44 +89,44 @@ function hideLoadingState(type) {
             loadingElement.classList.add('hidden');
         }
         
-        // 恢复按钮
+        // Restore button
         const confirmButton = modal.querySelector('button[onclick*="confirm"]');
         if (confirmButton) {
             confirmButton.disabled = false;
-            confirmButton.textContent = type === 'update-role' ? '确认更新' : '确认移除';
+            confirmButton.textContent = type === 'update-role' ? 'Confirm Update' : 'Confirm Remove';
         }
     }
 }
 
 /**
- * 安全获取用户名 - 修复版本
- * @param {Object} member - 成员对象
- * @returns {string} 用户名
+ * Safely get username - Fixed version
+ * @param {Object} member - Member object
+ * @returns {string} Username
  */
 function getSafeUsername(member) {
-    // 尝试多种方式获取用户名
+    // Try various ways to get the username
     return member.username || 
            member.user?.username || 
            member.nickname || 
            member.name || 
-           `用户 ${member.user_id || member.id || '未知'}`;
+           `User ${member.user_id || member.id || 'Unknown'}`;
 }
 
 /**
- * 安全获取邮箱 - 修复版本
- * @param {Object} member - 成员对象
- * @returns {string} 邮箱
+ * Safely get email - Fixed version
+ * @param {Object} member - Member object
+ * @returns {string} Email
  */
 function getSafeEmail(member) {
     return member.email || 
            member.user?.email || 
-           '无邮箱';
+           'No email';
 }
 
 /**
- * 安全获取成员ID - 修复版本
- * @param {Object} member - 成员对象
- * @returns {number} 成员ID
+ * Safely get member ID - Fixed version
+ * @param {Object} member - Member object
+ * @returns {number} Member ID
  */
 function getSafeMemberId(member) {
     return member.user_id || member.id;
@@ -138,11 +138,11 @@ export function renderMemberList() {
     const memberCount = document.getElementById('member-count');
 
     if (!container) {
-        console.error('找不到成员列表容器');
+        console.error('Could not find member list container');
         return;
     }
 
-    console.log('开始渲染成员列表，数据:', window.groupMembers);
+    console.log('Starting to render member list, data:', window.groupMembers);
 
     container.innerHTML = '';
 
@@ -152,7 +152,7 @@ export function renderMemberList() {
     if (!window.groupMembers || window.groupMembers.length === 0) {
         container.innerHTML = `
             <div class="text-center py-8 text-gray-500">
-                <p>暂无成员</p>
+                <p>No members yet</p>
             </div>
         `;
         return;
@@ -160,40 +160,40 @@ export function renderMemberList() {
 
     window.groupMembers.forEach(member => {
         try {
-            // --- 修复开始 ---
-            // 获取安全的用户名和邮箱
+            // --- Fix start ---
+            // Get safe username and email
             const safeUsername = getSafeUsername(member);
             const safeEmail = getSafeEmail(member);
-            // --- 修复结束 ---
+            // --- Fix end ---
 
-            const isAdmin = member.role === 'admin' || member.is_admin === true; // 增加对 is_admin 的检查
-            const isSelf = parseInt(getSafeMemberId(member)) === parseInt(window.CURRENT_USER_ID); // 使用安全获取的ID
+            const isAdmin = member.role === 'admin' || member.is_admin === true; // Also check for is_admin
+            const isSelf = parseInt(getSafeMemberId(member)) === parseInt(window.CURRENT_USER_ID); // Use safely obtained ID
             
-            // 清理用户名，移除括号及其内容
+            // Clean up username, remove parentheses and their content
             const displayName = safeUsername.replace(/\s*\(.*\)/, '').trim();
-            const displayInitial = displayName ? displayName[0].toUpperCase() : '?'; // 确保 displayName 不为空
+            const displayInitial = displayName ? displayName[0].toUpperCase() : '?'; // Ensure displayName is not empty
 
-            // --- 修复：检查 member.balance 是否存在 ---
+            // --- Fix: Check if member.balance exists ---
             const balance = member.balance || 0;
             let balanceText;
             let balanceColorClass;
 
             if (balance > 0.01) {
-                balanceText = `应收 ¥${balance.toFixed(2)}`;
+                balanceText = `Owed ¥${balance.toFixed(2)}`;
                 balanceColorClass = 'text-success font-semibold';
             } else if (balance < -0.01) {
-                balanceText = `欠款 ¥${Math.abs(balance).toFixed(2)}`;
+                balanceText = `Owes ¥${Math.abs(balance).toFixed(2)}`;
                 balanceColorClass = 'text-danger font-semibold';
             } else {
-                balanceText = '已结算';
+                balanceText = 'Settled';
                 balanceColorClass = 'text-gray-500';
             }
             
-            // --- 修复：确保使用正确的成员ID ---
+            // --- Fix: Ensure the correct member ID is used ---
             const memberId = getSafeMemberId(member);
             if (!memberId) {
-                console.error('成员数据缺少有效ID', member);
-                return; // 跳过这个畸形的成员
+                console.error('Member data is missing a valid ID', member);
+                return; // Skip this malformed member
             }
 
             const memberCard = document.createElement('div');
@@ -206,8 +206,8 @@ export function renderMemberList() {
                     <div class="min-w-0">
                         <p class="text-base font-semibold text-gray-900 truncate flex items-center">
                             ${displayName}
-                            ${isAdmin ? '<span class="ml-2 text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">管理员</span>' : ''}
-                            ${isSelf ? '<span class="ml-2 text-xs bg-gray-400 text-white px-2 py-0.5 rounded-full font-medium">您</span>' : ''}
+                            ${isAdmin ? '<span class="ml-2 text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">Admin</span>' : ''}
+                            ${isSelf ? '<span class="ml-2 text-xs bg-gray-400 text-white px-2 py-0.5 rounded-full font-medium">You</span>' : ''}
                         </p>
                         <p class="text-sm text-gray-500 truncate">${safeEmail}</p>
                     </div>
@@ -231,11 +231,11 @@ export function renderMemberList() {
                                 class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10 hidden">
                                 <button onclick="handleUpdateRole(${memberId}, '${displayName.replace(/'/g, "\\'")}')" 
                                     class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150">
-                                    ${isAdmin ? '取消管理员' : '设为管理员'}
+                                    ${isAdmin ? 'Revoke Admin' : 'Make Admin'}
                                 </button>
                                 <button onclick="handleRemoveMember(${memberId}, '${displayName.replace(/'/g, "\\'")}')" 
                                     class="w-full text-left px-4 py-2 text-sm text-danger hover:bg-red-50 transition duration-150">
-                                    移除成员
+                                    Remove Member
                                 </button>
                             </div>
                         </div>
@@ -245,8 +245,8 @@ export function renderMemberList() {
 
             container.appendChild(memberCard);
         } catch (error) {
-            console.error('渲染成员项时出错:', error, member);
-            // 继续处理其他成员，不让单个成员的错误影响整个列表
+            console.error('An error occurred while rendering a member item:', error, member);
+            // Continue processing other members, do not let an error with a single member affect the entire list
         }
     });
 }
@@ -254,7 +254,7 @@ export function renderMemberList() {
 export function toggleMemberManagementMenu(event, memberId) {
     event.stopPropagation();
 
-    // 关闭所有其他菜单
+    // Close all other menus
     const allMenus = document.querySelectorAll('[id^="member-menu-"]');
     allMenus.forEach(menu => {
         if (menu.id !== `member-menu-${memberId}`) {
@@ -262,7 +262,7 @@ export function toggleMemberManagementMenu(event, memberId) {
         }
     });
 
-    // 切换当前菜单
+    // Toggle the current menu
     const currentMenu = document.getElementById(`member-menu-${memberId}`);
     if (currentMenu) {
         currentMenu.classList.toggle('hidden');
@@ -274,39 +274,39 @@ export const handleUpdateRole = requireAdmin(function (memberId, memberName) {
     const roleMessage = document.getElementById('role-update-message');
 
     if (roleModal && roleMessage) {
-        // 查找成员，支持多种ID字段
+        // Find member, supporting multiple ID fields
         const member = window.groupMembers.find(m => 
             parseInt(getSafeMemberId(m)) === parseInt(memberId)
         );
         
         if (member) {
-            // 检查管理员状态，支持多种字段
+            // Check admin status, supporting multiple fields
             const isAdmin = member.is_admin === true || member.role === 'admin';
-            const action = isAdmin ? '取消管理员' : '设为管理员';
-            const warningText = isAdmin ? '' : '（管理员可以管理群组所有设置）';
+            const action = isAdmin ? 'Revoke Admin' : 'Make Admin';
+            const warningText = isAdmin ? '' : '(Admins can manage all group settings)';
             
             roleMessage.innerHTML = `
-                确定要将成员 "${memberName}" ${action}吗？<br>
+                Are you sure you want to ${action} for member "${memberName}"?<br>
                 <small class="text-gray-500">${warningText}</small>
             `;
             
             roleModal.classList.remove('hidden');
             roleModal.dataset.memberId = memberId;
             
-            console.log('打开角色更新模态框:', {
+            console.log('Opening role update modal:', {
                 memberId,
                 memberName,
                 isAdmin,
                 member: member
             });
         } else {
-            console.error('未找到要更新角色的成员:', memberId);
+            console.error('Could not find member to update role:', memberId);
             if (window.showCustomAlert) {
-                window.showCustomAlert('错误', '未找到该成员');
+                window.showCustomAlert('Error', 'Could not find this member');
             }
         }
     } else {
-        console.error('找不到角色更新模态框元素');
+        console.error('Could not find role update modal elements');
     }
 });
 
@@ -315,44 +315,44 @@ export const handleRemoveMember = requireAdmin(function (memberId, memberName) {
     const removeMessage = document.getElementById('remove-message');
 
     if (removeModal && removeMessage) {
-        // 查找成员，支持多种ID字段
+        // Find member, supporting multiple ID fields
         const member = window.groupMembers.find(m => 
             parseInt(getSafeMemberId(m)) === parseInt(memberId)
         );
         
         if (member) {
-            // 检查是否为管理员，支持多种字段
+            // Check if admin, supporting multiple fields
             const isAdmin = member.is_admin === true || member.role === 'admin';
             
             if (isAdmin) {
                 if (window.showCustomAlert) {
-                    window.showCustomAlert('错误', '不能移除群组管理员');
+                    window.showCustomAlert('Error', 'Cannot remove a group admin');
                 }
                 return;
             }
             
-            // 再次确认移除操作
+            // Reconfirm removal
             removeMessage.innerHTML = `
-                确定要将成员 "${memberName}" 从群组中移除吗？<br>
-                <small class="text-red-500">此操作不可撤销，成员将无法再查看此群组的费用信息。</small>
+                Are you sure you want to remove member "${memberName}" from the group?<br>
+                <small class="text-red-500">This action cannot be undone, and the member will no longer be able to view this group's expense information.</small>
             `;
             
             removeModal.classList.remove('hidden');
             removeModal.dataset.memberId = memberId;
             
-            console.log('打开移除成员模态框:', {
+            console.log('Opening remove member modal:', {
                 memberId,
                 memberName,
                 member: member
             });
         } else {
-            console.error('未找到要移除的成员:', memberId);
+            console.error('Could not find member to remove:', memberId);
             if (window.showCustomAlert) {
-                window.showCustomAlert('错误', '未找到该成员');
+                window.showCustomAlert('Error', 'Could not find this member');
             }
         }
     } else {
-        console.error('找不到移除成员模态框元素');
+        console.error('Could not find remove member modal elements');
     }
 });
 
@@ -362,35 +362,35 @@ export async function confirmUpdateRole() {
     
     if (!memberId) {
         if (window.showCustomAlert) {
-            window.showCustomAlert('错误', '未找到要更新的成员');
+            window.showCustomAlert('Error', 'Could not find member to update');
         }
         return;
     }
 
-    // 显示加载状态
+    // Show loading state
     showLoadingState('update-role');
 
     try {
-        // 获取当前群组ID
+        // Get current group ID
         const groupId = window.CURRENT_GROUP_ID || window.currentGroupId || getGroupIdFromURL();
         if (!groupId) {
-            throw new Error('无法获取群组ID');
+            throw new Error('Could not get group ID');
         }
 
-        // 获取成员信息
+        // Get member information
         const member = window.groupMembers.find(m => 
             parseInt(getSafeMemberId(m)) === parseInt(memberId)
         );
         
         if (!member) {
-            throw new Error('未找到该成员');
+            throw new Error('Could not find this member');
         }
 
-        // 决定新的管理员状态（取反）
+        // Decide the new admin status (inverse)
         const currentIsAdmin = member.is_admin === true || member.role === 'admin';
         const newAdminStatus = !currentIsAdmin;
         
-        console.log('更新成员角色:', {
+        console.log('Updating member role:', {
             memberId,
             groupId,
             currentIsAdmin,
@@ -399,10 +399,10 @@ export async function confirmUpdateRole() {
 
         const token = getAuthToken();
         if (!token) {
-            throw new Error('未找到认证令牌，请重新登录');
+            throw new Error('Authentication token not found, please log in again');
         }
 
-        // 调用更新管理员状态的API
+        // Call the update admin status API
         const response = await fetch(`/groups/${groupId}/members/${memberId}/admin`, {
             method: 'PATCH',
             headers: {
@@ -416,32 +416,32 @@ export async function confirmUpdateRole() {
 
         if (response.ok) {
             const result = await response.json();
-            console.log('角色更新成功:', result);
+            console.log('Role updated successfully:', result);
             
-            const action = newAdminStatus ? '设置为管理员' : '取消管理员权限';
+            const action = newAdminStatus ? 'made an admin' : 'had admin permissions revoked';
             if (window.showCustomAlert) {
-                window.showCustomAlert('成功', `成员角色已${action}`);
+                window.showCustomAlert('Success', `Member role has been ${action}`);
             }
             
             cancelUpdateRole();
             
-            // 重新加载成员列表
+            // Reload member list
             if (window.loadMembersList) {
                 await window.loadMembersList();
             } else {
-                // 如果没有loadMembersList函数，刷新页面
+                // If loadMembersList function is not available, refresh the page
                 setTimeout(() => window.location.reload(), 1000);
             }
         } else {
             const errorData = await response.json();
-            console.error('API错误响应:', errorData);
+            console.error('API error response:', errorData);
             
-            let errorMessage = '更新角色失败';
+            let errorMessage = 'Failed to update role';
             if (errorData.detail) {
                 if (errorData.detail.includes('not a member')) {
-                    errorMessage = '该用户不是群组成员';
+                    errorMessage = 'This user is not a member of the group';
                 } else if (errorData.detail.includes('Only admin')) {
-                    errorMessage = '只有管理员可以修改权限';
+                    errorMessage = 'Only admins can modify permissions';
                 } else {
                     errorMessage = errorData.detail;
                 }
@@ -450,12 +450,12 @@ export async function confirmUpdateRole() {
             throw new Error(errorMessage);
         }
     } catch (error) {
-        console.error('更新角色错误:', error);
+        console.error('Error updating role:', error);
         if (window.showCustomAlert) {
-            window.showCustomAlert('错误', error.message || '更新角色失败，请重试');
+            window.showCustomAlert('Error', error.message || 'Failed to update role, please try again');
         }
     } finally {
-        // 隐藏加载状态
+        // Hide loading state
         hideLoadingState('update-role');
     }
 }
@@ -466,37 +466,37 @@ export async function confirmRemoveMember() {
     
     if (!memberId) {
         if (window.showCustomAlert) {
-            window.showCustomAlert('错误', '未找到要移除的成员');
+            window.showCustomAlert('Error', 'Could not find member to remove');
         }
         return;
     }
 
-    // 最终确认对话框
-    if (!window.confirm('确定要将该成员从群组中移除吗？此操作不可撤销。')) {
+    // Final confirmation dialog
+    if (!window.confirm('Are you sure you want to remove this member from the group? This action cannot be undone.')) {
         return;
     }
 
-    // 显示加载状态
+    // Show loading state
     showLoadingState('remove-member');
 
     try {
-        // 获取当前群组ID
+        // Get current group ID
         const groupId = window.CURRENT_GROUP_ID || window.currentGroupId || getGroupIdFromURL();
         if (!groupId) {
-            throw new Error('无法获取群组ID');
+            throw new Error('Could not get group ID');
         }
 
-        console.log('移除成员:', {
+        console.log('Removing member:', {
             memberId,
             groupId
         });
 
         const token = getAuthToken();
         if (!token) {
-            throw new Error('未找到认证令牌，请重新登录');
+            throw new Error('Authentication token not found, please log in again');
         }
 
-        // 调用移除成员的API
+        // Call the remove member API
         const response = await fetch(`/groups/${groupId}/members/${memberId}`, {
             method: 'DELETE',
             headers: {
@@ -505,31 +505,31 @@ export async function confirmRemoveMember() {
         });
 
         if (response.ok) {
-            console.log('成员移除成功');
+            console.log('Member removed successfully');
             
             if (window.showCustomAlert) {
-                window.showCustomAlert('成功', '成员已从群组中移除');
+                window.showCustomAlert('Success', 'Member has been removed from the group');
             }
             
             cancelRemoveMember();
             
-            // 重新加载成员列表
+            // Reload member list
             if (window.loadMembersList) {
                 await window.loadMembersList();
             } else {
-                // 如果没有loadMembersList函数，刷新页面
+                // If loadMembersList function is not available, refresh the page
                 setTimeout(() => window.location.reload(), 1000);
             }
         } else {
             const errorData = await response.json();
-            console.error('API错误响应:', errorData);
+            console.error('API error response:', errorData);
             
-            let errorMessage = '移除成员失败';
+            let errorMessage = 'Failed to remove member';
             if (errorData.detail) {
                 if (errorData.detail.includes('Cannot remove the group admin')) {
-                    errorMessage = '不能移除群组管理员';
+                    errorMessage = 'Cannot remove a group admin';
                 } else if (errorData.detail.includes('not a member')) {
-                    errorMessage = '该用户不是群组成员';
+                    errorMessage = 'This user is not a member of the group';
                 } else {
                     errorMessage = errorData.detail;
                 }
@@ -538,12 +538,12 @@ export async function confirmRemoveMember() {
             throw new Error(errorMessage);
         }
     } catch (error) {
-        console.error('移除成员错误:', error);
+        console.error('Error removing member:', error);
         if (window.showCustomAlert) {
-            window.showCustomAlert('错误', error.message || '移除成员失败，请重试');
+            window.showCustomAlert('Error', error.message || 'Failed to remove member, please try again');
         }
     } finally {
-        // 隐藏加载状态
+        // Hide loading state
         hideLoadingState('remove-member');
     }
 }
@@ -552,9 +552,9 @@ export function cancelUpdateRole() {
     const modal = document.getElementById('role-update-modal');
     if (modal) {
         modal.classList.add('hidden');
-        // 重置加载状态
+        // Reset loading state
         hideLoadingState('update-role');
-        // 清理数据
+        // Clean up data
         delete modal.dataset.memberId;
     }
 }
@@ -563,14 +563,14 @@ export function cancelRemoveMember() {
     const modal = document.getElementById('remove-modal');
     if (modal) {
         modal.classList.add('hidden');
-        // 重置加载状态
+        // Reset loading state
         hideLoadingState('remove-member');
-        // 清理数据
+        // Clean up data
         delete modal.dataset.memberId;
     }
 }
 
-// 邀请成员功能 - 修复版本
+// Invite member function - Fixed version
 export function clearInviteForm() {
     const emailInput = document.getElementById('invite-user-email-input');
     if (emailInput) emailInput.value = '';
@@ -582,7 +582,7 @@ export async function inviteNewMember() {
     const submitButton = document.getElementById('invite-submit-button');
 
     if (!emailInput || !loadingMessage || !submitButton) {
-        console.error('找不到邀请表单元素');
+        console.error('Could not find invitation form elements');
         return;
     }
 
@@ -590,14 +590,14 @@ export async function inviteNewMember() {
 
     if (!email) {
         if (window.showCustomAlert) {
-            window.showCustomAlert('错误', '请输入邮箱地址');
+            window.showCustomAlert('Error', 'Please enter an email address');
         }
         return;
     }
 
     if (!isValidEmail(email)) {
         if (window.showCustomAlert) {
-            window.showCustomAlert('错误', '请输入有效的邮箱地址');
+            window.showCustomAlert('Error', 'Please enter a valid email address');
         }
         return;
     }
@@ -606,20 +606,20 @@ export async function inviteNewMember() {
     submitButton.disabled = true;
 
     try {
-        // 获取当前群组ID
+        // Get current group ID
         const groupId = window.CURRENT_GROUP_ID || window.currentGroupId || getGroupIdFromURL();
         if (!groupId) {
-            throw new Error('无法获取群组ID');
+            throw new Error('Could not get group ID');
         }
 
         const token = getAuthToken();
         if (!token) {
-            throw new Error('未找到认证令牌，请重新登录');
+            throw new Error('Authentication token not found, please log in again');
         }
 
-        console.log('发送邀请:', { email, groupId });
+        console.log('Sending invitation:', { email, groupId });
 
-        // 调用邀请API
+        // Call the invitation API
         const response = await fetch(`/groups/${groupId}/invite`, {
             method: 'POST',
             headers: {
@@ -631,15 +631,15 @@ export async function inviteNewMember() {
 
         if (response.ok) {
             const result = await response.json();
-            console.log('邀请发送成功:', result);
+            console.log('Invitation sent successfully:', result);
             
             if (window.showCustomAlert) {
-                window.showCustomAlert('成功', `邀请已发送到 ${email}`);
+                window.showCustomAlert('Success', `Invitation sent to ${email}`);
             }
             clearInviteForm();
         } else {
             const errorData = await response.json();
-            let errorMessage = '发送邀请失败';
+            let errorMessage = 'Failed to send invitation';
             
             if (errorData.detail) {
                 errorMessage = errorData.detail;
@@ -648,9 +648,9 @@ export async function inviteNewMember() {
             throw new Error(errorMessage);
         }
     } catch (error) {
-        console.error('发送邀请失败:', error);
+        console.error('Failed to send invitation:', error);
         if (window.showCustomAlert) {
-            window.showCustomAlert('错误', error.message || '发送邀请失败，请重试');
+            window.showCustomAlert('Error', error.message || 'Failed to send invitation, please try again');
         }
     } finally {
         loadingMessage.classList.add('hidden');
@@ -658,9 +658,9 @@ export async function inviteNewMember() {
     }
 }
 
-// 键盘事件处理
+// Keyboard event handling
 document.addEventListener('keydown', function(event) {
-    // ESC键关闭模态框
+    // ESC key closes modals
     if (event.key === 'Escape') {
         const roleModal = document.getElementById('role-update-modal');
         const removeModal = document.getElementById('remove-modal');
@@ -675,7 +675,7 @@ document.addEventListener('keydown', function(event) {
     }
 });
 
-// 暴露所有成员管理相关函数到全局 window 对象
+// Expose all member management related functions to the global window object
 window.renderMemberList = renderMemberList;
 window.toggleMemberManagementMenu = toggleMemberManagementMenu;
 window.handleUpdateRole = handleUpdateRole;
@@ -689,4 +689,4 @@ window.inviteNewMember = inviteNewMember;
 window.getGroupIdFromURL = getGroupIdFromURL;
 window.isValidEmail = isValidEmail;
 
-console.log('成员管理模块已加载，所有函数已暴露到全局');
+console.log('Member management module loaded, all functions exposed to global');
