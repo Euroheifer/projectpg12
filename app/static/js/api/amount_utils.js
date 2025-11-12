@@ -1,10 +1,10 @@
-// amount_utils.js - 金额转换工具函数（向后兼容）
-// 防止缓存版本: 2025.11.06
+// amount_utils.js - Amount conversion utility functions (backward compatible)
+// Prevent caching version: 2025.11.06
 const JS_CACHE_VERSION = '2025.11.06.002';
 
 /**
- * 将金额字符串转换为分（cents）
- * 例如: "10.50" -> 1050
+ * Convert amount string to cents
+ * Example: "10.50" -> 1050
  */
 export function amountToCents(amountString) {
     if (!amountString) return 0;
@@ -14,8 +14,8 @@ export function amountToCents(amountString) {
 }
 
 /**
- * 将分（cents）转换为金额字符串
- * 例如: 1050 -> "10.50"
+ * Convert cents to amount string
+ * Example: 1050 -> "10.50"
  */
 export function centsToAmountString(centsInt) {
     if (centsInt === undefined || centsInt === null || isNaN(centsInt)) {
@@ -26,8 +26,8 @@ export function centsToAmountString(centsInt) {
 }
 
 /**
- * 格式化金额显示
- * 添加货币符号和千分位分隔符
+ * Format currency display
+ * Add currency symbol and thousands separator
  */
 export function formatCurrency(centsInt, currency = '$') {
     const amount = centsToAmountString(centsInt);
@@ -37,17 +37,17 @@ export function formatCurrency(centsInt, currency = '$') {
 }
 
 /**
- * 验证金额字符串是否有效
+ * Validate if the amount string is valid
  */
 export function isValidAmount(amountString) {
     const amount = parseFloat(amountString);
     return !isNaN(amount) && amount >= 0;
 }
 
-// 暴露到全局
+// Expose to global
 window.amountToCents = amountToCents;
 window.centsToAmountString = centsToAmountString;
 window.formatCurrency = formatCurrency;
 window.isValidAmount = isValidAmount;
 
-console.log('amount_utils.js 已加载，金额转换函数已暴露到全局 (v2025.11.06.002)');
+console.log('amount_utils.js loaded, amount conversion functions exposed to global (v2025.11.06.002)');

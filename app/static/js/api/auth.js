@@ -1,17 +1,17 @@
 // /static/js/api/auth.js
-// 防止缓存版本: 2025.11.06
+// Prevent caching version: 2025.11.06
 const JS_CACHE_VERSION = '2025.11.06.001';
 
 // ----------------------------------------------------------------
-// --- 这是一个完整的、已修复的文件。请复制并替换你的旧文件。---
+// --- This is a complete, fixed file. Please copy and replace your old file. ---
 // ----------------------------------------------------------------
 
-// --- 导入 getAuthToken，因为所有真实的 API 调用都需要它 ---
+// --- Import getAuthToken, as all real API calls need it ---
 import { getAuthToken } from '../ui/utils.js';
 
 /**
- * API 调用: 注册 (来自 user.js)
- * API 路由: @app.post("/users/signup", ...)
+ * API Call: Register (from user.js)
+ * API Route: @app.post("/users/signup", ...)
  */
 export async function handleSignup(username, email, password) {
     const response = await fetch('/users/signup', {
@@ -21,14 +21,14 @@ export async function handleSignup(username, email, password) {
     });
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || '注册失败');
+        throw new Error(errorData.detail || 'Registration failed');
     }
     return await response.json();
 }
 
 /**
- * API 调用: 登录 (来自 user.js)
- * API 路由: @app.post("/token", ...)
+ * API Call: Login (from user.js)
+ * API Route: @app.post("/token", ...)
  */
 export async function handleLogin(email, password) {
     const formData = new URLSearchParams();
@@ -43,18 +43,18 @@ export async function handleLogin(email, password) {
 
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || '登录失败');
+        throw new Error(errorData.detail || 'Login failed');
     }
 
     const tokenData = await response.json();
-    // 关键: 在本地存储中保存 Token！
+    // Key: Save the Token in local storage!
     localStorage.setItem('access_token', tokenData.access_token);
     return tokenData;
 }
 
 /**
- * API 调用: 退出登录 (来自 home.js)
- * API 路由: @app.post("/auth/logout", ...)
+ * API Call: Logout (from home.js)
+ * API Route: @app.post("/auth/logout", ...)
  */
 export async function handleLogout(token) {
     if (token) {
@@ -66,8 +66,8 @@ export async function handleLogout(token) {
 }
 
 /**
- * API 调用: 获取当前用户 (来自 home.js)
- * API 路由: @app.get("/me", ...)
+ * API Call: Get current user (from home.js)
+ * API Route: @app.get("/me", ...)
  */
 export async function getCurrentUser(token) {
     const response = await fetch('/me', {
@@ -78,13 +78,13 @@ export async function getCurrentUser(token) {
         }
     });
     if (!response.ok) {
-        throw new Error('无法验证用户身份');
+        throw new Error('Unable to verify user identity');
     }
     return await response.json();
 }
 
 /**
- * 清除本地存储 (来自 home.js)
+ * Clear local storage (from home.js)
  */
 export function clearAuthData() {
     localStorage.removeItem('access_token');
@@ -92,18 +92,18 @@ export function clearAuthData() {
 }
 
 // ----------------------------------------------------------------
-// --- 群组数据相关的 API 调用 (已修复 - 移除了 MOCK) ---
+// --- Group data related API calls (Fixed - MOCK removed) ---
 // ----------------------------------------------------------------
 
 /**
- * API 调用: 获取群组数据 (真实版本)
- * API 路由: @app.get("/groups/{group_id}", ...)
+ * API Call: Get group data (Real version)
+ * API Route: @app.get("/groups/{group_id}", ...)
  */
 export async function getGroupData(groupId) {
     const token = getAuthToken();
-    if (!token) throw new Error('未找到认证Token，请重新登录');
+    if (!token) throw new Error('Authentication token not found, please log in again');
 
-    console.log('正在请求群组数据，URL:', `/groups/${groupId}`);
+    console.log('Requesting group data, URL:', `/groups/${groupId}`);
     
     const response = await fetch(`/api/groups/${groupId}`, {
         method: 'GET',
@@ -113,59 +113,59 @@ export async function getGroupData(groupId) {
         }
     });
 
-    console.log('API响应状态:', response.status, response.statusText);
+    console.log('API response status:', response.status, response.statusText);
 
-    // 首先检查响应内容类型
+    // First check the response content type
     const contentType = response.headers.get('content-type');
-    console.log('响应内容类型:', contentType);
+    console.log('Response content type:', contentType);
 
     if (!response.ok) {
         let errorText;
         try {
             errorText = await response.text();
-            console.error('API错误响应内容:', errorText);
+            console.error('API error response content:', errorText);
         } catch (e) {
-            errorText = '无法读取错误信息';
+            errorText = 'Unable to read error message';
         }
         
-        if (response.status === 401) throw new Error('认证失败，请重新登录');
-        if (response.status === 403) throw new Error('您不是该群组的成员');
-        if (response.status === 404) throw new Error('未找到该群组');
-        throw new Error(`服务器错误: ${response.status} - ${errorText.substring(0, 100)}`);
+        if (response.status === 401) throw new Error('Authentication failed, please log in again');
+        if (response.status === 403) throw new Error('You are not a member of this group');
+        if (response.status === 404) throw new Error('Group not found');
+        throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 100)}`);
     }
 
-    // 验证响应内容类型
+    // Validate response content type
     if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text();
-        console.error('服务器返回了非JSON响应:', text.substring(0, 200));
+        console.error('Server returned non-JSON response:', text.substring(0, 200));
         
-        // 关键：如果后端因为路由顺序问题返回了 HTML，抛出一个清晰的错误
+        // Key: If the backend returns HTML due to routing order issues, throw a clear error
         if (text.trim().startsWith('<!DOCTYPE')) {
-            throw new Error('服务器返回了 HTML 页面，而不是 JSON。请检查 main.py 中的路由顺序。');
+            throw new Error('Server returned an HTML page instead of JSON. Please check the route order in main.py.');
         }
         
-        throw new Error('服务器返回了无效的JSON数据');
+        throw new Error('Server returned invalid JSON data');
     }
 
     try {
         const data = await response.json();
-        console.log('成功解析群组数据:', data);
+        console.log('Successfully parsed group data:', data);
         return data;
     } catch (error) {
-        console.error('解析JSON失败:', error);
-        throw new Error('解析群组数据失败');
+        console.error('Failed to parse JSON:', error);
+        throw new Error('Failed to parse group data');
     }
 }
 
 
 /**
- * API 调用: 获取群组成员 (真实版本)
- * API 路由: @app.get("/groups/{group_id}/members", ...)
+ * API Call: Get group members (Real version)
+ * API Route: @app.get("/groups/{group_id}/members", ...)
  */
 export async function getGroupMembers(groupId) {
-    console.log('获取群组成员数据，群组ID:', groupId);
+    console.log('Getting group member data, Group ID:', groupId);
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch(`/groups/${groupId}/members`, {
         method: 'GET',
@@ -174,21 +174,21 @@ export async function getGroupMembers(groupId) {
     
     if (!response.ok) {
         const errorText = await response.text();
-        console.error('获取群组成员失败，状态码:', response.status, '错误信息:', errorText);
-        throw new Error('获取群组成员失败');
+        console.error('Failed to get group members, status code:', response.status, 'error message:', errorText);
+        throw new Error('Failed to get group members');
     }
     
     return await response.json();
 }
 
 /**
- * API 调用: 获取群组费用 (真实版本)
- * API 路由: @app.get("/groups/{group_id}/expenses", ...)
+ * API Call: Get group expenses (Real version)
+ * API Route: @app.get("/groups/{group_id}/expenses", ...)
  */
 export async function getGroupExpenses(groupId) {
-    console.log('获取群组费用数据，群组ID:', groupId);
+    console.log('Getting group expense data, Group ID:', groupId);
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch(`/groups/${groupId}/expenses`, {
         method: 'GET',
@@ -197,28 +197,28 @@ export async function getGroupExpenses(groupId) {
     
     if (!response.ok) {
         const errorText = await response.text();
-        console.error('获取群组费用失败，状态码:', response.status, '错误信息:', errorText);
-        throw new Error('获取群组费用失败');
+        console.error('Failed to get group expenses, status code:', response.status, 'error message:', errorText);
+        throw new Error('Failed to get group expenses');
     }
     
     return await response.json();
 }
 
 /**
- * API 调用: 获取群组支付 (修复版本)
- * 修复: 实现真实的后端API调用
+ * API Call: Get group payments (Fixed version)
+ * Fix: Implement real backend API call
  */
 export async function getGroupPayments(groupId) {
-    console.log('获取群组支付数据，群组ID:', groupId);
+    console.log('Getting group payment data, Group ID:', groupId);
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     try {
-        // 🔴 v12.0修复：先获取所有费用，再聚合支付记录
+        // 🔴 v12.0 Fix: First get all expenses, then aggregate payment records
         const expenses = await getGroupExpenses(groupId);
         let allPayments = [];
         
-        console.log(`群组 ${groupId} 共有 ${expenses.length} 个费用，开始聚合支付记录...`);
+        console.log(`Group ${groupId} has ${expenses.length} expenses, starting to aggregate payment records...`);
         
         for (const expense of expenses) {
             try {
@@ -230,30 +230,30 @@ export async function getGroupPayments(groupId) {
                 if (response.ok) {
                     const payments = await response.json();
                     allPayments = allPayments.concat(payments);
-                    console.log(`费用 ${expense.id} 的支付记录: ${payments.length} 条`);
+                    console.log(`Payment records for expense ${expense.id}: ${payments.length}`);
                 }
             } catch (error) {
-                console.warn(`获取费用 ${expense.id} 的支付记录失败:`, error);
+                console.warn(`Failed to get payment records for expense ${expense.id}:`, error);
             }
         }
         
-        console.log(`成功获取群组 ${groupId} 的所有支付记录，共 ${allPayments.length} 条`);
+        console.log(`Successfully got all payment records for group ${groupId}, total ${allPayments.length}`);
         return allPayments;
         
     } catch (error) {
-        console.error('获取群组支付数据失败:', error);
+        console.error('Failed to get group payment data:', error);
         return [];
     }
 }
 
 /**
- * API 调用: 获取群组定期费用 (真实版本)
- * API 路由: @app.get("/groups/{group_id}/recurring-expenses", ...)
+ * API Call: Get group recurring expenses (Real version)
+ * API Route: @app.get("/groups/{group_id}/recurring-expenses", ...)
  */
 export async function getGroupRecurringExpenses(groupId) {
-    console.log('获取群组定期费用数据，群组ID:', groupId);
+    console.log('Getting group recurring expense data, Group ID:', groupId);
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch(`/groups/${groupId}/recurring-expenses`, {
         method: 'GET',
@@ -262,24 +262,24 @@ export async function getGroupRecurringExpenses(groupId) {
     
     if (!response.ok) {
         const errorText = await response.text();
-        console.error('获取群组定期费用失败，状态码:', response.status, '错误信息:', errorText);
-        throw new Error('获取群组定期费用失败');
+        console.error('Failed to get group recurring expenses, status code:', response.status, 'error message:', errorText);
+        throw new Error('Failed to get group recurring expenses');
     }
     
     return await response.json();
 }
 
 // ----------------------------------------------------------------
-// --- 邀请相关的 API 调用 ---
+// --- Invitation related API calls ---
 // ----------------------------------------------------------------
 
 /**
- * API 调用: 邀请成员到群组
- * API 路由: @app.post("/groups/{group_id}/invite", ...)
+ * API Call: Invite member to group
+ * API Route: @app.post("/groups/{group_id}/invite", ...)
  */
 export async function inviteMemberToGroup(groupId, inviteeEmail) {
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch(`/groups/${groupId}/invite`, {
         method: 'POST',
@@ -292,19 +292,19 @@ export async function inviteMemberToGroup(groupId, inviteeEmail) {
     
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || '邀请成员失败');
+        throw new Error(errorData.detail || 'Failed to invite member');
     }
     
     return await response.json();
 }
 
 /**
- * API 调用: 获取我的待处理邀请
- * API 路由: @app.get("/invitations/me", ...)
+ * API Call: Get my pending invitations
+ * API Route: @app.get("/invitations/me", ...)
  */
 export async function getMyPendingInvitations() {
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch('/invitations/me', {
         method: 'GET',
@@ -312,19 +312,19 @@ export async function getMyPendingInvitations() {
     });
     
     if (!response.ok) {
-        throw new Error('获取邀请列表失败');
+        throw new Error('Failed to get invitation list');
     }
     
     return await response.json();
 }
 
 /**
- * API 调用: 响应邀请
- * API 路由: @app.post("/invitations/{invitation_id}/respond", ...)
+ * API Call: Respond to invitation
+ * API Route: @app.post("/invitations/{invitation_id}/respond", ...)
  */
 export async function respondToInvitation(invitationId, action) {
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch(`/invitations/${invitationId}/respond`, {
         method: 'POST',
@@ -337,23 +337,23 @@ export async function respondToInvitation(invitationId, action) {
     
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || '响应邀请失败');
+        throw new Error(errorData.detail || 'Failed to respond to invitation');
     }
     
     return await response.json();
 }
 
 // ----------------------------------------------------------------
-// --- 费用相关的 API 调用 ---
+// --- Expense related API calls ---
 // ----------------------------------------------------------------
 
 /**
- * API 调用: 创建费用
- * API 路由: @app.post("/groups/{group_id}/expenses", ...)
+ * API Call: Create expense
+ * API Route: @app.post("/groups/{group_id}/expenses", ...)
  */
 export async function createExpense(groupId, expenseData) {
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch(`/groups/${groupId}/expenses`, {
         method: 'POST',
@@ -366,19 +366,19 @@ export async function createExpense(groupId, expenseData) {
     
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || '创建费用失败');
+        throw new Error(errorData.detail || 'Failed to create expense');
     }
     
     return await response.json();
 }
 
 /**
- * API 调用: 更新费用
- * API 路由: @app.patch("/groups/{group_id}/expenses/{expense_id}", ...)
+ * API Call: Update expense
+ * API Route: @app.patch("/groups/{group_id}/expenses/{expense_id}", ...)
  */
 export async function updateExpense(groupId, expenseId, expenseData) {
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch(`/groups/${groupId}/expenses/${expenseId}`, {
         method: 'PATCH',
@@ -391,19 +391,19 @@ export async function updateExpense(groupId, expenseId, expenseData) {
     
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || '更新费用失败');
+        throw new Error(errorData.detail || 'Failed to update expense');
     }
     
     return await response.json();
 }
 
 /**
- * API 调用: 删除费用
- * API 路由: @app.delete("/groups/{group_id}/expenses/{expense_id}", ...)
+ * API Call: Delete expense
+ * API Route: @app.delete("/groups/{group_id}/expenses/{expense_id}", ...)
  */
 export async function deleteExpense(groupId, expenseId) {
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch(`/groups/${groupId}/expenses/${expenseId}`, {
         method: 'DELETE',
@@ -411,30 +411,30 @@ export async function deleteExpense(groupId, expenseId) {
     });
     
     if (!response.ok) {
-        // 尝试解析 JSON 错误，如果失败则返回通用错误
+        // Try to parse JSON error, if it fails, return a generic error
         try {
             const errorData = await response.json();
-            throw new Error(errorData.detail || '删除费用失败');
+            throw new Error(errorData.detail || 'Failed to delete expense');
         } catch (e) {
-            throw new Error(`删除费用失败 (状态: ${response.status})`);
+            throw new Error(`Failed to delete expense (status: ${response.status})`);
         }
     }
     
-    // DELETE 通常返回 204 No Content，没有 body
+    // DELETE usually returns 204 No Content, no body
     return { success: true };
 }
 
 // ----------------------------------------------------------------
-// --- 支付相关的 API 调用 ---
+// --- Payment related API calls ---
 // ----------------------------------------------------------------
 
 /**
- * API 调用: 创建支付
- * API 路由: @app.post("/expenses/{expense_id}/payments", ...)
+ * API Call: Create payment
+ * API Route: @app.post("/expenses/{expense_id}/payments", ...)
  */
 export async function createPayment(expenseId, paymentData) {
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch(`/expenses/${expenseId}/payments`, {
         method: 'POST',
@@ -447,19 +447,19 @@ export async function createPayment(expenseId, paymentData) {
     
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || '创建支付失败');
+        throw new Error(errorData.detail || 'Failed to create payment');
     }
     
     return await response.json();
 }
 
 /**
- * API 调用: 获取费用支付
- * API 路由: @app.get("/expenses/{expense_id}/payments", ...)
+ * API Call: Get expense payments
+ * API Route: @app.get("/expenses/{expense_id}/payments", ...)
  */
 export async function getExpensePayments(expenseId) {
     const token = getAuthToken();
-    if (!token) throw new Error('未认证');
+    if (!token) throw new Error('Not authenticated');
 
     const response = await fetch(`/expenses/${expenseId}/payments`, {
         method: 'GET',
@@ -467,14 +467,14 @@ export async function getExpensePayments(expenseId) {
     });
     
     if (!response.ok) {
-        throw new Error('获取支付列表失败');
+        throw new Error('Failed to get payment list');
     }
     
     return await response.json();
 }
 
 // ----------------------------------------------------------------
-// --- 暴露函数到全局 ---
+// --- Expose functions to global ---
 // ----------------------------------------------------------------
 
 window.handleSignup = handleSignup;
@@ -496,4 +496,4 @@ window.deleteExpense = deleteExpense;
 window.createPayment = createPayment;
 window.getExpensePayments = getExpensePayments;
 
-console.log('auth.js 已加载，所有 API 函数已暴露到全局');
+console.log('auth.js loaded, all API functions exposed to global');
