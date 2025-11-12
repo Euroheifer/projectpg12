@@ -1,29 +1,29 @@
-// settlement.js - 结算功能
-// 防止缓存版本: 2025.11.10
+// settlement.js - Settlement functions
+// Cache buster: 2025.11.10
 const JS_CACHE_VERSION = '2025.11.10.001';
 
 import { getAuthToken, centsToAmountString, showCustomAlert, closeCustomAlert } from '../ui/utils.js';
 
-// --- 全局状态 ---
+// --- Global State ---
 let currentSettlementData = null;
 
 /**
- * 获取群组的结算信息 - 修复版本
- * @param {number} groupId - 群组ID
- * @returns {Promise<Object>} 结算信息
+ * Get settlement info for the group - Fixed Version
+ * @param {number} groupId - Group ID
+ * @returns {Promise<Object>} Settlement info
  */
 export async function getSettlementInfo(groupId) {
     try {
         const token = getAuthToken();
         if (!token) {
-            throw new Error('未找到认证token');
+            throw new Error('Authentication token not found');
         }
 
-        console.log('获取群组结算信息:', groupId);
+        console.log('Getting group settlement info:', groupId);
         
-        // 使用正确的API端点
+        // Use the correct API endpoint
         const endpoint = `/groups/${groupId}/settlement`;
-        console.log('调用API端点:', endpoint);
+        console.log('Calling API endpoint:', endpoint);
         
         const response = await fetch(endpoint, {
             headers: {
@@ -33,53 +33,53 @@ export async function getSettlementInfo(groupId) {
 
         if (response.ok) {
             const data = await response.json();
-            console.log('结算信息:', data);
+            console.log('Settlement info:', data);
             return data;
         } else {
             const errorText = await response.text();
-            console.error('API调用失败:', response.status, errorText);
+            console.error('API call failed:', response.status, errorText);
             
-            // 根据状态码返回不同的错误信息
+            // Return different error messages based on status code
             if (response.status === 404) {
                 return {
                     balances: [],
                     group_id: groupId,
-                    message: '该群组暂无结算数据'
+                    message: 'No settlement data for this group yet'
                 };
             } else if (response.status === 401) {
                 return {
                     balances: [],
                     group_id: groupId,
-                    error: '认证失败，请重新登录',
-                    message: '认证失败，请重新登录'
+                    error: 'Authentication failed, please log in again',
+                    message: 'Authentication failed, please log in again'
                 };
             } else {
                 return {
                     balances: [],
                     group_id: groupId,
-                    error: `服务器错误 (${response.status})`,
-                    message: '获取结算信息失败，请稍后再试'
+                    error: `Server error (${response.status})`,
+                    message: 'Failed to get settlement info, please try again later'
                 };
             }
         }
         
     } catch (error) {
-        console.error('获取结算信息失败:', error);
+        console.error('Error getting settlement info:', error);
         
-        // 网络错误或其他异常
+        // Network errors or other exceptions
         return {
             balances: [],
             group_id: groupId,
             error: error.message,
-            message: '网络连接失败，请检查网络后重试'
+            message: 'Network connection failed, please check your connection and try again'
         };
     }
 }
 
 /**
- * 计算结算金额
- * @param {Object} settlementData - 结算数据
- * @returns {Object} 计算后的结算信息
+ * Calculate settlement amounts
+ * @param {Object} settlementData - Settlement data
+ * @returns {Object} Calculated settlement info
  */
 export function calculateSettlementAmounts(settlementData) {
     if (!settlementData) {
@@ -88,12 +88,12 @@ export function calculateSettlementAmounts(settlementData) {
             totalOwedToMe: 0,
             settlementCount: 0,
             details: [],
-            error: '没有结算数据',
-            message: '暂无结算数据'
+            error: 'No settlement data',
+            message: 'No settlement data available'
         };
     }
 
-    // 处理错误情况
+    // Handle error cases
     if (settlementData.error) {
         return {
             totalOwedByMe: 0,
@@ -101,60 +101,60 @@ export function calculateSettlementAmounts(settlementData) {
             settlementCount: 0,
             details: [],
             error: settlementData.error,
-            message: settlementData.message || '获取结算信息失败'
+            message: settlementData.message || 'Failed to get settlement info'
         };
     }
 
-    // 获取余额数据，支持不同的数据格式
+    // Get balance data, support different formats
     let balances = [];
     
     if (settlementData.balances && Array.isArray(settlementData.balances)) {
-        // 标准格式：{ balances: [...] }
+        // Standard format: { balances: [...] }
         balances = settlementData.balances;
     } else if (settlementData.settlements && Array.isArray(settlementData.settlements)) {
-        // 备选格式：{ settlements: [...] }
+        // Alternative format: { settlements: [...] }
         balances = settlementData.settlements;
     } else {
-        // 返回空结果
+        // Return empty result
         return {
             totalOwedByMe: 0,
             totalOwedToMe: 0,
             settlementCount: 0,
             details: [],
             error: null,
-            message: settlementData.message || '暂无结算数据'
+            message: settlementData.message || 'No settlement data available'
         };
     }
 
-    let totalOwedByMe = 0; // 我欠别人的总金额
-    let totalOwedToMe = 0; // 别人欠我的总金额
-    let settlementCount = 0; // 待结算笔数
+    let totalOwedByMe = 0; // Total amount I owe others
+    let totalOwedToMe = 0; // Total amount others owe me
+    let settlementCount = 0; // Number of items to settle
     const details = [];
 
     for (const balance of balances) {
-        // 确保balance是有效对象
+        // Ensure balance is a valid object
         if (!balance || typeof balance !== 'object') {
-            console.warn('跳过无效的余额记录:', balance);
+            console.warn('Skipping invalid balance record:', balance);
             continue;
         }
 
-        // 获取金额，处理不同的字段名
+        // Get amount, handling different field names
         const amount = balance.amount || balance.balance || balance.total || 0;
         const memberId = balance.member_id || balance.user_id || balance.id;
         const memberName = balance.member_name || balance.user_name || balance.name || getMemberNameById(memberId);
 
         if (amount > 0) {
-            // 别人欠我钱
+            // Others owe me money
             totalOwedToMe += amount;
             details.push({
                 type: 'owed_to_me',
                 memberId: memberId,
                 memberName: memberName,
                 amount: amount,
-                description: `${memberName} 欠我 ¥${centsToAmountString(amount)}`
+                description: `${memberName} owes me ¥${centsToAmountString(amount)}`
             });
         } else if (amount < 0) {
-            // 我欠别人钱
+            // I owe others money
             const owedAmount = Math.abs(amount);
             totalOwedByMe += owedAmount;
             settlementCount++;
@@ -163,7 +163,7 @@ export function calculateSettlementAmounts(settlementData) {
                 memberId: memberId,
                 memberName: memberName,
                 amount: owedAmount,
-                description: `我欠 ${memberName} ¥${centsToAmountString(owedAmount)}`
+                description: `I owe ${memberName} ¥${centsToAmountString(owedAmount)}`
             });
         }
     }
@@ -180,9 +180,9 @@ export function calculateSettlementAmounts(settlementData) {
 }
 
 /**
- * 根据ID获取成员名称
- * @param {number} memberId - 成员ID
- * @returns {string} 成员名称
+ * Get member name by ID
+ * @param {number} memberId - Member ID
+ * @returns {string} Member name
  */
 function getMemberNameById(memberId) {
     const members = window.groupMembers || [];
@@ -197,54 +197,54 @@ function getMemberNameById(memberId) {
                member.username || 
                member.nickname || 
                member.name || 
-               `用户 ${memberId}`;
+               `User ${memberId}`;
     }
     
-    return `用户 ${memberId}`;
+    return `User ${memberId}`;
 }
 
 /**
- * 更新结算摘要显示 - 修复版本
- * @param {Object} calculation - 计算结果
+ * Update settlement summary display - Fixed Version
+ * @param {Object} calculation - Calculation result
  */
 export function updateSettlementSummary(calculation) {
     const summaryElement = document.getElementById('settlement-summary-text');
     if (!summaryElement) return;
 
-    // 处理错误情况
+    // Handle error case
     if (calculation.error) {
-        summaryElement.textContent = '结算功能暂时不可用';
+        summaryElement.textContent = 'Settlement unavailable';
         summaryElement.className = 'text-xl font-bold text-gray-500 mt-1';
         return;
     }
 
-    // 正常情况
+    // Normal case
     if (calculation.settlementCount === 0) {
-        summaryElement.textContent = '暂无待结算项目';
+        summaryElement.textContent = 'Nothing to settle';
         summaryElement.className = 'text-xl font-bold text-gray-500 mt-1';
     } else {
-        summaryElement.textContent = `总计 ${calculation.settlementCount} 笔待清算`;
+        summaryElement.textContent = `Total ${calculation.settlementCount} items to settle`;
         summaryElement.className = 'text-xl font-bold text-gray-900 mt-1';
     }
 }
 
 /**
- * 显示结算确认弹窗 - 修复版本
- * @param {Object} calculation - 计算结果
+ * Show settlement confirmation modal - Fixed Version
+ * @param {Object} calculation - Calculation result
  */
 export function showSettlementConfirmation(calculation) {
-    // 处理错误情况
+    // Handle error case
     if (calculation.error) {
-        showCustomAlert('提示', calculation.message || '结算功能暂时不可用，请稍后再试');
+        showCustomAlert('Notice', calculation.message || 'Settlement feature is temporarily unavailable, please try again later');
         return;
     }
 
     if (calculation.settlementCount === 0) {
-        showCustomAlert('提示', '当前没有需要结算的项目');
+        showCustomAlert('Notice', 'There are currently no items to settle');
         return;
     }
 
-    // 创建结算详情内容
+    // Create settlement details content
     let detailsHtml = '';
     calculation.details.forEach(detail => {
         if (detail.type === 'owed_by_me') {
@@ -254,28 +254,28 @@ export function showSettlementConfirmation(calculation) {
 
     const message = `
         <div class="text-left">
-            <p class="mb-3 font-medium">即将结算以下项目：</p>
+            <p class="mb-3 font-medium">You are about to settle the following items:</p>
             <ul class="mb-4">
                 ${detailsHtml}
             </ul>
             <p class="text-lg font-bold text-red-600">
-                预计支出：¥${centsToAmountString(calculation.totalOwedByMe)}
+                Total payable: ¥${centsToAmountString(calculation.totalOwedByMe)}
             </p>
         </div>
     `;
 
-    showCustomAlert('确认结算', message);
+    showCustomAlert('Confirm Settlement', message);
     
-    // 添加确认按钮事件
+    // Add confirm button event
     const modal = document.getElementById('custom-alert-modal');
     if (modal) {
-        // 移除旧的事件监听器
+        // Remove old event listeners
         const newModal = modal.cloneNode(true);
         modal.parentNode.replaceChild(newModal, modal);
         
-        // 添加确认按钮
+        // Add confirm button
         const confirmButton = document.createElement('button');
-        confirmButton.textContent = '确认结算';
+        confirmButton.textContent = 'Confirm Settlement';
         confirmButton.className = 'mt-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition duration-150';
         confirmButton.onclick = () => {
             closeCustomAlert();
@@ -283,7 +283,7 @@ export function showSettlementConfirmation(calculation) {
         };
         
         const cancelButton = document.createElement('button');
-        cancelButton.textContent = '取消';
+        cancelButton.textContent = 'Cancel';
         cancelButton.className = 'mt-4 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition duration-150 ml-2';
         cancelButton.onclick = () => closeCustomAlert();
         
@@ -297,27 +297,27 @@ export function showSettlementConfirmation(calculation) {
 }
 
 /**
- * 执行结算操作 - 修复版本
+ * Execute settlement operation - Fixed Version
  */
 export async function executeSettlement() {
     if (!currentSettlementData || !currentSettlementData.group_id) {
-        showCustomAlert('错误', '缺少必要参数，无法执行结算');
+        showCustomAlert('Error', 'Missing necessary parameters, cannot execute settlement');
         return;
     }
 
     try {
-        showCustomAlert('处理中', '正在执行结算，请稍候...');
+        showCustomAlert('Processing', 'Executing settlement, please wait...');
         
         const token = getAuthToken();
         if (!token) {
-            throw new Error('未找到认证token');
+            throw new Error('Authentication token not found');
         }
 
-        console.log('执行结算操作:', currentSettlementData.group_id);
+        console.log('Executing settlement operation:', currentSettlementData.group_id);
         
-        // 使用正确的结算API端点
+        // Use the correct settlement API endpoint
         const endpoint = `/groups/${currentSettlementData.group_id}/settlement`;
-        console.log('调用结算API端点:', endpoint);
+        console.log('Calling settlement API endpoint:', endpoint);
         
         const response = await fetch(endpoint, {
             method: 'POST',
@@ -332,130 +332,130 @@ export async function executeSettlement() {
 
         if (response.ok) {
             const responseData = await response.json();
-            console.log('结算成功响应:', responseData);
-            showCustomAlert('结算成功', '结算操作已成功完成！');
+            console.log('Settlement successful response:', responseData);
+            showCustomAlert('Settlement Successful', 'Settlement operation completed successfully!');
             
-            // 刷新页面以更新所有数据
+            // Refresh page to update all data
             setTimeout(() => {
                 window.location.reload();
             }, 1500);
             return responseData;
         } else {
-            let errorMessage = '结算操作失败';
+            let errorMessage = 'Settlement operation failed';
             try {
                 const errorData = await response.json();
                 errorMessage = errorData.error || errorData.detail || errorMessage;
             } catch (e) {
-                errorMessage = `服务器错误 (${response.status})`;
+                errorMessage = `Server error (${response.status})`;
             }
             
-            console.error('结算失败:', errorMessage);
+            console.error('Settlement failed:', errorMessage);
             throw new Error(errorMessage);
         }
         
     } catch (error) {
-        console.error('结算失败:', error);
+        console.error('Settlement failed:', error);
         
-        // 根据错误类型显示不同的错误信息
-        if (error.message.includes('认证') || error.message.includes('token')) {
-            showCustomAlert('认证失败', '请重新登录后重试');
-        } else if (error.message.includes('网络')) {
-            showCustomAlert('网络错误', '网络连接失败，请检查网络后重试');
+        // Show different error messages based on error type
+        if (error.message.includes('Authentication') || error.message.includes('token')) {
+            showCustomAlert('Authentication Failed', 'Please log in again and retry');
+        } else if (error.message.includes('Network')) {
+            showCustomAlert('Network Error', 'Network connection failed, please check your connection and try again');
         } else {
-            showCustomAlert('结算失败', error.message || '结算操作失败，请重试');
+            showCustomAlert('Settlement Failed', error.message || 'Settlement operation failed, please try again');
         }
     }
 }
 
 /**
- * 处理结算所有欠款 - 主要入口函数
+ * Handle settle all debts - Main entry function
  */
 export async function handleSettleUp() {
     try {
-        console.log('处理结算所有欠款');
+        console.log('Handling settle up all debts');
         
-        // 获取当前群组ID
+        // Get current group ID
         const currentGroupId = window.CURRENT_GROUP_ID || window.currentGroupId;
         if (!currentGroupId) {
-            showCustomAlert('错误', '无法获取当前群组信息');
+            showCustomAlert('Error', 'Could not get current group info');
             return;
         }
 
-        // 显示加载状态
-        showCustomAlert('处理中', '正在计算待结算金额...');
+        // Show loading state
+        showCustomAlert('Processing', 'Calculating outstanding balances...');
         
-        // 获取结算信息
+        // Get settlement info
         const settlementData = await getSettlementInfo(currentGroupId);
         currentSettlementData = settlementData;
         
-        // 计算结算金额
+        // Calculate settlement amounts
         const calculation = calculateSettlementAmounts(settlementData);
         
-        // 更新显示
+        // Update display
         updateSettlementSummary(calculation);
         
-        // 关闭加载提示
+        // Close loading modal
         closeCustomAlert();
         
-        // 显示确认弹窗
+        // Show confirmation modal
         showSettlementConfirmation(calculation);
         
     } catch (error) {
-        console.error('处理结算失败:', error);
-        showCustomAlert('错误', error.message || '获取结算信息失败');
+        console.error('Handle settle up failed:', error);
+        showCustomAlert('Error', error.message || 'Failed to get settlement info');
     }
 }
 
 /**
- * 刷新结算记录列表 - 修复版本
+ * Refresh settlement records list - Fixed Version
  */
 export function refreshSettlementRecords() {
     try {
         const currentGroupId = window.CURRENT_GROUP_ID || window.currentGroupId;
         if (!currentGroupId) {
-            console.warn('无法获取当前群组ID');
+            console.warn('Cannot get current group ID');
             return;
         }
 
-        // 获取结算信息并刷新显示
+        // Get settlement info and refresh display
         getSettlementInfo(currentGroupId).then(settlementData => {
             currentSettlementData = settlementData;
             const calculation = calculateSettlementAmounts(settlementData);
             updateSettlementSummary(calculation);
         }).catch(error => {
-            console.error('刷新结算记录失败:', error);
-            // 显示友好的错误状态
+            console.error('Failed to refresh settlement records:', error);
+            // Show friendly error state
             const summaryElement = document.getElementById('settlement-summary-text');
             if (summaryElement) {
-                summaryElement.textContent = '结算功能暂时不可用';
+                summaryElement.textContent = 'Settlement unavailable';
                 summaryElement.className = 'text-xl font-bold text-gray-500 mt-1';
             }
         });
         
     } catch (error) {
-        console.error('刷新结算记录失败:', error);
+        console.error('Failed to refresh settlement records:', error);
     }
 }
 
 /**
- * 获取结算历史记录 - 修复版本
- * @param {number} groupId - 群组ID
- * @param {number} page - 页码
- * @param {number} limit - 每页数量
- * @returns {Promise<Object>} 结算历史记录
+ * Get settlement history - Fixed Version
+ * @param {number} groupId - Group ID
+ * @param {number} page - Page number
+ * @param {number} limit - Items per page
+ * @returns {Promise<Object>} Settlement history
  */
 export async function getSettlementHistory(groupId, page = 1, limit = 10) {
     try {
         const token = getAuthToken();
         if (!token) {
-            throw new Error('未找到认证token');
+            throw new Error('Authentication token not found');
         }
 
-        console.log('获取结算历史记录:', { groupId, page, limit });
+        console.log('Getting settlement history:', { groupId, page, limit });
         
-        // 使用正确的API端点
+        // Use the correct API endpoint
         const endpoint = `/groups/${groupId}/settlement/history?page=${page}&limit=${limit}`;
-        console.log('调用结算历史API端点:', endpoint);
+        console.log('Calling settlement history API endpoint:', endpoint);
         
         const response = await fetch(endpoint, {
             headers: {
@@ -465,21 +465,21 @@ export async function getSettlementHistory(groupId, page = 1, limit = 10) {
 
         if (response.ok) {
             const data = await response.json();
-            console.log('结算历史记录:', data);
+            console.log('Settlement history:', data);
             return data;
         } else {
-            console.error('结算历史API调用失败:', response.status);
+            console.error('Settlement history API call failed:', response.status);
             return { 
                 records: [], 
                 total: 0, 
                 page: 1, 
                 limit: limit, 
-                error: `获取历史记录失败 (${response.status})`
+                error: `Failed to get history records (${response.status})`
             };
         }
         
     } catch (error) {
-        console.error('获取结算历史失败:', error);
+        console.error('Error getting settlement history:', error);
         return { 
             records: [], 
             total: 0, 
@@ -491,19 +491,19 @@ export async function getSettlementHistory(groupId, page = 1, limit = 10) {
 }
 
 /**
- * 显示结算历史记录 - 修复版本
- * @param {Array} history - 历史记录
+ * Show settlement history - Fixed Version
+ * @param {Array} history - History records
  */
 export function displaySettlementHistory(history) {
     const container = document.getElementById('settlement-history-container');
     if (!container) return;
 
-    // 处理错误情况
+    // Handle error case
     if (history.error) {
         container.innerHTML = `
             <div class="text-center p-6 text-gray-500">
                 <i class="fa-solid fa-exclamation-triangle text-5xl text-gray-300 mb-3"></i>
-                <p>结算历史功能暂时不可用</p>
+                <p>Settlement history feature is temporarily unavailable</p>
                 <p class="text-sm text-gray-400 mt-2">${history.error}</p>
             </div>
         `;
@@ -514,7 +514,7 @@ export function displaySettlementHistory(history) {
         container.innerHTML = `
             <div class="text-center p-6 text-gray-500">
                 <i class="fa-solid fa-history text-5xl text-gray-300 mb-3"></i>
-                <p>暂无结算历史记录</p>
+                <p>No settlement history found</p>
             </div>
         `;
         return;
@@ -523,43 +523,43 @@ export function displaySettlementHistory(history) {
     container.innerHTML = history.records.map(record => `
         <div class="bg-white rounded-lg border border-gray-200 p-4 mb-3 shadow-sm">
             <div class="flex justify-between items-start mb-2">
-                <h4 class="font-medium text-gray-800">结算记录 #${record.id}</h4>
-                <span class="text-sm text-gray-500">${new Date(record.created_at).toLocaleString('zh-CN')}</span>
+                <h4 class="font-medium text-gray-800">Settlement Record #${record.id}</h4>
+                <span class="text-sm text-gray-500">${new Date(record.created_at).toLocaleString('en-US')}</span>
             </div>
             <p class="text-sm text-gray-600 mb-2">
-                群组：${record.group_name || '未知群组'}
+                Group: ${record.group_name || 'Unknown Group'}
             </p>
             <p class="text-sm text-gray-600 mb-2">
-                结算金额：¥${centsToAmountString(record.amount)}
+                Settled Amount: ¥${centsToAmountString(record.amount)}
             </p>
             <p class="text-sm text-gray-600">
-                状态：<span class="${record.status === 'completed' ? 'text-green-600' : 'text-yellow-600'}">
-                    ${record.status === 'completed' ? '已完成' : '处理中'}
+                Status: <span class="${record.status === 'completed' ? 'text-green-600' : 'text-yellow-600'}">
+                    ${record.status === 'completed' ? 'Completed' : 'Processing'}
                 </span>
             </p>
         </div>
     `).join('');
 }
 
-// 初始化结算模块 - 修复版本
+// Initialize settlement module - Fixed Version
 export function initializeSettlementModule() {
-    console.log('结算模块初始化');
+    console.log('Settlement module initialized');
     
-    // 绑定结算按钮事件（如果存在）
+    // Bind settlement button event (if exists)
     const settleUpButton = document.querySelector('button[onclick="handleSettleUp()"]');
     if (settleUpButton) {
         settleUpButton.addEventListener('click', handleSettleUp);
     }
     
-    // 加载当前结算状态
+    // Load current settlement status
     if (window.CURRENT_GROUP_ID || window.currentGroupId) {
         refreshSettlementRecords();
     }
 }
 
-// 暴露所有结算相关函数到全局 window 对象
+// Expose all settlement-related functions to global window object
 window.handleSettleUp = handleSettleUp;
-window.handleSettleUpFromSettlement = handleSettleUp; // 供group_page.js调用的别名
+window.handleSettleUpFromSettlement = handleSettleUp; // Alias for group_page.js
 window.getSettlementInfo = getSettlementInfo;
 window.calculateSettlementAmounts = calculateSettlementAmounts;
 window.updateSettlementSummary = updateSettlementSummary;
@@ -570,4 +570,4 @@ window.getSettlementHistory = getSettlementHistory;
 window.displaySettlementHistory = displaySettlementHistory;
 window.initializeSettlementModule = initializeSettlementModule;
 
-console.log('结算模块已加载，所有函数已暴露到全局');
+console.log('Settlement module loaded, all functions exposed to global scope');
