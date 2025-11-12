@@ -132,7 +132,7 @@ function renderGroups(groups) {
         const owes = balance < 0;
         const balanceAmount = Math.abs(balance).toFixed(2);
         const balanceColor = owes ? 'text-red-400' : 'text-emerald-500';
-        const balanceText = owes ? `You owe ¥${balanceAmount}` : `You are owed ¥${balanceAmount}`;
+        const balanceText = owes ? `You owe $${balanceAmount}` : `You are owed $${balanceAmount}`;
 
         // Determine if the user is an admin - Fixed version
         let isAdmin = false;

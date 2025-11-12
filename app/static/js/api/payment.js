@@ -370,7 +370,7 @@ export async function handleUpdatePayment(event) {
         showCustomAlert('Success', 'Payment record updated successfully');
         
         // Close modal
-        const modal = document.getElementById('payment-detail-modal');
+const modal = document.getElementById('payment-detail-modal');
         if (modal) {
             modal.classList.add('hidden');
         }
@@ -551,8 +551,8 @@ export function populatePaymentDetailForm(payment) {
         expenses.forEach(expense => {
             const option = document.createElement('option');
             option.value = expense.id;
-            option.textContent = `[¥${centsToAmountString(expense.amount)}] ${expense.description}`;
-            if (expense.id === payment.expense_id) option.selected = true; // 🔴 Fix: expense_id
+            // 🔴 Fix: Use centsToAmountString 
+            option.textContent = `[$${centsToAmountString(expense.amount)}] ${expense.description}`;
             expenseSelect.appendChild(option);
         });
     }
@@ -682,7 +682,7 @@ function createPaymentCard(payment) {
             <div class="flex-1">
                 <div class="flex items-center gap-2 mb-2">
                     <h3 class="font-semibold text-lg text-gray-900">
-                        ¥${amountDisplay}
+                        $${amountDisplay}
                     </h3>
                     ${payment.image_url ? '<span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Attachment</span>' : ''}
                 </div>

@@ -275,7 +275,7 @@ function renderGroupSummary() {
     const owedContext = window.currentGroup.user_balance_owed_context || '';
 
     if (owedAmountEl) {
-        owedAmountEl.textContent = `¥${Number(balanceOwed).toFixed(2)}`;
+        owedAmountEl.textContent = `$${Number(balanceOwed).toFixed(2)}`;
     }
     if (owedContextEl) {
         owedContextEl.textContent = owedContext;
@@ -288,7 +288,7 @@ function renderGroupSummary() {
     const owingContext = window.currentGroup.user_balance_owing_context || '';
 
     if (owingAmountEl) {
-        owingAmountEl.textContent = `¥${Number(balanceOwing).toFixed(2)}`;
+        owingAmountEl.textContent = `$${Number(balanceOwing).toFixed(2)}`;
     }
     if (owingContextEl) {
         owingContextEl.textContent = owingContext;

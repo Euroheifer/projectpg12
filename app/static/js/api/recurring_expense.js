@@ -70,7 +70,7 @@ export function initializeRecurringExpenseForm() {
         startDateInput.value = today;
         recurringExpenseState.startDate = today;
         console.log('Setting start date:', today);
-    } else {
+} else {
         console.error('Could not find start date input: repeat-start'); // Translated
     }
     
@@ -419,7 +419,7 @@ function updatePreviewList(previewData) {
         
         // 🔴 Fix: item.amount is already cents, centsToAmountString will handle it
         const displayAmount = centsToAmountString ? centsToAmountString(item.amount) : (item.amount / 100).toFixed(2);
-        amountSpan.textContent = `¥${displayAmount}`;
+        amountSpan.textContent = `$${displayAmount}`;
         
         listItem.appendChild(dateSpan);
         listItem.appendChild(amountSpan);
@@ -446,7 +446,7 @@ function updatePreviewSummary(previewData) {
         const displayTotal = centsToAmountString ? centsToAmountString(totalAmountInCents) : (totalAmountInCents / 100).toFixed(2);
         const displayPerPerson = centsToAmountString ? centsToAmountString(amountPerPersonInCents) : (amountPerPersonInCents / 100).toFixed(2);
         
-        summaryElement.textContent = `Total ${totalCount} times, ¥${displayTotal} total, ¥${displayPerPerson} per person`; // Translated
+        summaryElement.textContent = `Total ${totalCount} times, $${displayTotal} total, $${displayPerPerson} per person`; // Translated
     }
 }
 
@@ -538,7 +538,7 @@ function updateSplitDetailDisplay() {
         
         // 🔴 Fix: split.amount is already cents
         const displayAmount = centsToAmountString ? centsToAmountString(split.amount) : (split.amount / 100).toFixed(2);
-        amountSpan.textContent = `¥${displayAmount}`;
+        amountSpan.textContent = `$${displayAmount}`;
         
         detailItem.appendChild(memberName);
         detailItem.appendChild(amountSpan);
@@ -572,16 +572,16 @@ function updateRecurringSummary() {
         // 🔴 Fix: Provide richer summary
         summaryElement.innerHTML = `
             <div class="flex justify-between text-sm">
-                <span>Total Amount:</span> <!-- Translated -->
-                <span class="font-medium">¥${displayTotal}</span>
+                <span>Total Amount</span>
+                <span class="font-medium">$${displayTotal}</span>
             </div>
             <div class="flex justify-between text-sm">
                 <span>Participants:</span> <!-- Translated -->
                 <span class="font-medium">${participantCount} people</span> <!-- Translated -->
             </div>
             <div class="flex justify-between text-sm">
-                <span>Approx. per person:</span> <!-- Translated -->
-                <span class="font-medium">¥${displayPerPerson}</span>
+                <span>Per Person</span>
+                <span class="font-medium">$${displayPerPerson}</span>
             </div>
         `;
     }
