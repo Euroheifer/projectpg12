@@ -274,7 +274,7 @@ export function setupRealTimeValidation(inputElement, validator, errorMessage) {
 export function requireAdmin(action) {
     return function (...args) {
         if (!window.IS_CURRENT_USER_ADMIN) {
-            showCustomAlert('权限不足', '此操作需要管理员权限');
+            showCustomAlert('Permission Denied', 'This action requires admin privileges'); // Translated
             return;
         }
         return action.apply(this, args);
@@ -301,13 +301,13 @@ class LoadingManager {
                 <div class="loading-spinner">
                     <i class="fas fa-spinner fa-spin"></i>
                 </div>
-                <div class="loading-text">加载中...</div>
+                <div class="loading-text">Loading...</div>
             </div>
-        `;
+        `; // Translated
         document.body.appendChild(this.loadingElement);
     }
     
-    show(message = '加载中...') {
+    show(message = 'Loading...') { // Translated
         this.loadingCount++;
         const textElement = this.loadingElement.querySelector('.loading-text');
         if (textElement) {
@@ -345,7 +345,7 @@ const globalLoading = new LoadingManager();
 /**
  * 显示/隐藏全局loading
  */
-export function showLoading(message = '加载中...') {
+export function showLoading(message = 'Loading...') { // Translated
     globalLoading.show(message);
 }
 
@@ -365,16 +365,16 @@ class ErrorHandler {
      * 处理网络错误
      */
     handleNetworkError(error) {
-        console.error('网络错误:', error);
-        let message = '网络连接失败，请检查网络设置';
+        console.error('Network Error:', error); // Translated
+        let message = 'Network connection failed, please check your network settings'; // Translated
         
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
-            message = '网络请求失败，请稍后重试';
+            message = 'Network request failed, please try again later'; // Translated
         } else if (error.code === 'NETWORK_ERROR') {
-            message = '网络连接异常，请检查网络设置';
+            message = 'Network connection error, please check your network settings'; // Translated
         }
         
-        showCustomAlert('网络错误', message, 'error', 5000);
+        showCustomAlert('Network Error', message, 'error', 5000); // Translated
         this.logError('network', error, message);
     }
     
@@ -382,38 +382,38 @@ class ErrorHandler {
      * 处理API错误
      */
     handleApiError(response, data) {
-        console.error('API错误:', response.status, data);
+        console.error('API Error:', response.status, data); // Translated
         
-        let message = '操作失败，请稍后重试';
+        let message = 'Operation failed, please try again later'; // Translated
         let type = 'error';
         
         switch (response.status) {
             case 400:
-                message = data?.message || '请求参数错误';
+                message = data?.message || 'Invalid request parameters'; // Translated
                 type = 'warning';
                 break;
             case 401:
-                message = '登录已过期，请重新登录';
+                message = 'Login expired, please log in again'; // Translated
                 this.handleUnauthorized();
                 return;
             case 403:
-                message = '权限不足，无法执行此操作';
+                message = 'Permission denied, you cannot perform this action'; // Translated
                 break;
             case 404:
-                message = '请求的资源不存在';
+                message = 'The requested resource was not found'; // Translated
                 break;
             case 422:
-                message = data?.message || '数据验证失败';
+                message = data?.message || 'Data validation failed'; // Translated
                 type = 'warning';
                 break;
             case 429:
-                message = '请求过于频繁，请稍后重试';
+                message = 'Request too frequent, please try again later'; // Translated
                 break;
             case 500:
-                message = '服务器内部错误，请稍后重试';
+                message = 'Server internal error, please try again later'; // Translated
                 break;
             case 503:
-                message = '服务暂时不可用，请稍后重试';
+                message = 'Service temporarily unavailable, please try again later'; // Translated
                 break;
             default:
                 if (data?.message) {
@@ -421,7 +421,7 @@ class ErrorHandler {
                 }
         }
         
-        showCustomAlert('操作失败', message, type, 5000);
+        showCustomAlert('Operation Failed', message, type, 5000); // Translated
         this.logError('api', { response, data }, message);
     }
     
@@ -431,7 +431,7 @@ class ErrorHandler {
     handleUnauthorized() {
         // 清除认证信息
         clearAuthData();
-        showCustomAlert('登录过期', '您的登录已过期，请重新登录', 'warning', 3000);
+        showCustomAlert('Login Expired', 'Your session has expired, please log in again', 'warning', 3000); // Translated
         
         // 延迟跳转登录页
         setTimeout(() => {
@@ -479,16 +479,16 @@ const globalErrorHandler = new ErrorHandler();
 /**
  * 全局错误处理函数
  */
-export function handleGlobalError(error, context = '未知') {
-    console.error(`全局错误 [${context}]:`, error);
+export function handleGlobalError(error, context = 'Unknown') { // Translated
+    console.error(`Global Error [${context}]:`, error); // Translated
     
     if (error instanceof TypeError && error.message.includes('fetch')) {
         globalErrorHandler.handleNetworkError(error);
     } else if (error.response) {
         globalErrorHandler.handleApiError(error.response, error.data);
     } else {
-        showCustomAlert('系统错误', '发生未知错误，请刷新页面重试', 'error');
-        globalErrorHandler.logError('global', error, '未知错误');
+        showCustomAlert('System Error', 'An unknown error occurred, please refresh the page and try again', 'error'); // Translated
+        globalErrorHandler.logError('global', error, 'Unknown error'); // Translated
     }
 }
 
@@ -498,9 +498,9 @@ export function handleGlobalError(error, context = '未知') {
 export function safeAsync(asyncFunction, options = {}) {
     return async (...args) => {
         const { 
-            loadingMessage = '处理中...', 
+            loadingMessage = 'Processing...', // Translated
             successMessage, 
-            errorContext = '操作', 
+            errorContext = 'Operation', // Translated
             showLoading = true 
         } = options;
         
@@ -510,7 +510,7 @@ export function safeAsync(asyncFunction, options = {}) {
             const result = await asyncFunction(...args);
             
             if (successMessage) {
-                showCustomAlert('操作成功', successMessage, 'success', 3000);
+                showCustomAlert('Operation Successful', successMessage, 'success', 3000); // Translated
             }
             
             return result;
@@ -643,13 +643,13 @@ window.clearAuthData = clearAuthData;
 
 // 全局错误处理
 window.addEventListener('unhandledrejection', (event) => {
-    handleGlobalError(event.reason, '未处理的Promise拒绝');
+    handleGlobalError(event.reason, 'Unhandled Promise Rejection'); // Translated
     event.preventDefault();
 });
 
 window.addEventListener('error', (event) => {
-    handleGlobalError(event.error, 'JavaScript错误');
+    handleGlobalError(event.error, 'JavaScript Error'); // Translated
 });
 
 // 确保这些函数在全局可用
-console.log('工具函数已加载并暴露到全局');
+console.log('Utility functions loaded and exposed to global scope'); // Translated
