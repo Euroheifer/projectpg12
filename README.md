@@ -449,7 +449,7 @@ class Settings:
 
 ```bash
 # Clone repository
-git clone https://github.com/Euroheifer/projectpg12
+git clone https://github.com/tcx2004/project-pg12
 cd projectpg12
 
 # Environment setup
@@ -577,5 +577,5 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 **Version**: 2025.11.10.001\
 **Deployment**: <https://172.25.76.174:443/>\
-**Repository**: <https://github.com/Euroheifer/projectpg12>\
-**Development Team**: MiniMax Agent
+**Repository**: <https://github.com/tcx2004/project-pg12>\
+**Development Team**: Group12
