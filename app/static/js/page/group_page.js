@@ -1,5 +1,5 @@
 // /static/js/page/groups.js
-// 防止缓存版本: 2025.11.10.005 - 修复审计日志 (Audit Log)
+// Prevent caching version: 2025.11.10.005 - Fix Audit Log
 const JS_CACHE_VERSION = '2025.11.10.005';
 
 import {
@@ -142,10 +142,10 @@ async function initializePage() {
         // 6. Load data lists
         await loadDataLists();
 
-        // 7. Initialize settlement module - 启用结算功能
+        // 7. Initialize settlement module - Enable settlement feature
         if (window.currentGroupId) {
-            window.CURRENT_GROUP_ID = window.currentGroupId; // 统一变量名为大写
-            initializeSettlementModule(); // 启用结算模块
+            window.CURRENT_GROUP_ID = window.currentGroupId; // Unify variable name to uppercase
+            initializeSettlementModule(); // Enable settlement module
         }
 
         console.log(`Group page initialization complete - Group: ${window.currentGroupId}, User: ${window.CURRENT_USER_NAME}, Permission: ${window.IS_CURRENT_USER_ADMIN ? 'Admin' : 'Member'}`);
@@ -224,7 +224,7 @@ async function loadMembersList() {
     try {
         renderMemberList();
         
-        // 如果定期费用表单已初始化，更新其成员列表
+        // If the recurring expense form has been initialized, update its member list
         if (window.updateRecurringFormMembers) {
             window.updateRecurringFormMembers();
         }
@@ -311,7 +311,7 @@ function renderUIByPermission() {
 
 // --- Modification Start ---
 
-    // 1. Render group name (ID and Name) - 修复版本
+    // 1. Render group name (ID and Name) - Fixed version
     updateGroupNameDisplay();
 
     // 2. Render group summary (Balance and Settlement)
@@ -408,7 +408,7 @@ function updateGroupNameDisplay() {
         return;
     }
 
-    // Try different name attributes - 修复版本
+    // Try different name attributes - Fixed version
     const groupName = 
         window.currentGroup.name || 
         window.currentGroup.group_name || 
@@ -421,7 +421,7 @@ function updateGroupNameDisplay() {
         window.currentGroupId || 
         'Unknown';
 
-    // 安全地更新群组名称显示
+    // Safely update group name display
     groupNameDisplay.innerHTML = '';
     
     const nameSpan = document.createElement('span');
@@ -543,7 +543,7 @@ function setActiveTab(tabName) {
         case 'audit':
             // Audit page special handling - Load audit logs
             if (window.loadAuditLogs) {
-                // 🔴 修复：调用 loadAuditLogs
+                // 🔴 Fix: call loadAuditLogs
                 window.loadAuditLogs();
             }
             break;
@@ -554,7 +554,7 @@ function setActiveTab(tabName) {
 }
 
 /**
- * 填充群组管理页面字段 - 新增函数
+ * Populate group management page fields - New function
  */
 function populateGroupManagementFields() {
     if (!window.currentGroup) return;
@@ -590,13 +590,13 @@ function bindEvents() {
     } */
     // --- END OF ADDED SECTION ---
 	
-		// --- 修复重复绑定：在绑定之前先移除 ---
+		// --- Fix duplicate binding: remove before binding ---
     const addExpenseForm = document.getElementById('expense-form'); 
     if (addExpenseForm) {
-        // 1. 在绑定新事件之前，先移除可能存在的旧事件
+        // 1. Before binding a new event, remove any existing old events
         addExpenseForm.removeEventListener('submit', handleSaveExpense); 
         
-        // 2. 绑定新的事件
+        // 2. Bind the new event
         addExpenseForm.addEventListener('submit', handleSaveExpense); 
         console.log('Bound submit event to expense-form');
     } else {
@@ -654,8 +654,8 @@ function handleLogoutUser() {
 // --- Other Functions ---
 function refreshRecurringList() {
     // TODO: Implement recurring expense list refresh
-    console.log('刷新定期费用列表');
-    // 🔴 修复：调用 window 上的函数
+    console.log('Refreshing recurring expense list');
+    // 🔴 Fix: call function on window
     if (window.refreshRecurringList) {
         window.refreshRecurringList();
     }
@@ -672,17 +672,17 @@ window.handleAddNewExpense = function () {
     }
 };
 
-// 🔴 [START] 修复
+// 🔴 [START] Fix
 window.handleAddNewPayment = function () {
     console.log('Show add payment modal');
     
-    // 🔴 修复 Bug 1: 调用初始化函数
-    // 此函数在 payment.js 中定义
+    // 🔴 Fix Bug 1: call initialization function
+    // This function is defined in payment.js
     if (window.initializePaymentForm) {
         window.initializePaymentForm();
     } else {
-        console.error('initializePaymentForm() 函数未找到！');
-        showCustomAlert('Error', '支付表单加载失败，请刷新页面。');
+        console.error('initializePaymentForm() function not found!');
+        showCustomAlert('Error', 'Payment form failed to load, please refresh the page.');
     }
     
     const modal = document.getElementById('add-payment-modal');
@@ -690,12 +690,12 @@ window.handleAddNewPayment = function () {
         modal.classList.remove('hidden');
     }
 };
-// 🔴 [END] 修复
+// 🔴 [END] Fix
 
 window.handleAddNewRecurringExpense = function () {
     console.log('Show add recurring expense modal');
     
-    // 修复：确保初始化定期费用表单
+    // Fix: ensure recurring expense form is initialized
     if (window.initializeRecurringExpenseForm) {
         window.initializeRecurringExpenseForm();
     }
@@ -707,13 +707,13 @@ window.handleAddNewRecurringExpense = function () {
 };
 
 window.handleSettleUp = function () {
-    console.log('Settle all debts - 调用真正的结算功能');
-    // 调用结算模块中的真正结算功能
+    console.log('Settle all debts - calling real settlement function');
+    // Call the real settlement function in the settlement module
     if (window.handleSettleUpFromSettlement) {
         window.handleSettleUpFromSettlement();
     } else {
-        // 如果结算模块未加载，显示友好的错误信息
-        showCustomAlert('结算功能', '结算功能加载中，请稍后再试');
+        // If the settlement module is not loaded, display a friendly error message
+        showCustomAlert('Settlement Feature', 'Settlement feature is loading, please try again later');
     }
 };
 // Add functions to close modals
@@ -768,9 +768,9 @@ window.resetGroupSettings = function() {
 };
 
 window.saveGroupSettings = function() {
-    // 修复：实际保存群组设置
+    // Fix: actually save group settings
     if (!window.IS_CURRENT_USER_ADMIN) {
-        showCustomAlert('Error', '只有管理员可以修改群组设置');
+        showCustomAlert('Error', 'Only administrators can modify group settings');
         return;
     }
 
@@ -778,7 +778,7 @@ window.saveGroupSettings = function() {
     const groupDescriptionInput = document.getElementById('group-description-input');
 
     if (!groupNameInput || !groupDescriptionInput) {
-        showCustomAlert('Error', '找不到群组设置表单元素');
+        showCustomAlert('Error', 'Could not find group settings form elements');
         return;
     }
 
@@ -786,11 +786,11 @@ window.saveGroupSettings = function() {
     const groupDescription = groupDescriptionInput.value.trim();
 
     if (!groupName) {
-        showCustomAlert('Error', '群组名称不能为空');
+        showCustomAlert('Error', 'Group name cannot be empty');
         return;
     }
 
-    // 实际API调用保存设置
+    // Actual API call to save settings
     saveGroupSettingsAPI(groupName, groupDescription);
 };
 
@@ -808,7 +808,7 @@ window.closeDeleteConfirm = function() {
     }
 };
 
-// confirmDeleteExpense函数已从expense.js正确暴露到全局，无需重复定义
+// confirmDeleteExpense function is correctly exposed globally from expense.js, no need to redefine
 
 window.handleAmountChange = function() {
     // This function should be implemented in expense.js
@@ -854,7 +854,7 @@ window.setDetailSplitMethod = function(method) {
     }
 };
 
-// handleDeleteExpense函数已从expense.js正确暴露到全局，无需重复定义
+// handleDeleteExpense function is correctly exposed globally from expense.js, no need to redefine
 
 window.handleDetailCancel = function() {
     const modal = document.getElementById('expense-detail-modal');
@@ -863,14 +863,14 @@ window.handleDetailCancel = function() {
     }
 };
 
-// 定期费用保存事件的包装器 - 避免与recurring_expense.js中的函数冲突
+// Wrapper for recurring expense save event - avoid conflict with function in recurring_expense.js
 window.saveRecurringExpenseHandler = function(event) {
     event.preventDefault();
-    // 调用recurring_expense.js中导出的handleSaveRecurringExpense函数
+    // Call the handleSaveRecurringExpense function exported from recurring_expense.js
     if (window.handleSaveRecurringExpense) {
         window.handleSaveRecurringExpense(event);
     } else {
-        console.error('定期费用保存函数未加载');
+        console.error('Recurring expense save function not loaded');
         showCustomAlert('Info', 'Recurring expense save feature is under development');
     }
 };
@@ -886,10 +886,10 @@ window.saveRecurringExpenseHandler = function(event) {
 
 window.setRecurringSplitMethod = function(method) {
     console.log('Setting recurring split method to:', method);
-    // 调用真正暴露的函数，避免无限递归
+    // Call the truly exposed function to avoid infinite recursion
     if (typeof window.handleRecurringAmountChange === 'function') {
-        // 如果recurring_expense.js已加载，直接调用其暴露的函数
-        // 暂时使用console.log代替实际调用，避免无限递归
+        // If recurring_expense.js is loaded, call its exposed function directly
+        // Temporarily use console.log instead of the actual call to avoid infinite recursion
         console.log('Recurring split method would be called with:', method);
     } else {
         console.warn('setRecurringSplitMethod function not found');
@@ -970,58 +970,58 @@ window.handleDisableRecurringExpense = function() {
     }
 };
 
-// 🔴 [START] 修复
-// 修复“保存支付”按钮
+// 🔴 [START] Fix
+// Fix "Save Payment" button
 window.savePaymentHandler = function(event) {
     event.preventDefault();
-    // 调用 payment.js 中导入的真正的 handleSavePayment
+    // Call the real handleSavePayment imported from payment.js
     if (window.handleSavePayment) {
         window.handleSavePayment(event);
     } else {
-        console.error('支付保存函数(handleSavePayment)未加载');
-        showCustomAlert('Error', '支付功能暂未就绪');
+        console.error('Payment save function (handleSavePayment) not loaded');
+        showCustomAlert('Error', 'Payment feature is not ready yet');
     }
 };
-// 🔴 [END] 修复
+// 🔴 [END] Fix
 
-// 费用更新事件的包装器 - 避免与expense.js中的函数冲突
+// Wrapper for expense update event - avoid conflict with function in expense.js
 window.updateExpenseHandler = function(event) {
     event.preventDefault();
-    // 调用expense.js中导出的handleUpdateExpense函数
+    // Call the handleUpdateExpense function exported from expense.js
     if (window.handleUpdateExpense) {
         window.handleUpdateExpense(event);
     } else {
-        console.error('费用更新函数未加载');
-        showCustomAlert('Error', '费用更新功能暂未就绪');
+        console.error('Expense update function not loaded');
+        showCustomAlert('Error', 'Expense update feature is not ready yet');
     }
 };
 
-// 🔴 [START] 修复
-// 修复“更新支付”按钮
+// 🔴 [START] Fix
+// Fix "Update Payment" button
 window.updatePaymentHandler = function(event) {
     event.preventDefault();
-    // 调用 payment.js 中导入的真正的 handleUpdatePayment
+    // Call the real handleUpdatePayment imported from payment.js
     if (window.handleUpdatePayment) {
         window.handleUpdatePayment(event);
     } else {
-        console.error('支付更新函数(handleUpdatePayment)未加载');
-        showCustomAlert('Error', '支付功能暂未就绪');
+        console.error('Payment update function (handleUpdatePayment) not loaded');
+        showCustomAlert('Error', 'Payment feature is not ready yet');
     }
 };
-// 🔴 [END] 修复
+// 🔴 [END] Fix
 
 /**
- * 保存群组设置API - 新增函数
+ * Save group settings API - New function
  */
 async function saveGroupSettingsAPI(groupName, groupDescription) {
     try {
         const token = getAuthToken();
         if (!token) {
-            throw new Error('未找到认证令牌');
+            throw new Error('Authentication token not found');
         }
 
         const response = await fetch(`/groups/${window.currentGroupId}`, {
-            method: 'PATCH', // 修复：使用PATCH而不是PUT
+            method: 'PATCH', // Fix: use PATCH instead of PUT
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
@@ -1034,33 +1034,33 @@ async function saveGroupSettingsAPI(groupName, groupDescription) {
 
         if (response.ok) {
             const result = await response.json();
-            console.log('群组设置保存成功:', result);
+            console.log('Group settings saved successfully:', result);
             
-            // 更新本地数据
+            // Update local data
             if (window.currentGroup) {
                 window.currentGroup.name = groupName;
                 window.currentGroup.description = groupDescription;
             }
             
-            // 刷新显示
+            // Refresh display
             updateGroupNameDisplay();
             
-            showCustomAlert('Success', '群组设置已保存');
+            showCustomAlert('Success', 'Group settings have been saved');
         } else {
             const errorData = await response.json();
         throw new Error(errorData.detail ? (typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData.detail)) : `HTTP ${response.status}: ${response.statusText}`);
         }
     } catch (error) {
-        console.error('保存群组设置失败:', error);
-        showCustomAlert('Error', error.message || '保存群组设置失败');
+        console.error('Failed to save group settings:', error);
+        showCustomAlert('Error', error.message || 'Failed to save group settings');
     }
 }
 
-// 确保所有全局函数都被正确定义
+// Ensure all global functions are correctly defined
 function ensureGlobalFunctions() {
-    console.log('验证全局函数是否正确暴露...');
+    console.log('Verifying that global functions are correctly exposed...');
     
-    // 检查关键函数是否存在
+    // Check for the existence of key functions
     const requiredFunctions = [
         'setActiveTab',
         'goBackToHome', 
@@ -1072,9 +1072,9 @@ function ensureGlobalFunctions() {
     
     requiredFunctions.forEach(funcName => {
         if (typeof window[funcName] !== 'function') {
-            console.error(`全局函数 ${funcName} 未定义！`);
+            console.error(`Global function ${funcName} is not defined!`);
         } else {
-            console.log(`✓ ${funcName} 已正确定义`);
+            console.log(`✓ ${funcName} is correctly defined`);
         }
     });
 }
@@ -1082,27 +1082,27 @@ function ensureGlobalFunctions() {
 document.addEventListener('DOMContentLoaded', function () {
     console.log('DOM content loaded, starting group page initialization...');
     
-    // 延迟初始化，确保其他模块已加载
+    // Delay initialization to ensure other modules have loaded
     setTimeout(() => {
         try {
             initializePage();
             ensureGlobalFunctions();
         } catch (error) {
-            console.error('初始化群组页面时发生错误:', error);
-            showCustomAlert('Error', '页面初始化失败，请刷新页面重试', 'error');
+            console.error('An error occurred while initializing the group page:', error);
+            showCustomAlert('Error', 'Page initialization failed, please refresh the page and try again', 'error');
         }
     }, 100);
 });
 
-// 在模块加载完成后也验证一次
+// Also verify after the module has loaded
 setTimeout(ensureGlobalFunctions, 1000);
 
-// 立即暴露所有函数到全局 - 解决函数未定义问题
+// Immediately expose all functions to global - solve function not defined problem
 (function exposeGlobalFunctions() {
-    console.log('立即暴露全局函数到window对象...');
+    console.log('Immediately exposing global functions to the window object...');
     
     try {
-        // 核心功能函数
+        // Core feature functions
         window.initializePage = initializePage;
         window.setActiveTab = setActiveTab;
         window.toggleUserMenu = toggleUserMenu;
@@ -1114,7 +1114,7 @@ setTimeout(ensureGlobalFunctions, 1000);
         window.loadMembersList = loadMembersList;
         window.showCustomAlert = showCustomAlert;
         
-        // HTML调用的函数
+        // Functions called by HTML
         window.goBackToHome = function() {
             window.location.href = '/home';
         };
@@ -1123,18 +1123,18 @@ setTimeout(ensureGlobalFunctions, 1000);
             populateGroupManagementFields();
         };
         
-        console.log('✓ 所有全局函数已暴露完成');
+        console.log('✓ All global functions have been exposed');
     } catch (error) {
-        console.error('暴露全局函数时发生错误:', error);
+        console.error('An error occurred while exposing global functions:', error);
     }
 })();
 
 // ----------------------------------------------------
-// 🔴 [START] 审计日志 (AUDIT LOG) 修复
+// 🔴 [START] Audit Log Fix
 // ----------------------------------------------------
 
 /**
- * (已修复) 加载审计日志
+ * (Fixed) Load audit logs
  */
 window.loadAuditLogs = async function() {
     const container = document.getElementById('audit-log-content');
@@ -1146,20 +1146,20 @@ window.loadAuditLogs = async function() {
     try {
         const token = getAuthToken();
         if (!token) {
-            container.innerHTML = '<p class="text-center text-gray-500">用户未登录</p>';
+            container.innerHTML = '<p class="text-center text-gray-500">User not logged in</p>';
             return;
         }
         
         const groupId = window.currentGroupId;
         if (!groupId) {
-            container.innerHTML = '<p class="text-center text-gray-500">无法确定当前群组</p>';
+            container.innerHTML = '<p class="text-center text-gray-500">Could not determine the current group</p>';
             return;
         }
         
-        // 显示加载状态
-        container.innerHTML = '<div class="text-center text-gray-500">正在加载审计日志...</div>';
+        // Show loading status
+        container.innerHTML = '<div class="text-center text-gray-500">Loading audit logs...</div>';
         
-        // 🔴 修复：使用正确的 API 路由 (来自 main.py)
+        // 🔴 Fix: use the correct API route (from main.py)
         const response = await fetch(`/groups/${groupId}/audit-trail`, {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -1170,54 +1170,54 @@ window.loadAuditLogs = async function() {
             const logs = await response.json();
             
             if (!logs || logs.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-500">暂无审计日志</p>';
+                container.innerHTML = '<p class="text-center text-gray-500">No audit logs yet</p>';
                 return;
             }
             
-            // 渲染审计日志
-            renderAuditLogs(logs); // 🔴 修复：调用新的渲染函数
+            // Render audit logs
+            renderAuditLogs(logs); // 🔴 Fix: call the new rendering function
             
         } else {
             const errorData = await response.json();
-            const errorMsg = errorData.detail || `HTTP ${response.status} 错误`;
-            console.error('加载审计日志失败:', errorMsg);
-            container.innerHTML = `<p class="text-center text-red-500">加载审计日志失败: ${errorMsg}</p>`;
+            const errorMsg = errorData.detail || `HTTP ${response.status} error`;
+            console.error('Failed to load audit logs:', errorMsg);
+            container.innerHTML = `<p class="text-center text-red-500">Failed to load audit logs: ${errorMsg}</p>`;
         }
         
     } catch (error) {
-        console.error('加载审计日志时发生错误:', error);
-        container.innerHTML = '<p class="text-center text-red-500">加载审计日志时发生网络错误</p>';
+        console.error('An error occurred while loading audit logs:', error);
+        container.innerHTML = '<p class="text-center text-red-500">A network error occurred while loading audit logs</p>';
     }
 }
 
 /**
- * (已修复) 渲染审计日志
- * @param {Array} logs - 从 API 获取的日志数组
+ * (Fixed) Render audit logs
+ * @param {Array} logs - Array of logs obtained from the API
  */
 function renderAuditLogs(logs) {
     const container = document.getElementById('audit-log-content');
     if (!container) return;
 
     const logsHTML = logs.map(log => {
-        // 🔴 修复 1: 使用 log.timestamp (来自 schemas.py)
-        const timestamp = new Date(log.timestamp).toLocaleString('zh-CN', {
+        // 🔴 Fix 1: use log.timestamp (from schemas.py)
+        const timestamp = new Date(log.timestamp).toLocaleString('en-US', {
             year: 'numeric', month: '2-digit', day: '2-digit', 
             hour: '2-digit', minute: '2-digit'
         });
 
-        // 🔴 修复 2: 使用 log.user.username (来自 schemas.py)
-        const username = log.user?.username || `用户ID: ${log.user_id}` || "未知用户";
+        // 🔴 Fix 2: use log.user.username (from schemas.py)
+        const username = log.user?.username || `User ID: ${log.user_id}` || "Unknown user";
         
-        const action = log.action || '未知操作';
+        const action = log.action || 'Unknown action';
         
-        // 🔴 修复 3: 安全地格式化 log.details
+        // 🔴 Fix 3: safely format log.details
         let detailsText = '';
         if (log.details) {
             try {
-                // 使用 JSON.stringify 优雅地格式化 [object Object]
+                // Use JSON.stringify to gracefully format [object Object]
                 detailsText = JSON.stringify(log.details, null, 2);
             } catch (e) {
-                detailsText = '无法解析的详情';
+                detailsText = 'Unparseable details';
             }
         }
         
@@ -1227,18 +1227,18 @@ function renderAuditLogs(logs) {
                     <div class="flex-1 min-w-0">
                         <p class="text-sm text-gray-500">${timestamp}</p>
                         <p class="text-base font-medium text-gray-900 mt-1 truncate">
-                            用户 <span class="font-bold text-primary">${username}</span> 执行了 <span class="font-bold text-amber-600">${action}</span>
+                            User <span class="font-bold text-primary">${username}</span> performed <span class="font-bold text-amber-600">${action}</span>
                         </p>
                         ${detailsText ? `
                             <details class="mt-2 text-xs text-gray-600">
-                                <summary class="cursor-pointer hover:text-primary">查看详情</summary>
+                                <summary class="cursor-pointer hover:text-primary">View details</summary>
                                 <pre class="mt-1 p-2 bg-gray-100 rounded overflow-auto">${escapeHtml(detailsText)}</pre>
                             </details>
                         ` : ''}
                     </div>
                     <div class="text-right flex-shrink-0 ml-2">
                         <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                            审计日志
+                            Audit Log
                         </span>
                     </div>
                 </div>
@@ -1250,7 +1250,7 @@ function renderAuditLogs(logs) {
 }
 
 /**
- * 辅助函数：转义 HTML 
+ * Helper function: escape HTML 
  */
 function escapeHtml(text) {
     if (typeof text !== 'string') return text;
@@ -1263,5 +1263,5 @@ function escapeHtml(text) {
 }
 
 // ----------------------------------------------------
-// 🔴 [END] 审计日志 (AUDIT LOG) 修复
+// 🔴 [END] Audit Log Fix
 // ----------------------------------------------------
