@@ -158,7 +158,7 @@ function initializeParticipantSelection() {
     console.log('Initializing participant selection, member data:', window.groupMembers); // Translated
     
     gridContainer.innerHTML = '';
-    recurringSelectedParticipants.clear(); // 🔴 Clear Set
+recurringSelectedParticipants.clear(); // 🔴 Clear Set
     
     if (window.groupMembers && window.groupMembers.length > 0) {
         window.groupMembers.forEach(member => {
@@ -572,7 +572,7 @@ function updateRecurringSummary() {
         // 🔴 Fix: Provide richer summary
         summaryElement.innerHTML = `
             <div class="flex justify-between text-sm">
-                <span>Total Amount</span>
+                <span>Total Amount:</span> <!-- Translated -->
                 <span class="font-medium">$${displayTotal}</span>
             </div>
             <div class="flex justify-between text-sm">
@@ -706,7 +706,7 @@ export async function handleSaveRecurringExpense(event) {
             
         const response = await fetch(url, {
             method: currentEditingRecurringExpense ? 'PATCH' : 'POST', // 🔴 Fix: Update uses PATCH
-            headers: {
+headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${getAuthToken()}` // 🔴 Fix: Add Token
             },
@@ -756,7 +756,6 @@ function closeRecurringExpenseModal() {
     if (modal) {
         modal.classList.add('hidden');
     }
-    
     currentEditingRecurringExpense = null;
     resetRecurringForm();
 }
@@ -1006,7 +1005,7 @@ function renderRecurringExpenseList(expenses) {
         const amount = document.createElement('p');
         // 🔴 Fix: Amount is in cents
         const displayAmount = centsToAmountString ? centsToAmountString(expense.amount) : (expense.amount / 100).toFixed(2);
-        amount.textContent = `Amount: ¥${displayAmount}`; // Translated
+        amount.textContent = `Amount: $${displayAmount}`; // Translated
         
         const frequency = document.createElement('p');
         const frequencyLabels = {
