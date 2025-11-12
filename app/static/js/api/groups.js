@@ -1,14 +1,14 @@
 // file: app/static/js/api/groups.js
-// 防止缓存版本: 2025.11.06
+// Prevent caching version: 2025.11.06
 const JS_CACHE_VERSION = '2025.11.06.001';
 
 import { showCustomAlert } from '../ui/utils.js';
 import { getAuthToken } from '../ui/utils.js';
 
 
-// 打开创建群组模态框 (保持不变)
+// Open create group modal (unchanged)
 export function handleCreateGroup() {
-    console.log('handleCreateGroup 被调用');
+    console.log('handleCreateGroup called');
     const modal = document.getElementById('create-group-modal');
     const groupNameInput = document.getElementById('group-name');
     const groupDescriptionInput = document.getElementById('group-description');
@@ -21,32 +21,32 @@ export function handleCreateGroup() {
         modal.classList.remove('hidden');
         groupNameInput.focus();
     } else {
-        console.error('找不到必要的DOM元素');
+        console.error('Could not find necessary DOM elements');
     }
 }
 
-// 关闭创建群组模态框 (保持不变)
+// Close create group modal (unchanged)
 export function closeCreateGroupModal() {
-    console.log('closeCreateGroupModal 被调用');
+    console.log('closeCreateGroupModal called');
     const modal = document.getElementById('create-group-modal');
     if (modal) {
         modal.classList.add('hidden');
     }
 }
 
-// 创建新群组 (成功后强制刷新页面，让后端重新渲染)
+// Create new group (force page refresh on success to have the backend re-render)
 export async function createNewGroup() {
-    console.log('createNewGroup 被调用');
+    console.log('createNewGroup called');
     const groupName = document.getElementById('group-name').value;
     const groupDescription = document.getElementById('group-description').value;
 
     if (!groupName.trim()) {
-        showCustomAlert('请输入群组名称');
+        showCustomAlert('Please enter a group name');
         return;
     }
 
     try {
-        console.log('开始创建群组...');
+        console.log('Starting to create group...');
         const response = await fetch('/groups/', {
             method: 'POST',
             headers: {
@@ -60,26 +60,26 @@ export async function createNewGroup() {
         });
 
         if (response.ok) {
-            console.log('群组创建成功');
+            console.log('Group created successfully');
             closeCreateGroupModal();
-            showCustomAlert('群组创建成功');
+            showCustomAlert('Group created successfully');
 
-            // 关键：强制页面刷新，触发后端重新渲染整个页面
+            // Key: Force page refresh to trigger backend to re-render the entire page
             window.location.reload();
 
         } else {
             const errorData = await response.json();
-            console.error('创建群组失败:', errorData);
-            throw new Error(errorData.detail || '创建群组失败');
+            console.error('Failed to create group:', errorData);
+            throw new Error(errorData.detail || 'Failed to create group');
         }
     } catch (error) {
-        console.error('创建群组错误:', error);
-        showCustomAlert(error.message || '创建群组失败，请重试');
+        console.error('Error creating group:', error);
+        showCustomAlert(error.message || 'Failed to create group, please try again');
     }
 }
 
 // ==============
-// 以下是API核心封装，不涉及UI渲染
+// The following are core API wrappers, not involving UI rendering
 // ==============
 
 export async function createGroup(groupName, description = "") {
@@ -98,7 +98,7 @@ export async function createGroup(groupName, description = "") {
 
     if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || '创建群组失败');
+        throw new Error(error.detail || 'Failed to create group');
     }
     return await response.json();
 }
@@ -109,13 +109,13 @@ export async function getUserGroups() {
         headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!response.ok) {
-        throw new Error('获取群组列表失败');
+        throw new Error('Failed to get group list');
     }
     return await response.json();
 }
 
 // ==============
-// 添加缺失的群组详情API函数
+// Add missing group detail API functions
 // ==============
 export async function getGroupDetails(groupId) {
     try {
@@ -135,7 +135,7 @@ export async function getGroupDetails(groupId) {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.error('获取群组详情失败:', error);
+        console.error('Failed to get group details:', error);
         throw error;
     }
 }
@@ -151,7 +151,7 @@ export async function getGroupMembers(groupId) {
 
     if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || '获取群组成员失败');
+        throw new Error(error.detail || 'Failed to get group members');
     }
     return await response.json();
 }
@@ -167,24 +167,24 @@ export async function getGroupExpenses(groupId) {
 
     if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || '获取群组费用失败');
+        throw new Error(error.detail || 'Failed to get group expenses');
     }
     return await response.json();
 }
 
 /**
- * 注意：此函数已被弃用
- * 支付API是基于费用的，而不是基于群组的
- * 请使用 getExpensePayments(expenseId) 替代
+ * Note: This function is deprecated
+ * The payment API is based on expenses, not groups
+ * Please use getExpensePayments(expenseId) instead
  * 
- * API 路由: 不存在 /groups/{group_id}/payments
- * 正确路由: /expenses/{expense_id}/payments
+ * API Route: /groups/{group_id}/payments does not exist
+ * Correct Route: /expenses/{expense_id}/payments
  */
 export async function getGroupPayments(groupId) {
-    console.warn('getGroupPayments 已弃用 - 请使用 getExpensePayments(expenseId)');
+    console.warn('getGroupPayments is deprecated - please use getExpensePayments(expenseId)');
     const token = getAuthToken();
     
-    // 返回空数组，避免前端崩溃
+    // Return an empty array to avoid crashing the frontend
     return [];
 }
 
@@ -199,26 +199,26 @@ export async function getGroupRecurringExpenses(groupId) {
 
     if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || '获取群组定期费用失败');
+        throw new Error(error.detail || 'Failed to get group recurring expenses');
     }
     return await response.json();
 }
 
 
 // ==============
-// 群组设置管理功能
+// Group settings management functions
 // ==============
 
-// 重置群组设置
+// Reset group settings
 export function resetGroupSettings() {
-    console.log('重置群组设置');
+    console.log('Resetting group settings');
     
-    // 重置表单字段
+    // Reset form fields
     const groupNameInput = document.getElementById('group-name-settings');
     const groupDescriptionInput = document.getElementById('group-description-settings');
     
     if (groupNameInput) {
-        // 从当前群组数据重置
+        // Reset from current group data
         const currentName = groupNameInput.getAttribute('data-original-name') || '';
         groupNameInput.value = currentName;
     }
@@ -228,21 +228,21 @@ export function resetGroupSettings() {
         groupDescriptionInput.value = currentDescription;
     }
     
-    showCustomAlert('群组设置已重置');
+    showCustomAlert('Group settings have been reset');
 }
 
-// 更新群组设置
+// Update group settings
 export async function updateGroupSettings(groupId, settings = null) {
     try {
-        console.log(`更新群组设置，群组ID: ${groupId}`);
+        console.log(`Updating group settings, Group ID: ${groupId}`);
         
-        // 如果没有传递settings，从表单获取
+        // If settings are not passed, get them from the form
         if (!settings) {
             const groupNameInput = document.getElementById('group-name-settings');
             const groupDescriptionInput = document.getElementById('group-description-settings');
             
             if (!groupNameInput) {
-                throw new Error('找不到群组名称输入框');
+                throw new Error('Could not find group name input');
             }
             
             settings = {
@@ -252,7 +252,7 @@ export async function updateGroupSettings(groupId, settings = null) {
         }
         
         if (!settings.name) {
-            showCustomAlert('群组名称不能为空');
+            showCustomAlert('Group name cannot be empty');
             return;
         }
         
@@ -267,10 +267,10 @@ export async function updateGroupSettings(groupId, settings = null) {
         
         if (response.ok) {
             const updatedGroup = await response.json();
-            console.log('群组设置更新成功:', updatedGroup);
-            showCustomAlert('群组设置更新成功');
+            console.log('Group settings updated successfully:', updatedGroup);
+            showCustomAlert('Group settings updated successfully');
             
-            // 更新表单中的原始值
+            // Update the original values in the form
             const groupNameInput = document.getElementById('group-name-settings');
             const groupDescriptionInput = document.getElementById('group-description-settings');
             
@@ -284,23 +284,23 @@ export async function updateGroupSettings(groupId, settings = null) {
             return updatedGroup;
         } else {
             const errorData = await response.json();
-            console.error('更新群组设置失败:', errorData);
-            throw new Error(errorData.detail || '更新群组设置失败');
+            console.error('Failed to update group settings:', errorData);
+            throw new Error(errorData.detail || 'Failed to update group settings');
         }
     } catch (error) {
-        console.error('更新群组设置错误:', error);
-        showCustomAlert(error.message || '更新群组设置失败，请重试');
+        console.error('Error updating group settings:', error);
+        showCustomAlert(error.message || 'Failed to update group settings, please try again');
         throw error;
     }
 }
 
-// 删除群组
+// Delete group
 export async function deleteGroup(groupId, groupName) {
     try {
-        console.log(`删除群组: ${groupName} (ID: ${groupId})`);
+        console.log(`Deleting group: ${groupName} (ID: ${groupId})`);
         
-        // 确认删除
-        const confirmMessage = `确定要删除群组 "${groupName}" 吗？\n\n此操作不可撤销，将删除群组的所有数据。`;
+        // Confirm deletion
+        const confirmMessage = `Are you sure you want to delete the group "${groupName}"?\n\nThis action cannot be undone and will delete all data for the group.`;
         if (!confirm(confirmMessage)) {
             return;
         }
@@ -313,10 +313,10 @@ export async function deleteGroup(groupId, groupName) {
         });
         
         if (response.ok) {
-            console.log('群组删除成功');
-            showCustomAlert('群组删除成功');
+            console.log('Group deleted successfully');
+            showCustomAlert('Group deleted successfully');
             
-            // 跳转到群组列表页面
+            // Redirect to the group list page
             setTimeout(() => {
                 window.location.href = '/groups';
             }, 1000);
@@ -324,24 +324,24 @@ export async function deleteGroup(groupId, groupName) {
             return true;
         } else {
             const errorData = await response.json();
-            console.error('删除群组失败:', errorData);
-            throw new Error(errorData.detail || '删除群组失败');
+            console.error('Failed to delete group:', errorData);
+            throw new Error(errorData.detail || 'Failed to delete group');
         }
     } catch (error) {
-        console.error('删除群组错误:', error);
-        showCustomAlert(error.message || '删除群组失败，请重试');
+        console.error('Error deleting group:', error);
+        showCustomAlert(error.message || 'Failed to delete group, please try again');
         throw error;
     }
 }
 
 // ==============
-// 审计日志管理功能
+// Audit log management functions
 // ==============
 
-// 获取审计日志数据
+// Get audit log data
 export async function loadAuditLog(groupId, page = 1, limit = 50) {
     try {
-        console.log(`加载审计日志，群组ID: ${groupId}`);
+        console.log(`Loading audit log, Group ID: ${groupId}`);
         
         const response = await fetch(`/groups/${groupId}/audit-trail?page=${page}&limit=${limit}`, {
             method: 'GET',
@@ -353,31 +353,31 @@ export async function loadAuditLog(groupId, page = 1, limit = 50) {
         
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.detail || '获取审计日志失败');
+            throw new Error(errorData.detail || 'Failed to get audit log');
         }
         
         const auditLogs = await response.json();
-        console.log('审计日志数据获取成功:', auditLogs);
+        console.log('Audit log data retrieved successfully:', auditLogs);
         
-        // 渲染审计日志
+        // Render audit log
         renderAuditLog(auditLogs);
         
         return auditLogs;
     } catch (error) {
-        console.error('加载审计日志错误:', error);
-        showCustomAlert(error.message || '加载审计日志失败');
+        console.error('Error loading audit log:', error);
+        showCustomAlert(error.message || 'Failed to load audit log');
         throw error;
     }
 }
 
-// 渲染审计日志显示
+// Render audit log display
 export function renderAuditLog(auditLogs) {
     try {
-        console.log('渲染审计日志:', auditLogs);
+        console.log('Rendering audit log:', auditLogs);
         
         const auditLogContainer = document.getElementById('audit-log-container');
         if (!auditLogContainer) {
-            console.warn('找不到审计日志容器元素');
+            console.warn('Could not find audit log container element');
             return;
         }
         
@@ -385,15 +385,15 @@ export function renderAuditLog(auditLogs) {
             auditLogContainer.innerHTML = `
                 <div class="text-center py-8 text-gray-500">
                     <i class="fas fa-history text-4xl mb-4"></i>
-                    <p>暂无审计日志记录</p>
+                    <p>No audit log records yet</p>
                 </div>
             `;
             return;
         }
         
-        // 渲染审计日志列表
+        // Render audit log list
         const auditLogHtml = auditLogs.map(log => {
-            const timestamp = new Date(log.timestamp).toLocaleString('zh-CN');
+            const timestamp = new Date(log.timestamp).toLocaleString('en-US');
             const action = getAuditActionText(log.action);
             const actionIcon = getAuditActionIcon(log.action);
             
@@ -413,8 +413,8 @@ export function renderAuditLog(auditLogs) {
                                 </time>
                             </div>
                             <div class="mt-1 text-sm text-gray-600">
-                                <p>操作用户ID: ${log.user_id}</p>
-                                <p>记录ID: ${log.id}</p>
+                                <p>Operating User ID: ${log.user_id}</p>
+                                <p>Record ID: ${log.id}</p>
                             </div>
                         </div>
                     </div>
@@ -426,9 +426,9 @@ export function renderAuditLog(auditLogs) {
             <div class="audit-logs-header mb-4">
                 <h3 class="text-lg font-semibold text-gray-900 flex items-center">
                     <i class="fas fa-shield-alt mr-2 text-blue-600"></i>
-                    审计日志
+                    Audit Log
                     <span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                        ${auditLogs.length} 条记录
+                        ${auditLogs.length} records
                     </span>
                 </h3>
             </div>
@@ -437,38 +437,38 @@ export function renderAuditLog(auditLogs) {
             </div>
         `;
         
-        // 添加滚动和动画效果
+        // Add scrolling and animation effects
         auditLogContainer.classList.add('audit-log-container');
         auditLogContainer.scrollTop = 0;
         
     } catch (error) {
-        console.error('渲染审计日志错误:', error);
-        showCustomAlert('渲染审计日志失败');
+        console.error('Error rendering audit log:', error);
+        showCustomAlert('Failed to render audit log');
     }
 }
 
-// 获取审计操作文本
+// Get audit action text
 function getAuditActionText(action) {
     const actionMap = {
-        'create': '创建群组',
-        'update': '更新群组',
-        'delete': '删除群组',
-        'add_member': '添加成员',
-        'remove_member': '移除成员',
-        'add_expense': '添加费用',
-        'update_expense': '更新费用',
-        'delete_expense': '删除费用',
-        'add_payment': '添加支付',
-        'delete_payment': '删除支付',
-        'invite_user': '邀请用户',
-        'accept_invitation': '接受邀请',
-        'decline_invitation': '拒绝邀请'
+        'create': 'Create Group',
+        'update': 'Update Group',
+        'delete': 'Delete Group',
+        'add_member': 'Add Member',
+        'remove_member': 'Remove Member',
+        'add_expense': 'Add Expense',
+        'update_expense': 'Update Expense',
+        'delete_expense': 'Delete Expense',
+        'add_payment': 'Add Payment',
+        'delete_payment': 'Delete Payment',
+        'invite_user': 'Invite User',
+        'accept_invitation': 'Accept Invitation',
+        'decline_invitation': 'Decline Invitation'
     };
     
-    return actionMap[action] || `未知操作: ${action}`;
+    return actionMap[action] || `Unknown action: ${action}`;
 }
 
-// 获取审计操作图标
+// Get audit action icon
 function getAuditActionIcon(action) {
     const iconMap = {
         'create': '<i class="fas fa-plus-circle"></i>',
@@ -489,23 +489,23 @@ function getAuditActionIcon(action) {
     return iconMap[action] || '<i class="fas fa-info-circle"></i>';
 }
 
-// loadAuditLogs函数的完整实现在文件后面
+// The full implementation of loadAuditLogs is at the end of the file
 
 export function renderAuditLogList() {
-    console.log('渲染审计日志列表');
-    // 留空以兼容现有代码，实际在loadAuditLog中处理
+    console.log('Rendering audit log list');
+    // Leave empty to be compatible with existing code, actual handling is in loadAuditLog
 }
 
-// 获取当前群组ID
+// Get current group ID
 export function getCurrentGroupId() {
-    // 从URL中提取群组ID
+    // Extract group ID from the URL
     const urlParts = window.location.pathname.split('/');
     if (urlParts.length >= 3 && urlParts[1] === 'groups') {
         const groupId = parseInt(urlParts[2]);
         return isNaN(groupId) ? null : groupId;
     }
     
-    // 从页面元素中获取
+    // Get from page element
     const groupIdElement = document.getElementById('current-group-id');
     if (groupIdElement) {
         return parseInt(groupIdElement.value);
@@ -515,13 +515,13 @@ export function getCurrentGroupId() {
 }
 
 export function redirectToGroupDetail(groupId, groupName) {
-    console.log(`重定向到群组详情页: ${groupName} (ID: ${groupId})`);
+    console.log(`Redirecting to group detail page: ${groupName} (ID: ${groupId})`);
 
-    // 使用正确的URL格式跳转到群组页面
+    // Use the correct URL format to navigate to the group page
     window.location.href = `/groups/${groupId}`;
 }
 
-// 尝试暴露函数到全局
+// Try to expose functions to global
 try {
     window.handleCreateGroup = handleCreateGroup;
     window.closeCreateGroupModal = closeCreateGroupModal;
@@ -534,25 +534,25 @@ try {
     window.getGroupPayments = getGroupPayments;
     window.getGroupRecurringExpenses = getGroupRecurringExpenses;
     
-    // 新增的群组管理功能
+    // New group management functions
     window.updateGroupSettings = updateGroupSettings;
     window.deleteGroup = deleteGroup;
     window.resetGroupSettings = resetGroupSettings;
     window.saveGroupSettings = updateGroupSettings;
     
-    // 审计日志功能
+    // Audit log functions
     window.loadAuditLog = loadAuditLog;
     window.renderAuditLog = renderAuditLog;
     window.renderAuditLogList = renderAuditLogList;
     window.getCurrentGroupId = getCurrentGroupId;
-    // loadAuditLogs 将在文件末尾暴露
+    // loadAuditLogs will be exposed at the end of the file
 
-    console.log('groups.js: 全局暴露完成');
+    console.log('groups.js: Global exposure complete');
 } catch (error) {
-    console.warn('groups.js: 全局暴露失败，可能是模块环境:', error);
+    console.warn('groups.js: Global exposure failed, possibly in a module environment:', error);
 }
 
-// 添加CSS样式（如果需要）
+// Add CSS styles (if needed)
 if (typeof document !== 'undefined') {
     const style = document.createElement('style');
     style.textContent = `
@@ -588,10 +588,10 @@ if (typeof document !== 'undefined') {
     document.head.appendChild(style);
 }
 
-// ==================== 群组管理功能 ====================
+// ==================== Group Management Functions ====================
 
 /**
- * 保存群组设置
+ * Save group settings
  */
 export async function saveGroupSettings() {
     const groupNameInput = document.getElementById('group-name-input');
@@ -599,7 +599,7 @@ export async function saveGroupSettings() {
     const messageElement = document.getElementById('save-group-settings-message');
     
     if (!groupNameInput || !groupDescriptionInput) {
-        showCustomAlert('错误', '找不到群组设置表单元素');
+        showCustomAlert('Error', 'Could not find group settings form elements');
         return;
     }
     
@@ -608,7 +608,7 @@ export async function saveGroupSettings() {
     
     if (!groupName) {
         if (messageElement) {
-            messageElement.textContent = '群组名称不能为空';
+            messageElement.textContent = 'Group name cannot be empty';
             messageElement.className = 'mt-2 p-2 text-sm rounded bg-red-100 text-red-700';
             messageElement.classList.remove('hidden');
         }
@@ -618,19 +618,19 @@ export async function saveGroupSettings() {
     try {
         const token = getAuthToken();
         if (!token) {
-            showCustomAlert('错误', '用户未登录，请重新登录');
+            showCustomAlert('Error', 'User not logged in, please log in again');
             return;
         }
         
         const groupId = window.currentGroupId;
         if (!groupId) {
-            showCustomAlert('错误', '无法确定当前群组ID');
+            showCustomAlert('Error', 'Could not determine current group ID');
             return;
         }
         
-        // 显示加载状态
+        // Show loading status
         if (messageElement) {
-            messageElement.textContent = '正在保存...';
+            messageElement.textContent = 'Saving...';
             messageElement.className = 'mt-2 p-2 text-sm rounded bg-blue-100 text-blue-700';
             messageElement.classList.remove('hidden');
         }
@@ -649,29 +649,29 @@ export async function saveGroupSettings() {
         
         if (response.ok) {
             const updatedGroup = await response.json();
-            console.log('群组设置已更新:', updatedGroup);
+            console.log('Group settings updated:', updatedGroup);
             
-            // 更新全局群组数据
+            // Update global group data
             window.currentGroup = updatedGroup;
             
-            // 更新页面显示
+            // Update page display
             if (window.currentGroup) {
                 const nameDisplay = document.getElementById('group-name-display');
                 const descriptionDisplay = document.getElementById('group-description-display');
                 
                 if (nameDisplay) nameDisplay.textContent = updatedGroup.name;
-                if (descriptionDisplay) descriptionDisplay.textContent = updatedGroup.description || '无描述';
+                if (descriptionDisplay) descriptionDisplay.textContent = updatedGroup.description || 'No description';
             }
             
-            // 显示成功消息
+            // Show success message
             if (messageElement) {
-                messageElement.textContent = '群组设置已成功保存！';
+                messageElement.textContent = 'Group settings saved successfully!';
                 messageElement.className = 'mt-2 p-2 text-sm rounded bg-green-100 text-green-700';
             }
             
-            showCustomAlert('成功', '群组设置已成功保存！', 'success');
+            showCustomAlert('Success', 'Group settings saved successfully!', 'success');
             
-            // 3秒后隐藏消息
+            // Hide message after 3 seconds
             setTimeout(() => {
                 if (messageElement) {
                     messageElement.classList.add('hidden');
@@ -680,32 +680,32 @@ export async function saveGroupSettings() {
             
         } else {
             const errorData = await response.json().catch(() => ({}));
-            const errorMessage = errorData.detail || `保存失败 (状态码: ${response.status})`;
+            const errorMessage = errorData.detail || `Save failed (status code: ${response.status})`;
             
-            console.error('保存群组设置失败:', errorMessage);
+            console.error('Failed to save group settings:', errorMessage);
             
             if (messageElement) {
-                messageElement.textContent = `保存失败: ${errorMessage}`;
+                messageElement.textContent = `Save failed: ${errorMessage}`;
                 messageElement.className = 'mt-2 p-2 text-sm rounded bg-red-100 text-red-700';
             }
             
-            showCustomAlert('错误', `保存失败: ${errorMessage}`);
+            showCustomAlert('Error', `Save failed: ${errorMessage}`);
         }
         
     } catch (error) {
-        console.error('保存群组设置时发生错误:', error);
+        console.error('An error occurred while saving group settings:', error);
         
         if (messageElement) {
-            messageElement.textContent = '保存时发生网络错误，请检查网络连接';
+            messageElement.textContent = 'A network error occurred while saving, please check your network connection';
             messageElement.className = 'mt-2 p-2 text-sm rounded bg-red-100 text-red-700';
         }
         
-        showCustomAlert('错误', '保存时发生网络错误，请检查网络连接');
+        showCustomAlert('Error', 'A network error occurred while saving, please check your network connection');
     }
 }
 
 /**
- * 加载审计日志
+ * Load audit logs
  */
 export async function loadAuditLogs() {
     const container = document.getElementById('audit-log-content');
@@ -714,18 +714,18 @@ export async function loadAuditLogs() {
     try {
         const token = getAuthToken();
         if (!token) {
-            container.innerHTML = '<p class="text-center text-gray-500">用户未登录</p>';
+            container.innerHTML = '<p class="text-center text-gray-500">User not logged in</p>';
             return;
         }
         
         const groupId = window.currentGroupId;
         if (!groupId) {
-            container.innerHTML = '<p class="text-center text-gray-500">无法确定当前群组</p>';
+            container.innerHTML = '<p class="text-center text-gray-500">Could not determine current group</p>';
             return;
         }
         
-        // 显示加载状态
-        container.innerHTML = '<div class="text-center text-gray-500">正在加载审计日志...</div>';
+        // Show loading status
+        container.innerHTML = '<div class="text-center text-gray-500">Loading audit logs...</div>';
         
         const response = await fetch(`/groups/${groupId}/audit-logs`, {
             headers: {
@@ -737,15 +737,15 @@ export async function loadAuditLogs() {
             const logs = await response.json();
             
             if (!logs || logs.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-500">暂无审计日志</p>';
+                container.innerHTML = '<p class="text-center text-gray-500">No audit logs yet</p>';
                 return;
             }
             
-            // 渲染审计日志
+            // Render audit logs
             const logsHTML = logs.map(log => {
-                const timestamp = new Date(log.created_at).toLocaleString('zh-CN');
-                const username = log.user?.username || log.username || '未知用户';
-                const action = log.action || '未知操作';
+                const timestamp = new Date(log.created_at).toLocaleString('en-US');
+                const username = log.user?.username || log.username || 'Unknown user';
+                const action = log.action || 'Unknown action';
                 const details = log.details || '';
                 
                 return `
@@ -753,12 +753,12 @@ export async function loadAuditLogs() {
                         <div class="flex items-start justify-between">
                             <div class="flex-1">
                                 <p class="text-sm text-gray-600">${timestamp}</p>
-                                <p class="text-base font-medium text-gray-900 mt-1">用户 ${username} ${action}</p>
+                                <p class="text-base font-medium text-gray-900 mt-1">User ${username} ${action}</p>
                                 ${details ? `<p class="text-sm text-gray-500 mt-1">${details}</p>` : ''}
                             </div>
                             <div class="text-right">
                                 <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded">
-                                    审计日志
+                                    Audit Log
                                 </span>
                             </div>
                         </div>
@@ -769,18 +769,18 @@ export async function loadAuditLogs() {
             container.innerHTML = logsHTML;
             
         } else {
-            console.log('审计日志API暂未实现，返回空数据');
-            container.innerHTML = '<p class="text-center text-gray-500">审计日志功能暂未实现</p>';
+            console.log('Audit log API not yet implemented, returning empty data');
+            container.innerHTML = '<p class="text-center text-gray-500">Audit log feature not yet implemented</p>';
             return [];
         }
         
     } catch (error) {
-        console.error('加载审计日志时发生错误:', error);
-        container.innerHTML = '<p class="text-center text-red-500">加载审计日志时发生错误</p>';
+        console.error('An error occurred while loading audit logs:', error);
+        container.innerHTML = '<p class="text-center text-red-500">An error occurred while loading audit logs</p>';
     }
 }
 
-// 暴露到全局
+// Expose to global
 window.saveGroupSettings = saveGroupSettings;
 window.loadAuditLogs = loadAuditLogs;
 
