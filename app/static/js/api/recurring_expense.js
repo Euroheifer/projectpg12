@@ -1,14 +1,14 @@
-// recurring_expense.js - 定期费用相关的CRUD操作、频率设置
-// 防止缓存版本: 2025.11.10.003 - 修复分摊按钮
+// recurring_expense.js - CRUD operations, frequency settings for recurring expenses
+// Cache buster: 2025.11.10.003 - Fix split button
 const JS_CACHE_VERSION = '2025.11.10.003';
 
-// 🔴 修复：import 必须在顶层
+// 🔴 Fix: import must be at top level
 import { 
     centsToAmountString as importedCentsToAmountString, 
     amountToCents as importedAmountToCents 
 } from '../ui/utils.js';
 
-// 从 ui/utils.js 导入金额转换函数
+// Import amount conversion functions from ui/utils.js
 let centsToAmountString;
 let amountToCents;
 
@@ -36,7 +36,7 @@ if (typeof importedAmountToCents === 'function') {
 }
 
 
-// --- 全局状态 ---
+// --- Global State ---
 let recurringExpenseState = {
     isRecurring: false,
     frequency: 'daily',
@@ -51,27 +51,27 @@ let currentEditingRecurringExpense = null;
 let isRecurringFormInitialized = false;
 
 /**
- * 初始化定期费用表单
+ * Initialize recurring expense form
  */
 export function initializeRecurringExpenseForm() {
-    console.log('Recurring expense module starting to initialize...');
+    console.log('Initializing recurring expense module...'); // Translated
     
     if (isRecurringFormInitialized) {
-        console.log('定期费用表单已初始化，跳过重复执行');
+        console.log('Recurring expense form already initialized, skipping.'); // Translated
         return;
     }
     
-    console.log('初始化定期费用表单 - v2025.11.10.002修复版本');
+    console.log('Initializing recurring expense form - v2025.11.10.002 fixed version'); // Translated
 
-    // 设置默认日期
+    // Set default date
     const today = new Date().toISOString().split('T')[0];
     const startDateInput = document.getElementById('repeat-start');
     if (startDateInput) {
         startDateInput.value = today;
         recurringExpenseState.startDate = today;
-        console.log('设置开始日期:', today);
+        console.log('Setting start date:', today);
     } else {
-        console.error('找不到开始日期输入框 repeat-start');
+        console.error('Could not find start date input: repeat-start'); // Translated
     }
     
     const endDateInput = document.getElementById('repeat-end');
@@ -80,23 +80,23 @@ export function initializeRecurringExpenseForm() {
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         endDateInput.value = nextMonth.toISOString().split('T')[0];
         recurringExpenseState.endDate = endDateInput.value;
-        console.log('设置结束日期:', endDateInput.value);
+        console.log('Setting end date:', endDateInput.value);
     } else {
-        console.error('找不到结束日期输入框 repeat-end');
+        console.error('Could not find end date input: repeat-end'); // Translated
     }
 
-    // 检查组员数据是否已加载
+    // Check if group members data is loaded
     if (!window.groupMembers || window.groupMembers.length === 0) {
-        console.warn('组员数据尚未加载，定期费用表单可能无法正常初始化');
+        console.warn('Group members data not yet loaded, recurring expense form may not initialize correctly'); // Translated
         const checkGroupMembers = () => {
             if (window.groupMembers && window.groupMembers.length > 0) {
-                console.log('检测到组员数据已加载，初始化付款人选择器和参与者选择');
+                console.log('Detected group members loaded, initializing payer selector and participant selection'); // Translated
                 initializePayerSelector();
                 initializeParticipantSelection();
                 setupEventListeners();
                 isRecurringFormInitialized = true;
             } else {
-                console.log('等待组员数据加载中...');
+                console.log('Waiting for group members data to load...'); // Translated
                 setTimeout(checkGroupMembers, 1000);
             }
         };
@@ -104,7 +104,7 @@ export function initializeRecurringExpenseForm() {
         return;
     }
     
-    // 初始化付款人选择器和参与者选择
+    // Initialize payer selector and participant selection
     initializePayerSelector();
     initializeParticipantSelection();
     setupEventListeners();
@@ -113,52 +113,52 @@ export function initializeRecurringExpenseForm() {
 }
 
 /**
- * 初始化付款人选择器
+ * Initialize payer selector
  */
 function initializePayerSelector() {
     const payerSelect = document.getElementById('recurring-payer');
     if (!payerSelect) {
-        console.error('找不到付款人选择器元素 recurring-payer');
+        console.error('Could not find payer selector element: recurring-payer'); // Translated
         return;
     }
     
-    console.log('初始化付款人选择器，组员数据:', window.groupMembers);
+    console.log('Initializing payer selector, member data:', window.groupMembers); // Translated
     
     if (window.groupMembers && window.groupMembers.length > 0) {
-        payerSelect.innerHTML = '<option value="">Please select payer</option>';
+        payerSelect.innerHTML = '<option value="">Please select a payer</option>'; // Translated
         window.groupMembers.forEach(member => {
             const option = document.createElement('option');
             option.value = member.user_id; 
             option.textContent = member.user?.username || member.nickname || `User ${member.user_id}`;
             payerSelect.appendChild(option);
         });
-        console.log(`付款人选择器已初始化，共 ${window.groupMembers.length} 个成员`);
+        console.log(`Payer selector initialized with ${window.groupMembers.length} members`); // Translated
     } else {
-        console.warn('组员数据为空，无法初始化付款人选择器');
-        payerSelect.innerHTML = '<option value="">暂无可选择的付款人</option>';
+        console.warn('Group members data is empty, cannot initialize payer selector'); // Translated
+        payerSelect.innerHTML = '<option value="">No payers available to select</option>'; // Translated
     }
 }
 
 /**
- * 初始化参与者选择
+ * Initialize participant selection
  */
 function initializeParticipantSelection() {
     const container = document.getElementById('recurring-participants-section');
     if (!container) {
-        console.error('找不到参与者容器 recurring-participants-section');
+        console.error('Could not find participant container: recurring-participants-section'); // Translated
         return;
     }
     
     const gridContainer = container.querySelector('.grid');
     if (!gridContainer) {
-        console.error('找不到参与者网格容器 .grid');
+        console.error('Could not find participant grid container .grid'); // Translated
         return;
     }
     
-    console.log('初始化参与者选择，组员数据:', window.groupMembers);
+    console.log('Initializing participant selection, member data:', window.groupMembers); // Translated
     
     gridContainer.innerHTML = '';
-    recurringSelectedParticipants.clear(); // 🔴 清空Set
+    recurringSelectedParticipants.clear(); // 🔴 Clear Set
     
     if (window.groupMembers && window.groupMembers.length > 0) {
         window.groupMembers.forEach(member => {
@@ -178,11 +178,11 @@ function initializeParticipantSelection() {
             
             checkbox.addEventListener('change', function() {
                 if (this.checked) {
-                    recurringSelectedParticipants.add(parseInt(this.value, 10)); // 🔴 确保是数字
+                    recurringSelectedParticipants.add(parseInt(this.value, 10)); // 🔴 Ensure number
                 } else {
-                    recurringSelectedParticipants.delete(parseInt(this.value, 10)); // 🔴 确保是数字
+                    recurringSelectedParticipants.delete(parseInt(this.value, 10)); // 🔴 Ensure number
                 }
-                console.log('参与者选择变化:', Array.from(recurringSelectedParticipants));
+                console.log('Participant selection changed:', Array.from(recurringSelectedParticipants)); // Translated
                 updateRecurringSplitCalculation();
             });
             
@@ -190,37 +190,37 @@ function initializeParticipantSelection() {
             wrapper.appendChild(label);
             gridContainer.appendChild(wrapper);
             
-            // 默认选中所有参与者
+            // Default select all participants
             checkbox.checked = true;
             recurringSelectedParticipants.add(member.user_id);
         });
-        console.log(`参与者选择器已初始化，共 ${window.groupMembers.length} 个成员`);
+        console.log(`Participant selector initialized with ${window.groupMembers.length} members`); // Translated
     } else {
-        console.warn('组员数据为空，无法初始化参与者选择');
-        gridContainer.innerHTML = '<p class="text-gray-500">暂无可选择的参与者</p>';
+        console.warn('Group members data is empty, cannot initialize participant selection'); // Translated
+        gridContainer.innerHTML = '<p class="text-gray-500">No participants available to select</p>'; // Translated
     }
 }
 
 /**
- * 设置事件监听器
+ * Set up event listeners
  */
 function setupEventListeners() {
-    console.log('设置定期费用表单事件监听器');
+    console.log('Setting up recurring expense form event listeners'); // Translated
     
     const amountInput = document.getElementById('recurring-amount');
     if (amountInput) {
         amountInput.removeEventListener('input', handleRecurringAmountChange);
         amountInput.addEventListener('input', handleRecurringAmountChange);
-        console.log('已设置金额输入框事件监听器');
+        console.log('Amount input event listener set'); // Translated
     } else {
-        console.error('找不到金额输入框 recurring-amount');
+        console.error('Could not find amount input: recurring-amount'); // Translated
     }
     
     const startDateInput = document.getElementById('repeat-start');
     if (startDateInput) {
         startDateInput.addEventListener('change', function() {
             recurringExpenseState.startDate = this.value;
-            console.log('开始日期变化:', this.value);
+            console.log('Start date changed:', this.value); // Translated
             updateRecurringPreview();
         });
     }
@@ -229,7 +229,7 @@ function setupEventListeners() {
     if (endDateInput) {
         endDateInput.addEventListener('change', function() {
             recurringExpenseState.endDate = this.value;
-            console.log('结束日期变化:', this.value);
+            console.log('End date changed:', this.value); // Translated
             updateRecurringPreview();
         });
     }
@@ -237,18 +237,18 @@ function setupEventListeners() {
     const payerSelect = document.getElementById('recurring-payer');
     if (payerSelect) {
         payerSelect.addEventListener('change', function() {
-            console.log('付款人已选择:', this.value);
+            console.log('Payer selected:', this.value); // Translated
         });
     }
     
-    console.log('定期费用表单事件监听器设置完成');
+    console.log('Recurring expense form event listeners set up complete'); // Translated
 }
 
 /**
- * 更新表单成员数据
+ * Update form member data
  */
 export function updateRecurringFormMembers() {
-    console.log('更新定期费用表单成员数据');
+    console.log('Updating recurring expense form member data'); // Translated
     if (!isRecurringFormInitialized) {
         initializeRecurringExpenseForm();
     } else {
@@ -258,10 +258,10 @@ export function updateRecurringFormMembers() {
 }
 
 /**
- * 选择频率
+ * Select frequency
  */
 export function selectFrequency(frequency) {
-    console.log('选择频率:', frequency);
+    console.log('Selected frequency:', frequency); // Translated
     
     recurringExpenseState.frequency = frequency;
     
@@ -277,14 +277,14 @@ export function selectFrequency(frequency) {
 }
 
 /**
- * 设置定期费用分摊方式
+ * Set recurring expense split method
  */
 export function setRecurringSplitMethod(method) {
-    console.log('设置定期费用分摊方式:', method);
+    console.log('Setting recurring expense split method:', method); // Translated
     
     recurringSplitMethod = method;
     
-    // 🔴 修复：使用正确的 ID
+    // 🔴 Fix: Use correct IDs
     const equalBtn = document.getElementById('recurring-split-equal');
     const customBtn = document.getElementById('recurring-split-exact');
     
@@ -305,10 +305,10 @@ export function setRecurringSplitMethod(method) {
 }
 
 /**
- * 处理定期费用金额变化
+ * Handle recurring expense amount change
  */
 export function handleRecurringAmountChange() {
-    console.log('处理定期费用金额变化');
+    console.log('Handling recurring expense amount change'); // Translated
     
     updateRecurringSplitCalculation();
     updateRecurringPreview();
@@ -316,32 +316,32 @@ export function handleRecurringAmountChange() {
 }
 
 /**
- * 更新定期费用预览
+ * Update recurring expense preview
  */
 export function updateRecurringPreview() {
-    console.log('更新定期费用预览');
+    console.log('Updating recurring preview'); // Translated
     
     const startDate = document.getElementById('repeat-start')?.value;
     const endDate = document.getElementById('repeat-end')?.value;
     const amountInput = document.getElementById('recurring-amount');
     
     if (!startDate || !endDate || !amountInput) {
-        console.warn('缺少必要的预览数据元素');
+        console.warn('Missing necessary preview data elements'); // Translated
         return;
     }
     
-    // 🔴 修复：立即转换为分
+    // 🔴 Fix: Immediately convert to cents
     const totalAmountInCents = amountToCents(amountInput.value);
     
     const startDateTime = new Date(startDate);
     const endDateTime = new Date(endDate);
     
     if (startDateTime > endDateTime) {
-        console.warn('开始日期不能晚于结束日期');
+        console.warn('Start date cannot be later than end date'); // Translated
         return;
     }
     
-    // 🔴 修复：传递分
+    // 🔴 Fix: Pass cents
     const previewData = generateRecurringPreview(
         startDate,
         endDate,
@@ -354,8 +354,8 @@ export function updateRecurringPreview() {
 }
 
 /**
- * 生成定期费用预览数据
- * 🔴 修复：totalAmountInCents 是以分为单位的
+ * Generate recurring expense preview data
+ * 🔴 Fix: totalAmountInCents is in cents
  */
 function generateRecurringPreview(startDate, endDate, frequency, totalAmountInCents) {
     const previewData = [];
@@ -368,7 +368,7 @@ function generateRecurringPreview(startDate, endDate, frequency, totalAmountInCe
         const dateStr = currentDate.toISOString().split('T')[0];
         previewData.push({
             date: dateStr,
-            amount: totalAmountInCents, // 🔴 存储分
+            amount: totalAmountInCents, // 🔴 Store cents
             frequency: frequency
         });
         
@@ -394,13 +394,13 @@ function generateRecurringPreview(startDate, endDate, frequency, totalAmountInCe
 }
 
 /**
- * 更新预览列表
- * 🔴 修复：item.amount 是以分为单位的
+ * Update preview list
+ * 🔴 Fix: item.amount is in cents
  */
 function updatePreviewList(previewData) {
     const previewList = document.getElementById('recurring-preview-list');
     if (!previewList) {
-        console.error('找不到预览列表元素');
+        console.error('Could not find preview list element'); // Translated
         return;
     }
     
@@ -417,7 +417,7 @@ function updatePreviewList(previewData) {
         const amountSpan = document.createElement('span');
         amountSpan.className = 'text-sm font-medium text-gray-900';
         
-        // 🔴 修复：item.amount 已经是分，centsToAmountString 会正确处理
+        // 🔴 Fix: item.amount is already cents, centsToAmountString will handle it
         const displayAmount = centsToAmountString ? centsToAmountString(item.amount) : (item.amount / 100).toFixed(2);
         amountSpan.textContent = `¥${displayAmount}`;
         
@@ -428,42 +428,42 @@ function updatePreviewList(previewData) {
 }
 
 /**
- * 更新预览摘要
- * 🔴 修复：previewData 中的 amount 是以分为单位的
+ * Update preview summary
+ * 🔴 Fix: amount in previewData is in cents
  */
 function updatePreviewSummary(previewData) {
-    // 🔴 修复：totalAmountInCents 是以分为单位的
+    // 🔴 Fix: totalAmountInCents is in cents
     const totalCount = previewData.length;
     const totalAmountInCents = previewData.reduce((sum, item) => sum + item.amount, 0);
     
     const summaryElement = document.getElementById('recurring-preview-summary');
     if (summaryElement) {
         const participantCount = recurringSelectedParticipants.size;
-        // 🔴 修复：amountPerPersonInCents 是以分为单位的
+        // 🔴 Fix: amountPerPersonInCents is in cents
         const amountPerPersonInCents = participantCount > 0 ? totalAmountInCents / participantCount : 0;
         
-        // 🔴 修复：使用 centsToAmountString 显示
+        // 🔴 Fix: Use centsToAmountString to display
         const displayTotal = centsToAmountString ? centsToAmountString(totalAmountInCents) : (totalAmountInCents / 100).toFixed(2);
         const displayPerPerson = centsToAmountString ? centsToAmountString(amountPerPersonInCents) : (amountPerPersonInCents / 100).toFixed(2);
         
-        summaryElement.textContent = `共 ${totalCount} 次，合计 ¥${displayTotal}，每人 ¥${displayPerPerson}`;
+        summaryElement.textContent = `Total ${totalCount} times, ¥${displayTotal} total, ¥${displayPerPerson} per person`; // Translated
     }
 }
 
 /**
- * 更新分摊计算
- * 🔴 修复：使用分进行计算
+ * Update split calculation
+ * 🔴 Fix: Use cents for calculation
  */
 function updateRecurringSplitCalculation() {
     const amountInput = document.getElementById('recurring-amount');
     if (!amountInput || !amountInput.value) { // 🔴
-        recurringMemberSplits = []; // 🔴 清空
-        renderSplitDetails(); // 🔴 渲染空状态
-        updateRecurringSummary(); // 🔴 更新摘要
+        recurringMemberSplits = []; // 🔴 Clear
+        renderSplitDetails(); // 🔴 Render empty state
+        updateRecurringSummary(); // 🔴 Update summary
         return;
     }
     
-    // 🔴 修复：立即转换为分
+    // 🔴 Fix: Immediately convert to cents
     const totalAmountInCents = amountToCents(amountInput.value);
     const selectedMemberIds = Array.from(recurringSelectedParticipants);
 
@@ -474,12 +474,12 @@ function updateRecurringSplitCalculation() {
         return;
     }
     
-    // 重新计算每个成员的分摊金额
+    // Recalculate split amount for each member
     recurringMemberSplits = selectedMemberIds.map(userId => {
         const member = window.groupMembers.find(m => m.user_id === userId);
         if (!member) return null;
         
-        // 🔴 修复：以分为单位计算
+        // 🔴 Fix: Calculate in cents
         const count = selectedMemberIds.length;
         const baseAmount = Math.floor(totalAmountInCents / count);
         const remainder = totalAmountInCents % count;
@@ -493,35 +493,35 @@ function updateRecurringSplitCalculation() {
         return {
             user_id: userId,
             user: member.user,
-            amount: splitAmountInCents // 🔴 存储分
+            amount: splitAmountInCents // 🔴 Store cents
         };
     }).filter(split => split !== null);
     
-    // 验证总和
+    // Validate sum
     const sum = recurringMemberSplits.reduce((acc, s) => acc + s.amount, 0);
-    console.log(`分摊计算完成 (分): 总额 ${totalAmountInCents}, 分摊总和 ${sum}`);
+    console.log(`Split calculation complete (cents): Total ${totalAmountInCents}, Split Sum ${sum}`); // Translated
     
-    // 更新详情和摘要
+    // Update details and summary
     updateSplitDetailDisplay();
     updateRecurringSummary();
 }
 
 /**
- * 更新分摊详情显示
- * 🔴 修复：split.amount 是以分为单位的
+ * Update split detail display
+ * 🔴 Fix: split.amount is in cents
  */
 function updateSplitDetailDisplay() {
-    // 🔴 修复：使用正确的 ID
+    // 🔴 Fix: Use correct ID
     const splitDetailContainer = document.getElementById('recurring-split-list');
     if (!splitDetailContainer) {
-        console.error('找不到分摊详情容器');
+        console.error('Could not find split detail container'); // Translated
         return;
     }
     
     splitDetailContainer.innerHTML = '';
     
     if (recurringMemberSplits.length === 0) {
-        splitDetailContainer.innerHTML = '<p class="text-gray-500">请选择参与者</p>';
+        splitDetailContainer.innerHTML = '<p class="text-gray-500">Please select participants</p>'; // Translated
         return;
     }
     
@@ -531,12 +531,12 @@ function updateSplitDetailDisplay() {
         
         const memberName = document.createElement('span');
         memberName.className = 'text-sm text-gray-700';
-        memberName.textContent = split.user?.username || '未知用户';
+        memberName.textContent = split.user?.username || 'Unknown User'; // Translated
         
         const amountSpan = document.createElement('span');
         amountSpan.className = 'text-sm font-medium text-gray-900';
         
-        // 🔴 修复：split.amount 已经是分
+        // 🔴 Fix: split.amount is already cents
         const displayAmount = centsToAmountString ? centsToAmountString(split.amount) : (split.amount / 100).toFixed(2);
         amountSpan.textContent = `¥${displayAmount}`;
         
@@ -547,40 +547,40 @@ function updateSplitDetailDisplay() {
 }
 
 /**
- * 更新定期费用摘要
- * 🔴 修复：使用分进行计算
+ * Update recurring expense summary
+ * 🔴 Fix: Use cents for calculation
  */
 function updateRecurringSummary() {
     const amountInput = document.getElementById('recurring-amount');
     if (!amountInput) return;
     
-    // 🔴 修复：立即转换为分
+    // 🔴 Fix: Immediately convert to cents
     const totalAmountInCents = amountToCents(amountInput.value);
     const participantCount = recurringSelectedParticipants.size;
     
-    // 🔴 修复：以分为单位计算
+    // 🔴 Fix: Calculate in cents
     const amountPerPersonInCents = participantCount > 0 ? Math.floor(totalAmountInCents / participantCount) : 0;
-    // (注意: 简单的平均值可能因余数而不准确, 但对于摘要显示足够了)
+    // (Note: Simple average may be inaccurate due to remainder, but good enough for summary)
 
-    // 🔴 修复：使用正确的 ID
+    // 🔴 Fix: Use correct ID
     const summaryElement = document.getElementById('recurring-split-summary');
     if (summaryElement) {
-        // 🔴 修复：使用 centsToAmountString 显示
+        // 🔴 Fix: Use centsToAmountString to display
         const displayTotal = centsToAmountString ? centsToAmountString(totalAmountInCents) : (totalAmountInCents / 100).toFixed(2);
         const displayPerPerson = centsToAmountString ? centsToAmountString(amountPerPersonInCents) : (amountPerPersonInCents / 100).toFixed(2);
         
-        // 🔴 修复：提供更丰富的摘要
+        // 🔴 Fix: Provide richer summary
         summaryElement.innerHTML = `
             <div class="flex justify-between text-sm">
-                <span>总金额:</span>
+                <span>Total Amount:</span> <!-- Translated -->
                 <span class="font-medium">¥${displayTotal}</span>
             </div>
             <div class="flex justify-between text-sm">
-                <span>参与者:</span>
-                <span class="font-medium">${participantCount} 人</span>
+                <span>Participants:</span> <!-- Translated -->
+                <span class="font-medium">${participantCount} people</span> <!-- Translated -->
             </div>
             <div class="flex justify-between text-sm">
-                <span>每人约:</span>
+                <span>Approx. per person:</span> <!-- Translated -->
                 <span class="font-medium">¥${displayPerPerson}</span>
             </div>
         `;
@@ -588,17 +588,17 @@ function updateRecurringSummary() {
 }
 
 /**
- * 更新金额显示
+ * Update amount display
  */
 function updateAmountDisplay() {
     const amountInput = document.getElementById('recurring-amount');
     if (!amountInput) return;
     
-    console.log('金额已更新 (元):', amountInput.value);
+    console.log('Amount updated (in Yuan):', amountInput.value); // Translated
 }
 
 /**
- * 验证表单
+ * Validate form
  */
 function validateRecurringExpenseForm() {
     const amountInput = document.getElementById('recurring-amount');
@@ -607,36 +607,36 @@ function validateRecurringExpenseForm() {
     const endDateInput = document.getElementById('repeat-end');
     
     if (!amountInput || !payerSelect || !startDateInput || !endDateInput) {
-        return { isValid: false, message: '表单元素缺失' };
+        return { isValid: false, message: 'Form elements are missing' }; // Translated
     }
     
-    // 🔴 修复：使用 amountToCents 验证
+    // 🔴 Fix: Use amountToCents to validate
     const amountInCents = amountToCents(amountInput.value);
     if (amountInCents <= 0) {
-        return { isValid: false, message: '请输入有效的金额' };
+        return { isValid: false, message: 'Please enter a valid amount' }; // Translated
     }
     
     if (!payerSelect.value) {
-        return { isValid: false, message: 'Please select payer' };
+        return { isValid: false, message: 'Please select a payer' }; // Translated
     }
     
     if (recurringSelectedParticipants.size === 0) {
-        return { isValid: false, message: '请至少选择一位参与者' };
+        return { isValid: false, message: 'Please select at least one participant' }; // Translated
     }
     
     const startDate = new Date(startDateInput.value);
     const endDate = new Date(endDateInput.value);
     
     if (startDate > endDate) {
-        return { isValid: false, message: '开始日期不能晚于结束日期' };
+        return { isValid: false, message: 'Start date cannot be later than end date' }; // Translated
     }
     
     return { isValid: true };
 }
 
 /**
- * 收集表单数据
- * 🔴 修复：确保所有金额都是分
+ * Collect form data
+ * 🔴 Fix: Ensure all amounts are in cents
  */
 function collectRecurringExpenseFormData() {
     const amountInput = document.getElementById('recurring-amount');
@@ -644,11 +644,11 @@ function collectRecurringExpenseFormData() {
     const startDateInput = document.getElementById('repeat-start');
     const endDateInput = document.getElementById('repeat-end');
     
-    // 🔴 确保分摊计算是最新的
+    // 🔴 Ensure split calculation is up-to-date
     updateRecurringSplitCalculation(); 
 
     return {
-        amount: amountToCents(amountInput.value), // 🔴 转换为分
+        amount: amountToCents(amountInput.value), // 🔴 Convert to cents
         currency: 'CNY',
         payer_id: payerSelect.value,
         participants: Array.from(recurringSelectedParticipants),
@@ -656,7 +656,7 @@ function collectRecurringExpenseFormData() {
         start_date: startDateInput.value,
         end_date: endDateInput.value,
         split_method: recurringSplitMethod,
-        member_splits: recurringMemberSplits.map(split => ({ // 🔴 recurringMemberSplits 已经是分
+        member_splits: recurringMemberSplits.map(split => ({ // 🔴 recurringMemberSplits is already in cents
             user_id: split.user_id,
             amount: split.amount 
         }))
@@ -664,11 +664,11 @@ function collectRecurringExpenseFormData() {
 }
 
 /**
- * 保存定期费用
+ * Save recurring expense
  */
 export async function handleSaveRecurringExpense(event) {
     event.preventDefault();
-    console.log('保存定期费用');
+    console.log('Saving recurring expense'); // Translated
     
     try {
         const validationResult = validateRecurringExpenseForm();
@@ -683,47 +683,47 @@ export async function handleSaveRecurringExpense(event) {
         
         const formData = collectRecurringExpenseFormData();
         
-        // 🔴 修复：确保后端API字段名匹配 (schemas.py)
+        // 🔴 Fix: Ensure backend API field names match (schemas.py)
         const apiData = {
-            description: document.getElementById('recurring-description').value || '定期费用',
-            amount: formData.amount, // 分
+            description: document.getElementById('recurring-description').value || 'Recurring Expense', // Translated
+            amount: formData.amount, // Cents
             frequency: formData.frequency,
             start_date: formData.start_date,
-            payer_id: parseInt(formData.payer_id, 10), // 确保是数字
+            payer_id: parseInt(formData.payer_id, 10), // Ensure number
             split_type: formData.split_method,
-            splits: formData.member_splits.map(s => ({ // 🔴 匹配 ExpenseSplitCreate
+            splits: formData.member_splits.map(s => ({ // 🔴 Match ExpenseSplitCreate
                 user_id: s.user_id,
-                amount: s.amount // 分
+                amount: s.amount // Cents
             }))
-            // end_date 不是 RecurringExpenseCreate 的一部分, 但在逻辑上使用
+            // end_date is not part of RecurringExpenseCreate, but used logically
         };
         
-        console.log("发送到API的数据:", apiData);
+        console.log("Data sent to API:", apiData); // Translated
 
         const url = currentEditingRecurringExpense 
             ? `/groups/${window.currentGroupId}/recurring-expenses/${currentEditingRecurringExpense.id}`
             : `/groups/${window.currentGroupId}/recurring-expenses`;
             
         const response = await fetch(url, {
-            method: currentEditingRecurringExpense ? 'PATCH' : 'POST', // 🔴 修复：更新使用 PATCH
+            method: currentEditingRecurringExpense ? 'PATCH' : 'POST', // 🔴 Fix: Update uses PATCH
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${getAuthToken()}` // 🔴 修复：添加Token
+                'Authorization': `Bearer ${getAuthToken()}` // 🔴 Fix: Add Token
             },
-            body: JSON.stringify(apiData) // 🔴 修复：发送 apiData
+            body: JSON.stringify(apiData) // 🔴 Fix: Send apiData
         });
         
         if (response.ok) {
             const result = await response.json();
             if (window.showCustomAlert) {
-                window.showCustomAlert(currentEditingRecurringExpense ? '定期费用更新成功' : '定期费用创建成功', 'success');
+                window.showCustomAlert(currentEditingRecurringExpense ? 'Recurring expense updated' : 'Recurring expense created', 'success'); // Translated
             } else {
-                alert(currentEditingRecurringExpense ? '定期费用更新成功' : '定期费用创建成功');
+                alert(currentEditingRecurringExpense ? 'Recurring expense updated' : 'Recurring expense created'); // Translated
             }
             
             closeRecurringExpenseModal();
             
-            // 刷新定期费用列表
+            // Refresh recurring expense list
             if (window.refreshRecurringList) {
                 window.refreshRecurringList();
             } else {
@@ -731,7 +731,7 @@ export async function handleSaveRecurringExpense(event) {
             }
         } else {
             const error = await response.json();
-            const errorMsg = error.detail ? (typeof error.detail === 'string' ? error.detail : JSON.stringify(error.detail)) : '保存失败';
+            const errorMsg = error.detail ? (typeof error.detail === 'string' ? error.detail : JSON.stringify(error.detail)) : 'Save failed'; // Translated
             if (window.showCustomAlert) {
                 window.showCustomAlert(errorMsg, 'error');
             } else {
@@ -739,17 +739,17 @@ export async function handleSaveRecurringExpense(event) {
             }
         }
     } catch (error) {
-        console.error('保存定期费用失败:', error);
+        console.error('Failed to save recurring expense:', error); // Translated
         if (window.showCustomAlert) {
-            window.showCustomAlert('保存失败，请稍后重试', 'error');
+            window.showCustomAlert('Save failed, please try again later', 'error'); // Translated
         } else {
-            alert('保存失败，请稍后重试');
+            alert('Save failed, please try again later'); // Translated
         }
     }
 }
 
 /**
- * 关闭模态框
+ * Close modal
  */
 function closeRecurringExpenseModal() {
     const modal = document.getElementById('add-recurring-expense-modal');
@@ -762,13 +762,13 @@ function closeRecurringExpenseModal() {
 }
 
 /**
- * 重置表单
+ * Reset form
  */
 function resetRecurringForm() {
     const form = document.getElementById('recurring-expense-form');
     if (form) form.reset();
 
-    // 手动重置日期
+    // Manually reset dates
     const today = new Date().toISOString().split('T')[0];
     const startDateInput = document.getElementById('repeat-start');
     if (startDateInput) startDateInput.value = today;
@@ -780,10 +780,10 @@ function resetRecurringForm() {
         endDateInput.value = nextMonth.toISOString().split('T')[0];
     }
     
-    // 重置参与者选择
+    // Reset participant selection
     initializeParticipantSelection();
     
-    // 重置状态
+    // Reset state
     recurringExpenseState = {
         isRecurring: false,
         frequency: 'daily',
@@ -795,96 +795,96 @@ function resetRecurringForm() {
     setRecurringSplitMethod('equal');
 }
 
-// ==================== API相关函数 ====================
+// ==================== API related functions ====================
 
 /**
- * 禁用定期费用
+ * Disable recurring expense
  */
 export async function handleDisableRecurringExpense(expenseId) {
     try {
-        const response = await fetch(`/groups/${window.currentGroupId}/recurring-expenses/${expenseId}`, { // 🔴 修复：使用 PATCH
+        const response = await fetch(`/groups/${window.currentGroupId}/recurring-expenses/${expenseId}`, { // 🔴 Fix: Use PATCH
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${getAuthToken()}`
             },
-            body: JSON.stringify({ is_active: false }) // 🔴 修复：发送
+            body: JSON.stringify({ is_active: false }) // 🔴 Fix: Send
         });
         
         if (response.ok) {
-            if (window.showCustomAlert) window.showCustomAlert('定期费用已禁用', 'success');
+            if (window.showCustomAlert) window.showCustomAlert('Recurring expense disabled', 'success'); // Translated
             await refreshRecurringList();
         } else {
             const error = await response.json();
-            if (window.showCustomAlert) window.showCustomAlert(error.detail || '操作失败', 'error');
+            if (window.showCustomAlert) window.showCustomAlert(error.detail || 'Operation failed', 'error'); // Translated
         }
     } catch (error) {
-        console.error('禁用定期费用失败:', error);
-        if (window.showCustomAlert) window.showCustomAlert('操作失败，请稍后重试', 'error');
+        console.error('Failed to disable recurring expense:', error); // Translated
+        if (window.showCustomAlert) window.showCustomAlert('Operation failed, please try again later', 'error'); // Translated
     }
 }
 
 /**
- * 启用定期费用
+ * Enable recurring expense
  */
 export async function handleEnableRecurringExpense(expenseId) {
     try {
-        const response = await fetch(`/groups/${window.currentGroupId}/recurring-expenses/${expenseId}`, { // 🔴 修复：使用 PATCH
+        const response = await fetch(`/groups/${window.currentGroupId}/recurring-expenses/${expenseId}`, { // 🔴 Fix: Use PATCH
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${getAuthToken()}`
             },
-            body: JSON.stringify({ is_active: true }) // 🔴 修复：发送
+            body: JSON.stringify({ is_active: true }) // 🔴 Fix: Send
         });
         
         if (response.ok) {
-            if (window.showCustomAlert) window.showCustomAlert('定期费用已启用', 'success');
+            if (window.showCustomAlert) window.showCustomAlert('Recurring expense enabled', 'success'); // Translated
             await refreshRecurringList();
         } else {
             const error = await response.json();
-            if (window.showCustomAlert) window.showCustomAlert(error.detail || '操作失败', 'error');
+            if (window.showCustomAlert) window.showCustomAlert(error.detail || 'Operation failed', 'error'); // Translated
         }
     } catch (error) {
-        console.error('启用定期费用失败:', error);
-        if (window.showCustomAlert) window.showCustomAlert('操作失败，请稍后重试', 'error');
+        console.error('Failed to enable recurring expense:', error); // Translated
+        if (window.showCustomAlert) window.showCustomAlert('Operation failed, please try again later', 'error'); // Translated
     }
 }
 
 /**
- * 删除定期费用
+ * Delete recurring expense
  */
 export async function handleDeleteRecurringExpense(expenseId) {
-    if (!confirm('确定要删除这个定期费用吗？')) {
+    if (!confirm('Are you sure you want to delete this recurring expense?')) { // Translated
         return;
     }
     
     try {
         const response = await fetch(`/groups/${window.currentGroupId}/recurring-expenses/${expenseId}`, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${getAuthToken()}` } // 🔴 修复：添加Token
+            headers: { 'Authorization': `Bearer ${getAuthToken()}` } // 🔴 Fix: Add Token
         });
         
-        if (response.status === 204) { // 🔴 修复：检查 204
-            if (window.showCustomAlert) window.showCustomAlert('定期费用已删除', 'success');
+        if (response.status === 204) { // 🔴 Fix: Check 204
+            if (window.showCustomAlert) window.showCustomAlert('Recurring expense deleted', 'success'); // Translated
             await refreshRecurringList();
         } else {
             const error = await response.json();
-            if (window.showCustomAlert) window.showCustomAlert(error.detail || '删除失败', 'error');
+            if (window.showCustomAlert) window.showCustomAlert(error.detail || 'Delete failed', 'error'); // Translated
         }
     } catch (error) {
-        console.error('删除定期费用失败:', error);
-        if (window.showCustomAlert) window.showCustomAlert('删除失败，请稍后重试', 'error');
+        console.error('Failed to delete recurring expense:', error); // Translated
+        if (window.showCustomAlert) window.showCustomAlert('Delete failed, please try again later', 'error'); // Translated
     }
 }
 
 /**
- * 编辑定期费用
+ * Edit recurring expense
  */
 export async function handleEditRecurringExpense(expenseId) {
     try {
         const response = await fetch(`/groups/${window.currentGroupId}/recurring-expenses/${expenseId}`, {
-            headers: { 'Authorization': `Bearer ${getAuthToken()}` } // 🔴 修复：添加Token
+            headers: { 'Authorization': `Bearer ${getAuthToken()}` } // 🔴 Fix: Add Token
         });
         
         if (response.ok) {
@@ -893,29 +893,29 @@ export async function handleEditRecurringExpense(expenseId) {
             populateRecurringDetailForm(expense);
             currentEditingRecurringExpense = expense;
             
-            // 🔴 修复：打开的是主模态框，而不是详情模态框
+            // 🔴 Fix: Open the main modal, not the detail modal
             openAddRecurringModal(); 
         } else {
             const error = await response.json();
-            if (window.showCustomAlert) window.showCustomAlert(error.detail || '获取定期费用信息失败', 'error');
+            if (window.showCustomAlert) window.showCustomAlert(error.detail || 'Failed to get recurring expense info', 'error'); // Translated
         }
     } catch (error) {
-        console.error('获取定期费用信息失败:', error);
-        if (window.showCustomAlert) window.showCustomAlert('获取信息失败，请稍后重试', 'error');
+        console.error('Failed to get recurring expense info:', error); // Translated
+        if (window.showCustomAlert) window.showCustomAlert('Failed to get info, please try again later', 'error'); // Translated
     }
 }
 
 /**
- * 填充定期费用详情表单
- * 🔴 修复：金额以分为单位
+ * Populate recurring expense detail form
+ * 🔴 Fix: Amount is in cents
  */
 function populateRecurringDetailForm(expense) {
     const amountInput = document.getElementById('recurring-amount');
     const payerSelect = document.getElementById('recurring-payer');
     const startDateInput = document.getElementById('repeat-start');
-    const endDateInput = document.getElementById('repeat-end'); // 🔴 假设有结束日期
+    const endDateInput = document.getElementById('repeat-end'); // 🔴 Assuming there is an end date
     
-    if (amountInput) amountInput.value = centsToAmountString(expense.amount); // 🔴 转换
+    if (amountInput) amountInput.value = centsToAmountString(expense.amount); // 🔴 Convert
     if (payerSelect) payerSelect.value = expense.payer_id;
     if (startDateInput) startDateInput.value = expense.start_date;
     if (endDateInput) endDateInput.value = expense.end_date || ''; // 🔴
@@ -923,13 +923,13 @@ function populateRecurringDetailForm(expense) {
     selectFrequency(expense.frequency || 'daily');
     setRecurringSplitMethod(expense.split_type || 'equal');
     
-    // 🔴 修复：从 splits_definition 设置参与者
+    // 🔴 Fix: Set participants from splits_definition
     recurringSelectedParticipants.clear();
     if (expense.splits_definition) {
         const participantIds = expense.splits_definition.map(s => s.user_id);
         participantIds.forEach(id => recurringSelectedParticipants.add(id));
         
-        // 更新复选框
+        // Update checkboxes
         const allCheckboxes = document.querySelectorAll('#recurring-participants-section input[type="checkbox"]');
         allCheckboxes.forEach(cb => {
             cb.checked = recurringSelectedParticipants.has(parseInt(cb.value, 10));
@@ -937,46 +937,46 @@ function populateRecurringDetailForm(expense) {
     }
     
     updateRecurringPreview();
-    updateRecurringSplitCalculation(); // 🔴 确保分摊被计算
+    updateRecurringSplitCalculation(); // 🔴 Ensure split is calculated
 }
 
 /**
- * 刷新定期费用列表
+ * Refresh recurring expense list
  */
 export async function refreshRecurringList() {
     try {
         const response = await fetch(`/groups/${window.currentGroupId}/recurring-expenses`, {
-             headers: { 'Authorization': `Bearer ${getAuthToken()}` } // 🔴 修复：添加Token
+             headers: { 'Authorization': `Bearer ${getAuthToken()}` } // 🔴 Fix: Add Token
         });
         
         if (response.ok) {
             const expenses = await response.json();
             renderRecurringExpenseList(expenses);
         } else {
-            console.error('获取定期费用列表失败');
-            renderRecurringExpenseList([]); // 🔴 显示空列表
+            console.error('Failed to get recurring expense list'); // Translated
+            renderRecurringExpenseList([]); // 🔴 Show empty list
         }
     } catch (error) {
-        console.error('获取定期费用列表失败:', error);
-        renderRecurringExpenseList([]); // 🔴 显示空列表
+        console.error('Failed to get recurring expense list:', error); // Translated
+        renderRecurringExpenseList([]); // 🔴 Show empty list
     }
 }
 
 /**
- * 渲染定期费用列表
- * 🔴 修复：金额以分为单位
+ * Render recurring expense list
+ * 🔴 Fix: Amount is in cents
  */
 function renderRecurringExpenseList(expenses) {
-    const container = document.getElementById('recurring-list'); // 🔴 修复：使用正确的 ID
+    const container = document.getElementById('recurring-list'); // 🔴 Fix: Use correct ID
     if (!container) {
-        console.error('找不到定期费用列表容器');
+        console.error('Could not find recurring expense list container'); // Translated
         return;
     }
     
     container.innerHTML = '';
     
     if (!expenses || expenses.length === 0) {
-        container.innerHTML = '<p class="text-gray-500 text-center py-4">暂无定期费用</p>';
+        container.innerHTML = '<p class="text-gray-500 text-center py-4">No recurring expenses found</p>'; // Translated
         return;
     }
     
@@ -989,13 +989,13 @@ function renderRecurringExpenseList(expenses) {
         
         const title = document.createElement('h3');
         title.className = 'text-lg font-medium text-gray-900';
-        title.textContent = expense.description || `定期费用 ${expense.frequency}`;
+        title.textContent = expense.description || `Recurring Expense ${expense.frequency}`; // Translated
         
         const status = document.createElement('span');
         status.className = `px-2 py-1 text-xs font-medium rounded-full ${
             expense.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
         }`;
-        status.textContent = expense.is_active ? '启用' : '禁用';
+        status.textContent = expense.is_active ? 'Active' : 'Disabled'; // Translated
         
         header.appendChild(title);
         header.appendChild(status);
@@ -1004,27 +1004,27 @@ function renderRecurringExpenseList(expenses) {
         details.className = 'text-sm text-gray-600 space-y-1';
         
         const amount = document.createElement('p');
-        // 🔴 修复：金额以分为单位
+        // 🔴 Fix: Amount is in cents
         const displayAmount = centsToAmountString ? centsToAmountString(expense.amount) : (expense.amount / 100).toFixed(2);
-        amount.textContent = `金额: ¥${displayAmount}`;
+        amount.textContent = `Amount: ¥${displayAmount}`; // Translated
         
         const frequency = document.createElement('p');
         const frequencyLabels = {
-            'daily': '每日',
-            'weekly': '每周',
-            'monthly': '每月',
-            'yearly': '每年'
+            'daily': 'Daily', // Translated
+            'weekly': 'Weekly', // Translated
+            'monthly': 'Monthly', // Translated
+            'yearly': 'Yearly' // Translated
         };
-        frequency.textContent = `频率: ${frequencyLabels[expense.frequency] || expense.frequency}`;
+        frequency.textContent = `Frequency: ${frequencyLabels[expense.frequency] || expense.frequency}`; // Translated
         
         const dateRange = document.createElement('p');
-        // 🔴 修复：next_due_date
-        dateRange.textContent = `开始于: ${expense.start_date} (下次: ${expense.next_due_date})`;
+        // 🔴 Fix: next_due_date
+        dateRange.textContent = `Starts: ${expense.start_date} (Next: ${expense.next_due_date})`; // Translated
         
         const payer = document.createElement('p');
-        // 🔴 修复：从 groupMembers 查找 payer name
+        // 🔴 Fix: Find payer name from groupMembers
         const payerName = getMemberNameById(expense.payer_id);
-        payer.textContent = `付款人: ${payerName}`;
+        payer.textContent = `Payer: ${payerName}`; // Translated
         
         details.appendChild(amount);
         details.appendChild(frequency);
@@ -1036,16 +1036,16 @@ function renderRecurringExpenseList(expenses) {
         
         const editBtn = document.createElement('button');
         editBtn.className = 'px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600';
-        editBtn.textContent = '编辑';
+        editBtn.textContent = 'Edit'; // Translated
         editBtn.onclick = () => handleEditRecurringExpense(expense.id);
         
         const toggleBtn = document.createElement('button');
         toggleBtn.className = `px-3 py-1 text-sm rounded ${
             expense.is_active 
-                ? 'bg-yellow-500 text-white hover:bg-yellow-600' // 🔴 改为黄色
+                ? 'bg-yellow-500 text-white hover:bg-yellow-600' // 🔴 Changed to yellow
                 : 'bg-green-500 text-white hover:bg-green-600'
         }`;
-        toggleBtn.textContent = expense.is_active ? '禁用' : '启用';
+        toggleBtn.textContent = expense.is_active ? 'Disable' : 'Enable'; // Translated
         toggleBtn.onclick = () => {
             if (expense.is_active) {
                 handleDisableRecurringExpense(expense.id);
@@ -1056,7 +1056,7 @@ function renderRecurringExpenseList(expenses) {
         
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600';
-        deleteBtn.textContent = '删除';
+        deleteBtn.textContent = 'Delete'; // Translated
         deleteBtn.onclick = () => handleDeleteRecurringExpense(expense.id);
         
         actions.appendChild(editBtn);
@@ -1071,26 +1071,26 @@ function renderRecurringExpenseList(expenses) {
     });
 }
 
-/** 🔴 辅助函数：根据ID获取成员名称 **/
+/** 🔴 Helper function: Get member name by ID **/
 function getMemberNameById(userId) {
-    if (!window.groupMembers) return `用户 ${userId}`;
+    if (!window.groupMembers) return `User ${userId}`;
     const member = window.groupMembers.find(m => m.user_id === userId);
     if (member) {
-        return member.user?.username || member.nickname || `用户 ${userId}`;
+        return member.user?.username || member.nickname || `User ${userId}`;
     }
-    return `用户 ${userId}`;
+    return `User ${userId}`;
 }
 
 
 /**
- * 打开定期费用详情模态框
+ * Open recurring expense detail modal
  */
 export function openRecurringDetail(expenseId) {
     openRecurringDetailModal();
 }
 
 /**
- * 打开添加定期费用模态框
+ * Open add recurring expense modal
  */
 function openAddRecurringModal() {
     const modal = document.getElementById('add-recurring-expense-modal');
@@ -1098,14 +1098,14 @@ function openAddRecurringModal() {
         modal.classList.remove('hidden');
     }
     
-    console.log('🔧 打开定期费用模态框，初始化表单数据...');
-    currentEditingRecurringExpense = null; // 🔴 确保重置
-    resetRecurringForm(); // 🔴 重置表单
+    console.log('🔧 Opening recurring expense modal, initializing form data...'); // Translated
+    currentEditingRecurringExpense = null; // 🔴 Ensure reset
+    resetRecurringForm(); // 🔴 Reset form
     updateRecurringFormMembers();
 }
 
 /**
- * 打开定期费用详情模态框
+ * Open recurring expense detail modal
  */
 function openRecurringDetailModal() {
     const modal = document.getElementById('recurring-detail-modal');
@@ -1115,7 +1115,7 @@ function openRecurringDetailModal() {
 }
 
 /**
- * 关闭定期费用详情模态框
+ * Close recurring expense detail modal
  */
 function closeRecurringDetailModal() {
     const modal = document.getElementById('recurring-detail-modal');
@@ -1125,21 +1125,21 @@ function closeRecurringDetailModal() {
 }
 
 /**
- * 获取频率标签
+ * Get frequency label
  */
 function getFrequencyLabel(frequency) {
     const labels = {
-        'daily': '每日',
-        'weekly': '每周',
-        'monthly': '每月',
-        'yearly': '每年'
+        'daily': 'Daily', // Translated
+        'weekly': 'Weekly', // Translated
+        'monthly': 'Monthly', // Translated
+        'yearly': 'Yearly' // Translated
     };
     return labels[frequency] || frequency;
 }
 
-// ==================== 全局函数绑定 ====================
+// ==================== Global function binding ====================
 
-console.log('开始暴露定期费用函数到全局...');
+console.log('Exposing recurring expense functions to global...'); // Translated
 
 window.handleSaveRecurringExpense = handleSaveRecurringExpense;
 window.selectFrequency = selectFrequency;
@@ -1159,23 +1159,23 @@ window.initializeRecurringExpenseForm = initializeRecurringExpenseForm;
 window.updateRecurringFormMembers = updateRecurringFormMembers;
 window.showMessage = showMessage;
 
-console.log('定期费用模块已加载，所有函数已暴露到全局 - v2025.11.10.002');
+console.log('Recurring expense module loaded, all functions exposed to global - v2025.11.10.002'); // Translated
 
 initializeEventListeners();
 
 /**
- * 初始化事件监听器
+ * Initialize event listeners
  */
 function initializeEventListeners() {
-    console.log('初始化定期费用事件监听器...');
+    console.log('Initializing recurring expense event listeners...'); // Translated
     
     const amountInput = document.getElementById('recurring-amount');
     if (amountInput) {
         amountInput.removeAttribute('oninput');
         amountInput.addEventListener('input', handleRecurringAmountChange);
-        console.log('✅ 金额输入框事件监听器已绑定');
+        console.log('✅ Amount input event listener bound'); // Translated
     } else {
-        console.error('❌ 找不到金额输入框 recurring-amount');
+        console.error('❌ Could not find amount input: recurring-amount'); // Translated
     }
     
     const frequencyButtons = document.querySelectorAll('.frequency-option');
@@ -1184,42 +1184,42 @@ function initializeEventListeners() {
         button.addEventListener('click', function() {
             const frequency = this.getAttribute('data-frequency');
             if (frequency) {
-                console.log('✅ 选择频率:', frequency);
+                console.log('✅ Selected frequency:', frequency); // Translated
                 selectFrequency(frequency);
             }
         });
     });
-    console.log(`✅ ${frequencyButtons.length} 个重复频率按钮事件监听器已绑定`);
+    console.log(`✅ ${frequencyButtons.length} repeat frequency button event listeners bound`); // Translated
     
     const payerSelect = document.getElementById('recurring-payer');
     if (payerSelect) {
         payerSelect.addEventListener('change', () => {
-            console.log('支付人选择已更改');
+            console.log('Payer selection changed'); // Translated
         });
     }
 
-    // 🔴 [START] 新增代码
-    // 绑定 "添加定期费用" 模态框中的 "Equally Split" / "Custom Amount" 按钮
+    // 🔴 [START] New code
+    // Bind "Equally Split" / "Custom Amount" buttons in "Add Recurring Expense" modal
     const recSplitMethodContainer = document.getElementById('recurring-split-method-selection');
     if (recSplitMethodContainer) {
         recSplitMethodContainer.addEventListener('click', (event) => {
             const button = event.target.closest('.split-toggle-btn');
             if (button && button.dataset.method) {
                 const method = button.dataset.method; // 'equal' or 'custom'
-                setRecurringSplitMethod(method); // 调用 recurring_expense.js 中已有的函数
-                console.log(`✅ "添加定期费用" 模态框: 分摊方式切换为 ${method}`);
+                setRecurringSplitMethod(method); // Call existing function in recurring_expense.js
+                console.log(`✅ "Add Recurring Expense" Modal: Split method switched to ${method}`); // Translated
             }
         });
-        console.log('✅ "添加定期费用" 模态框: 分摊按钮事件监听器已绑定');
+        console.log('✅ "Add Recurring Expense" Modal: Split button event listener bound'); // Translated
     } else {
-        console.error('❌ 找不到 "添加定期费用" 模态框的分摊按钮容器 #recurring-split-method-selection');
+        console.error('❌ Could not find split button container for "Add Recurring Expense" modal: #recurring-split-method-selection'); // Translated
     }
-    // 🔴 [END] 新增代码
+    // 🔴 [END] New code
     
-    console.log('定期费用事件监听器初始化完成');
+    console.log('Recurring expense event listener initialization complete'); // Translated
 }
 
-// ==================== 模态框控制函数 ====================
+// ==================== Modal control functions ====================
 
 function handleRecurringCancel() {
     closeRecurringExpenseModal();
@@ -1244,7 +1244,7 @@ function showMessage(message, type = 'info') {
 initializeEventListeners();
 
 setTimeout(() => {
-    console.log('验证函数暴露状态:');
+    console.log('Verifying function exposure status:'); // Translated
     console.log('handleRecurringAmountChange:', typeof window.handleRecurringAmountChange);
     console.log('selectFrequency:', typeof window.selectFrequency);
     console.log('setRecurringSplitMethod:', typeof window.setRecurringSplitMethod);
