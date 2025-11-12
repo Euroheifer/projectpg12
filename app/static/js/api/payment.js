@@ -283,14 +283,16 @@ export async function handleSavePayment(event) {
 
 /**
  * Update payment - Fixed version
+ * 🔴 [START] REPLACED FUNCTION
+ * This function now sends application/json and does NOT support file upload on update,
+ * to match the backend's expectation.
  */
-// 🔴 Fix: Add export
 export async function handleUpdatePayment(event) {
     event.preventDefault();
-    console.log('Updating payment');
+    console.log('Updating payment (using JSON fix)');
 
     const form = document.getElementById('payment-detail-form');
-    if (!currentEditingPayment) { // 🔴 Fix: Check currentEditingPayment
+    if (!currentEditingPayment) { 
         console.error('No payment is being edited');
         return;
     }
@@ -298,32 +300,26 @@ export async function handleUpdatePayment(event) {
     try {
         const formData = new FormData(form);
         
+        // 1. 🔴 Create a plain JavaScript object, NOT FormData
         const paymentData = {
             description: formData.get('payment-detail-description'),
             amount: amountToCents(formData.get('payment-detail-amount')),
             to_user_id: parseInt(formData.get('payment-detail-to'), 10),
             from_user_id: parseInt(formData.get('payment-detail-payer'), 10),
             date: formData.get('payment-detail-date'),
+            // 🚨 NOTE: File upload on update is not supported by this fix,
+            // to match the backend's expectation of application/json.
+            // The 'image_file' field is intentionally omitted.
         };
 
-        const apiFormData = new FormData();
-        apiFormData.append('description', paymentData.description);
-        apiFormData.append('amount', paymentData.amount);
-        apiFormData.append('to_user_id', paymentData.to_user_id);
-        apiFormData.append('from_user_id', paymentData.from_user_id);
-        
-        const receiptFile = formData.get('payment-detail-receipt-file');
-         if (receiptFile && receiptFile.size > 0) {
-             apiFormData.append('image_file', receiptFile);
-        }
-        
+        // 2. 🔴 Validation
         const errors = [];
         if (!paymentData.from_user_id) errors.push('Please select a payer');
         if (!paymentData.to_user_id) errors.push('Please select a payee');
         if (paymentData.from_user_id === paymentData.to_user_id) errors.push('Payer and payee cannot be the same person');
         if (paymentData.amount <= 0) errors.push('Please enter a valid amount');
         
-        const expenseId = formData.get('payment-detail-for-expense'); // 🔴
+        const expenseId = formData.get('payment-detail-for-expense');
         if (!expenseId) errors.push('Please select an associated expense');
         
         if (errors.length > 0) {
@@ -338,15 +334,16 @@ export async function handleUpdatePayment(event) {
         }
 
         const paymentId = currentEditingPayment.id;
-        console.log('Updating payment record:', { expenseId, paymentId });
+        console.log('Updating payment record (JSON):', { expenseId, paymentId, data: paymentData });
 
-        // API call
-        const response = await fetch(`/payments/${paymentId}`, { // 🔴 Fix: Use /payments/{payment_id} endpoint
-            method: 'PATCH', // 🔴 Fix: Use PATCH
+        // 3. 🔴 API call with JSON
+        const response = await fetch(`/payments/${paymentId}`, {
+            method: 'PATCH',
             headers: {
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json' // <--- SET CONTENT-TYPE
             },
-            body: apiFormData
+            body: JSON.stringify(paymentData) // <--- SEND JSON STRING
         });
 
         if (!response.ok) {
@@ -386,6 +383,9 @@ export async function handleUpdatePayment(event) {
         showCustomAlert('Error', error.message || 'An unknown error occurred while updating the payment');
     }
 }
+/** * 🔴 [END] REPLACED FUNCTION
+ */
+
 
 /**
  * Delete payment - Fixed version
