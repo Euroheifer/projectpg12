@@ -70,12 +70,12 @@ The application follows a **layered architecture** pattern with clear separation
 ```
 
 ## 🎯 Object-Oriented Design
-    ```mermaid
-    graph TD;
-        A-->B;
-        A-->C;
-        B-->D;
-        C-->D;
+ ```mermaid
+graph LR
+   A --> B
+   A -->C
+   C -->D
+``` 
 ### Core Domain Models
 
 #### 1. User Management
