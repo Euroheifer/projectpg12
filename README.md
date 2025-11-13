@@ -72,38 +72,173 @@ The application follows a **layered architecture** pattern with clear separation
 ## 🎯 Object-Oriented Design
  ```mermaid
 classDiagram
-    direction LR
-
+    %% Core User Entity
     class User {
-        %% 核心: 用户
+        -id: int
+        -email: str
+        -username: str
+        -hashed_password: str
+        +get_user_by_email()
+        +create_user()
+        +authenticate_user()
+        +get_current_user()
     }
 
+    %% Group Management System
     class Group {
-        %% 核心: 群组
+        -id: int
+        -name: str
+        -description: str
+        -admin_id: int
+        -created_at: datetime
+        +create_group()
+        +get_group_by_id()
+        +update_group()
+        +delete_group()
+        +get_group_members()
     }
 
+    %% Group Membership Management
+    class GroupMember {
+        -id: int
+        -group_id: int
+        -user_id: int
+        -is_admin: bool
+        -joined_at: datetime
+        +add_member()
+        +remove_member()
+        +update_member_role()
+        +is_admin_check()
+    }
+
+    %% Group Invitation System
+    class GroupInvitation {
+        -id: int
+        -group_id: int
+        -inviter_id: int
+        -invitee_id: int
+        -status: InvitationStatus
+        -created_at: datetime
+        +send_invitation()
+        +accept_invitation()
+        +decline_invitation()
+        +get_pending_invitations()
+    }
+
+    %% Core Expense System
     class Expense {
-        %% 核心: 费用
+        -id: int
+        -group_id: int
+        -payer_id: int
+        -amount: int
+        -description: str
+        -category: str
+        -expense_date: date
+        -created_at: datetime
+        +create_expense()
+        +update_expense()
+        +delete_expense()
+        +calculate_splits()
+        +get_expenses_by_group()
     }
 
+    %% Expense Splitting Logic
+    class ExpenseSplit {
+        -id: int
+        -expense_id: int
+        -user_id: int
+        -amount_owed: int
+        +calculate_equal_split()
+        +calculate_custom_split()
+        +update_split_amounts()
+    }
+
+    %% Recurring Expense Management
+    class RecurringExpense {
+        -id: int
+        -group_id: int
+        -payer_id: int
+        -amount: int
+        -description: str
+        -frequency: str
+        -next_occurrence: date
+        -is_active: bool
+        +create_recurring_expense()
+        +process_due_expenses()
+        +update_recurring_schedule()
+        +toggle_active_status()
+    }
+
+    %% Payment and Settlement System
     class Payment {
-        %% 核心: 结算
+        -id: int
+        -expense_id: int
+        -from_user_id: int
+        -to_user_id: int
+        -amount: int
+        -payment_date: date
+        -receipt_image_url: str
+        +record_payment()
+        +update_payment()
+        +delete_payment()
+        +get_payments_by_expense()
     }
 
-    %% 核心关系
-    User "1..*" -- "0..*" Group : (多对多: 成员)
-    User "1" -- "0..*" Group : (一对多: 管理员)
+    %% Audit Trail System
+    class AuditLog {
+        -id: int
+        -group_id: int
+        -user_id: int
+        -action: str
+        -details: dict
+        -timestamp: datetime
+        +log_action()
+        +get_group_audit_logs()
+        +log_user_activity()
+    }
 
-    Group "1" -- "0..*" Expense : (包含)
+    %% Enumeration Types
+    class InvitationStatus {
+        <<enumeration>>
+        PENDING
+        ACCEPTED
+        REJECTED
+    }
 
-    %% 费用的核心关联
-    User "1" -- "0..*" Expense : (支付人 Payer)
-    User "1..*" -- "0..*" Expense : (分摊人 Splittee)
+    class Frequency {
+        <<enumeration>>
+        DAILY
+        WEEKLY
+        MONTHLY
+        YEARLY
+    }
 
-    %% 结算的核心关联
-    User "1" -- "0..*" Payment : (付款人 From)
-    User "1" -- "0..*" Payment : (收款人 To)
-    Expense "1" -- "0..*" Payment : (关联的费用)
+    %% Relationships and Associations
+    User ||--o{ Group : "creates (1:N)"
+    User ||--o{ GroupMember : "memberships (1:N)"
+    Group ||--o{ GroupMember : "contains (1:N)"
+    User ||--o{ GroupInvitation : "sent (1:N)"
+    User ||--o{ GroupInvitation : "received (1:N)"
+    Group ||--o{ GroupInvitation : "generates (1:N)"
+    
+    Group ||--o{ Expense : "tracks (1:N)"
+    Group ||--o{ RecurringExpense : "schedules (1:N)"
+    User ||--o{ Expense : "pays (1:N)"
+    Expense ||--o{ ExpenseSplit : "splits (1:N)"
+    User ||--o{ ExpenseSplit : "owes (1:N)"
+    
+    Expense ||--o{ Payment : "settles (1:N)"
+    User ||--o{ Payment : "makes (1:N)"
+    User ||--o{ Payment : "receives (1:N)"
+    
+    Group ||--o{ AuditLog : "logs (1:N)"
+    User ||--o{ AuditLog : "performs (1:N)"
+
+    %% Composition and Aggregation
+    Group *-- GroupMember : "aggregates"
+    Group *-- Expense : "contains"
+    Expense *-- ExpenseSplit : "composes"
+    Expense *-- Payment : "may have"
 ``` 
 ### Core Domain Models
 
