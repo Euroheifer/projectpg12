@@ -71,10 +71,167 @@ The application follows a **layered architecture** pattern with clear separation
 
 ## 🎯 Object-Oriented Design
  ```mermaid
-graph LR
-   A --> B
-   A -->C
-   C -->D
+classDiagram
+    direction LR
+
+    class User {
+        +int id
+        +string email
+        +string username
+        +string hashed_password
+        +List~Group~ groups_created
+        +List~GroupMember~ memberships
+        +List~Payment~ payments_made
+        +List~Payment~ payments_received
+        +List~GroupInvitation~ sent_invitations
+        +List~GroupInvitation~ received_invitations
+        +createUser(db, user)
+        +getUserByEmail(db, email)
+        +authenticateUser(db, email, pass)
+    }
+
+    class Group {
+        +int id
+        +string name
+        +string description
+        +int admin_id
+        +List~GroupMember~ members
+        +List~Expense~ expenses
+        +List~GroupInvitation~ invitations
+        +List~RecurringExpense~ recurring_expenses
+        +createGroup(db, group, admin_id)
+        +getGroupById(db, id)
+        +getUserGroups(db, user_id)
+        +updateGroup(db, id, update_data)
+        +deleteGroup(db, id)
+    }
+
+    class GroupMember {
+        <<Association>>
+        +int id
+        +int group_id
+        +int user_id
+        +bool is_admin
+        +string nickname
+        +string remarks
+        +addGroupMember(db, group_id, user_id)
+        +removeGroupMember(db, group_id, user_id)
+        +getGroupMembers(db, group_id)
+        +updateGroupMemberAdminStatus(db, id, is_admin)
+    }
+
+    class Expense {
+        +int id
+        +string description
+        +int amount
+        +Date date
+        +int group_id
+        +int creator_id
+        +int payer_id
+        +string split_type
+        +string image_url
+        +List~ExpenseSplit~ splits
+        +List~Payment~ payments
+        +createExpense(db, group_id, creator_id, expense, file)
+        +getExpenseById(db, id)
+        +getGroupExpenses(db, group_id)
+        +updateExpense(db, id, update_data, user_id)
+        +deleteExpense(db, id, user_id)
+    }
+
+    class ExpenseSplit {
+        <<Association>>
+        +int id
+        +int expense_id
+        +int user_id
+        +int amount
+        +string share_type
+        +getExpenseSplits(db, expense_id)
+    }
+
+    class Payment {
+        +int id
+        +int expense_id
+        +int from_user_id
+        +int to_user_id
+        +int amount
+        +string description
+        +Date payment_date
+        +int creator_id
+        +string image_url
+        +createPayment(db, expense_id, creator_id, payment, file)
+        +getPayment(db, id)
+        +updatePayment(db, id, update_data, user_id, is_admin)
+        +deletePayment(db, id, user_id, is_admin)
+    }
+
+    class RecurringExpense {
+        +int id
+        +string description
+        +int amount
+        +string frequency
+        +Date start_date
+        +Date next_due_date
+        +int payer_id
+        +string split_type
+        +JSON splits_definition
+        +createRecurringExpense(db, group_id, creator_id, data)
+        +getGroupRecurringExpenses(db, group_id)
+        +updateRecurringExpense(db, id, update_data, user_id)
+        +deleteRecurringExpense(db, id, user_id)
+        +processDueRecurringExpenses(db)
+    }
+
+    class GroupInvitation {
+        +int id
+        +int group_id
+        +int inviter_id
+        +int invitee_id
+        +InvitationStatus status
+        +createGroupInvitation(db, group_id, inviter_id, invitee_id)
+        +getInvitationById(db, id)
+        +getPendingInvitationsForUser(db, user_id)
+    }
+    
+    class AuditLog {
+        +int id
+        +int group_id
+        +int user_id
+        +datetime timestamp
+        +string action
+        +JSON details
+        +createAuditLog(db, group_id, user_id, action, details)
+        +getAuditLogs(db, group_id)
+    }
+
+    ' Relationships
+    User "1" -- "0..*" Group : (admin)
+    User "1..*" -- "0..*" Group : (member)
+    User "1" -- "0..*" GroupMember : has
+    Group "1" -- "1..*" GroupMember : contains
+
+    Group "1" -- "0..*" Expense : has
+    User "1" -- "0..*" Expense : (creator)
+    User "1" -- "0..*" Expense : (payer)
+
+    Expense "1" -- "1..*" ExpenseSplit : is split into
+    User "1..*" -- "0..*" ExpenseSplit : participates in
+
+    Expense "1" -- "0..*" Payment : is settled by
+    User "1" -- "0..*" Payment : (from_user_id)
+    User "1" -- "0..*" Payment : (to_user_id)
+    User "1" -- "0..*" Payment : (creator_id)
+
+    Group "1" -- "0..*" RecurringExpense : has
+    User "1" -- "0..*" RecurringExpense : (creator)
+    User "1" -- "0..*" RecurringExpense : (payer)
+
+    Group "1" -- "0..*" GroupInvitation : has
+    User "1" -- "0..*" GroupInvitation : (inviter_id)
+    User "1" -- "0..*" GroupInvitation : (invitee_id)
+    
+    Group "1" -- "0..*" AuditLog : logs
+    User "1" -- "0..*" AuditLog : (user)
 ``` 
 ### Core Domain Models
 
