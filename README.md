@@ -204,7 +204,7 @@ classDiagram
         +getAuditLogs(db, group_id)
     }
 
-    ' Relationships
+    %% Relationships
     User "1" -- "0..*" Group : (admin)
     User "1..*" -- "0..*" Group : (member)
     User "1" -- "0..*" GroupMember : has
