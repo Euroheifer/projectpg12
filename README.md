@@ -75,35 +75,162 @@ classDiagram
     direction LR
 
     class User {
-        %% Core: User
+        +Integer id
+        +String email
+        +String username
+        +String hashed_password
+        +groups_created : List~Group~
+        +memberships : List~GroupMember~
+        +payments_made : List~Payment~
+        +payments_received : List~Payment~
+        +sent_invitations : List~GroupInvitation~
+        +received_invitations : List~GroupInvitation~
     }
 
     class Group {
-        %% Core: Group
+        +Integer id
+        +String name
+        +Text description
+        +Integer admin_id
+        +admin : User
+        +members : List~GroupMember~
+        +invitations : List~GroupInvitation~
+    }
+
+    class GroupMember {
+        <<Association>>
+        +Integer id
+        +Integer group_id
+        +Integer user_id
+        +Boolean is_admin
+        +String nickname
+        +Text remarks
+        +group : Group
+        +user : User
+    }
+
+    class InvitationStatus {
+        <<Enumeration>>
+        PENDING
+        ACCEPTED
+        REJECTED
+    }
+
+    class GroupInvitation {
+        +Integer id
+        +Integer group_id
+        +Integer inviter_id
+        +Integer invitee_id
+        +InvitationStatus status
+        +DateTime created_at
+        +DateTime updated_at
+        +group : Group
+        +inviter : User
+        +invitee : User
     }
 
     class Expense {
-        %% Core: Expense
+        +Integer id
+        +String description
+        +Integer amount
+        +Date date
+        +Integer group_id
+        +Integer creator_id
+        +Integer payer_id
+        +String split_type
+        +String image_url
+        +group : Group
+        +creator : User
+        +payer : User
+        +splits : List~ExpenseSplit~
+        +payments : List~Payment~
+    }
+
+    class RecurringExpense {
+        +Integer id
+        +String description
+        +Integer amount
+        +String frequency
+        +Date start_date
+        +Date next_due_date
+        +Boolean is_active
+        +Integer group_id
+        +Integer creator_id
+        +Integer payer_id
+        +String split_type
+        +JSON splits_definition
+        +group : Group
+        +creator : User
+        +payer : User
+    }
+
+    class ExpenseSplit {
+        +Integer id
+        +Integer expense_id
+        +Integer user_id
+        +Integer amount
+        +String share_type
+        +Integer balance
+        +DateTime last_balance_update
+        +expense : Expense
+        +user : User
     }
 
     class Payment {
-        %% Core: Settlement
+        +Integer id
+        +Integer expense_id
+        +Integer from_user_id
+        +Integer to_user_id
+        +Integer amount
+        +String description
+        +Date payment_date
+        +DateTime created_at
+        +Integer creator_id
+        +String image_url
+        +expense : Expense
+        +from_user : User
+        +to_user : User
     }
 
-    %% Core Relationships
-    User "1..*" -- "0..*" Group : "Member"
-    User "1" -- "0..*" Group : "Admin"
+    class AuditLog {
+        +Integer id
+        +Integer group_id
+        +Integer user_id
+        +DateTime timestamp
+        +String action
+        +JSON details
+        +user : User
+        +group : Group
+    }
+
+    %% --- Relationships ---
+    User "1" -- "0..*" Group : "Creates (Admin)"
+    User "1" -- "0..*" GroupMember : "Belongs to"
+    Group "1" -- "0..*" GroupMember : "Contains"
+
+    User "1" -- "0..*" GroupInvitation : "Invites (Inviter)"
+    User "1" -- "0..*" GroupInvitation : "Is invited (Invitee)"
+    Group "1" -- "0..*" GroupInvitation : "Belongs to"
+    GroupInvitation "1" -- "1" InvitationStatus : "Uses"
 
     Group "1" -- "0..*" Expense : "Contains"
+    User "1" -- "0..*" Expense : "Creates (Creator)"
+    User "1" -- "0..*" Expense : "Pays (Payer)"
 
-    %% Core Expense Links
-    User "1" -- "0..*" Expense : "Payer"
-    User "1..*" -- "0..*" Expense : "Splittee"
+    Group "1" -- "0..*" RecurringExpense : "Contains"
+    User "1" -- "0..*" RecurringExpense : "Creates (Creator)"
+    User "1" -- "0..*" RecurringExpense : "Pays (Payer)"
 
-    %% Core Settlement Links
-    User "1" -- "0..*" Payment : "From (Payer)"
-    User "1" -- "0..*" Payment : "To (Payee)"
-    Expense "1" -- "0..*" Payment : "Linked to"
+    Expense "1" -- "0..*" ExpenseSplit : "Contains"
+    User "1" -- "0..*" ExpenseSplit : "Participates in"
+
+    Expense "1" -- "0..*" Payment : "Is related to"
+    User "1" -- "0..*" Payment : "Pays from (Payer)"
+    User "1" -- "0..*" Payment : "Pays to (Payee)"
+    User "1" -- "0..*" Payment : "Creates (Creator)"
+
+    Group "1" -- "0..*" AuditLog : "Has"
+    User "1" -- "0..*" AuditLog : "Performs"
 ``` 
 ### Core Domain Models
 
